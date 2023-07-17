@@ -1,0 +1,21 @@
+# To use:
+#
+#   $ mamba env create -f environment.yml
+#   $ mamba activate rgpotpy
+#
+name: gaussjacquad
+channels:
+  - conda-forge
+dependencies:
+  - compilers
+  - meson
+  - gfortran
+  - pkg-config
+  - openblas
+  - fpm
+  # Python, Sympy
+  - ipython
+  - sympy
+  - jupytext
+  - papermill
+  - ipykernel

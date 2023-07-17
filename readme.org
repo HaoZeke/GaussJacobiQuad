@@ -1,0 +1,6 @@
+* About
+
+A permissively licensed modern implementation of Gauss-Jacobi quadrature.
+
+* License
+MIT.
