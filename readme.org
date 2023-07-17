@@ -2,5 +2,16 @@
 
 A permissively licensed modern implementation of Gauss-Jacobi quadrature.
 
+* Development
+** Developing locally
+A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
+set it up locally as well (using [[https://pypa.github.io/pipx][pipx]] for isolation):
+
+#+begin_src sh
+# Run before commiting
+pipx run pre-commit run --all-files
+# Or install the git hook to enforce this
+pipx run pre-commit install
+#+end_src
 * License
 MIT.
