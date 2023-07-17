@@ -1,9 +1,22 @@
 * About
 
 A permissively licensed modern implementation of Gauss-Jacobi quadrature.
+** Usage
+The most automated approach is to use the ~conda~ environment and ~fpm~ build:
+#+begin_src bash
+micromamba create -f environment.yml
+micromamba activate gaussjacquad
+fpm build
+#+end_src
+** Testing
+An analytic result can be obtained from the ~scripts~ folder.
+#+begin_src bash
+python scripts/gen_analytic_vals.py
+fpm test
+#+end_src
 
-* Development
-** Developing locally
+** Development
+*** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
 set it up locally as well (using [[https://pypa.github.io/pipx][pipx]] for isolation):
 
