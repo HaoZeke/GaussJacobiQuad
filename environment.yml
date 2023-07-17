@@ -13,6 +13,7 @@ dependencies:
   - pkg-config
   - openblas
   - fpm
+  - fprettify
   # Python, Sympy
   - ipython
   - sympy
