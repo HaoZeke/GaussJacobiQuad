@@ -1,4 +1,4 @@
-module types
+module gjp_types
 implicit none
 private
 public sp, dp, hp, qp, ivector, dvector, zvector

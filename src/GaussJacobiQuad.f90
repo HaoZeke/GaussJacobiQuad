@@ -8,8 +8,8 @@
 !! Hale and Townsend, Fast and accurate computation of Gauss–Legendre and
 !! Gauss–Jacobi quadrature nodes and weights, SIAM J. Sci. Comp. 2013
 module GaussJacobiQuad
-use types, only: dp
-use constants, only: pi
+use gjp_types, only: dp
+use gjp_constants, only: pi
 implicit none
 contains
 

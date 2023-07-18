@@ -8,7 +8,7 @@
 !> @param e_ is Euler's constant
 !> @param i_ denotes one unit length along the complex axis as a conversion helper
 
-module constants
+module gjp_constants
 use types, only: dp
 implicit none
 private
