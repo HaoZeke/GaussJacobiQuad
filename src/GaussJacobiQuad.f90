@@ -17,6 +17,13 @@ subroutine gauss_jacobi(n, a, b, x, w)
     integer, intent(in) :: n
     real(dp), intent(in) :: a, b
     real(dp), intent(out) :: x(n), w(n)
+    call gauss_jacobi_rec(n, a, b, x, w)
+end subroutine gauss_jacobi
+
+subroutine gauss_jacobi_rec(n, a, b, x, w)
+    integer, intent(in) :: n
+    real(dp), intent(in) :: a, b
+    real(dp), intent(out) :: x(n), w(n)
     real(dp), dimension(ceiling(n/2._dp)) :: x1, ders1
     real(dp), dimension(n/2) :: x2, ders2
     real(dp) :: ders(n), C
@@ -35,7 +42,7 @@ subroutine gauss_jacobi(n, a, b, x, w)
     C = 2**(a + b + 1) * exp(log_gamma(n + a + 1) - log_gamma(n + a + b + 1) + &
                              log_gamma(n + b + 1) - log_gamma(n + 1._dp)); 
     w = w * C
-end subroutine
+end subroutine gauss_jacobi_rec
 
 subroutine recurrence(n, n2, a, b, x, PP)
     integer, intent(in) :: n, n2

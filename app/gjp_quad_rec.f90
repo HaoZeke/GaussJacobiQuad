@@ -1,6 +1,6 @@
-program gjp_quad
+program gjp_quad_rec
 
-use GaussJacobiQuad, only: gauss_jacobi
+use GaussJacobiQuad, only: gauss_jacobi_rec
 use gjp_types, only: dp
 implicit none
 
@@ -25,7 +25,7 @@ read (arg, '(f8.3)') alpha
 call get_command_argument(3, arg)
 read (arg, '(f8.3)') beta
 
-call gauss_jacobi(n_points, alpha, beta, x, w)
+call gauss_jacobi_rec(n_points, alpha, beta, x, w)
 
 do i = 1, n_points
     print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(i), 'Weight: ', w(i)
@@ -33,4 +33,4 @@ end do
 
 deallocate (x, w)
 
-end program gjp_quad
+end program gjp_quad_rec
