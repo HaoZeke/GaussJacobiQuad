@@ -11,7 +11,7 @@ fpm build
 ** Testing
 An analytic result can be obtained from the ~scripts~ folder.
 #+begin_src bash
-python scripts/gen_analytic_vals.py
+python scripts/gen_analytic_vals.py --npts <npoints> --alpha <alpha> --beta <beta> --n_dig <precision>
 fpm test
 #+end_src
 
