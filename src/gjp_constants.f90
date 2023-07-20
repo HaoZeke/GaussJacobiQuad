@@ -9,7 +9,7 @@
 !> @param i_ denotes one unit length along the complex axis as a conversion helper
 
 module gjp_constants
-use types, only: dp
+use gjp_types, only: dp
 implicit none
 private
 public pi, e_, i_, Ha2eV_2010, c_2010, c_2006, c_1998, c_1986
