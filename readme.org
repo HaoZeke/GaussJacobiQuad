@@ -15,6 +15,11 @@ python scripts/gen_analytic_vals.py
 fpm test
 #+end_src
 
+Running the implemented recursion based Gauss-Jacobi can be done via:
+#+begin_src bash
+fpm run gjp_quad_rec -- <npoints> <alpha> <beta>
+#+end_src
+
 ** Development
 *** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
