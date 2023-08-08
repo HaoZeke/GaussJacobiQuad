@@ -17,6 +17,9 @@ dependencies:
   # Python, Sympy
   - ipython
   - sympy
+  - numpy
   - jupytext
   - papermill
   - ipykernel
+  # More testing
+  - pytest
