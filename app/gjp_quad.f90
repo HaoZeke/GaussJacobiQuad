@@ -12,10 +12,15 @@ character(len=:), allocatable :: method
 integer :: idx
 
 if (command_argument_count() /= 4) then
-    print*,"./gjp_quad <n_points> <alpha> <beta> <method>"
+    print*,"Usage: ./gjp_quad <n_points> <alpha> <beta> <method>"
+    print*,"  n_points: Number of quadrature points (integer)"
+    print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
+    print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
+    print*,"  method: Method to use for computation (supported: 'recurrence')"
+    print*," "
+    print*,"For Gauss-Jacobi quadrature, the weight function is (b-x)^alpha*(x-a)^beta."
     error stop "Must supply 4 arguments"
 end if
-
 call get_command_argument(1, arg)
 read (arg, '(i4)') n_points
 allocate (x(n_points), w(n_points))

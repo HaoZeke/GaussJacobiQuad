@@ -12,7 +12,10 @@ character(len=:), allocatable :: method
 integer :: idx, ierr
 
 if (command_argument_count() /= 3) then
-    print*,"./gjp_quad_rec <n_points> <alpha> <beta>"
+    print*,"Usage: ./gjp_quad_rec <n_points> <alpha> <beta>"
+    print*,"  n_points: Number of quadrature points (integer)"
+    print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
+    print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
     error stop "Must supply 3 arguments"
 end if
 
