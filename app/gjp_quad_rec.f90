@@ -1,6 +1,6 @@
 program gjp_quad_rec
 
-use GaussJacobiQuad, only: gauss_jacobi_rec
+use GaussJacobiQuad, only: gauss_jacobi
 use gjp_types, only: dp
 implicit none
 
@@ -8,6 +8,7 @@ integer :: n_points
 real(dp) :: alpha, beta
 real(dp), dimension(:), allocatable :: x, w
 character(len=128) :: arg
+character(len=:), allocatable :: method
 integer :: idx, ierr
 
 if (command_argument_count() /= 3) then
@@ -33,7 +34,8 @@ if (index(arg, '.') == 0) then
 end if
 read (arg, *) beta
 
-call gauss_jacobi_rec(n_points, alpha, beta, x, w)
+method = "recurrence"
+call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
 do idx = 1, n_points
     print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
