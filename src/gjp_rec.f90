@@ -13,6 +13,7 @@ use gjp_constants, only: pi
 implicit none
 contains
 
+! This returns unsorted roots and weights
 subroutine gauss_jacobi_rec(n, a, b, x, w)
     integer, intent(in) :: n
     real(dp), intent(in) :: a, b

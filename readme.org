@@ -1,6 +1,6 @@
 * About
 
-A permissively licensed modern implementation of Gauss-Jacobi quadrature.
+A permissively licensed modern implementation of Gauss-Jacobi quadrature which returns the weights and nodes over the standard interval $[-1, 1]$.
 ** Usage
 The most automated approach is to use the ~conda~ environment and ~fpm~ build:
 #+begin_src bash
