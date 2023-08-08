@@ -1,6 +1,7 @@
 module gjp_gw
 use gjp_types, only: dp, gjp_sparse_matrix
 use gjp_constants, only: pi
+use gjp_lapack, only: DSTEQR
 implicit none
 contains
 
@@ -13,20 +14,7 @@ subroutine gauss_jacobi_gw(n, a, b, x, w)
     real(dp) :: d(n), e(n - 1), z(n, n), work(2 * n - 2)
     integer :: info, i
 
-    interface
-        subroutine DSTEQR(COMPZ, N, D, E, Z, LDZ, WORK, INFO)
-            use gjp_types, only: dp
-            character :: COMPZ
-            integer :: N, LDZ, INFO
-            real(dp) :: D(*), E(*), Z(LDZ, *), WORK(*)
-        end subroutine DSTEQR
-    end interface
-    ! Compute the Jacobi matrix
     jacmat = jacobi_matrix(n, a, b)
-    print*,"The diagonal elements"
-    print*,jacmat%diagonal(1:n)
-    print*,"The off-diagonal elements"
-    print*,jacmat%off_diagonal(1:n - 1)
     zmom = jacobi_zeroeth_moment(a, b)
 
     ! Extract diagonal and off-diagonal elements
@@ -49,7 +37,8 @@ subroutine gauss_jacobi_gw(n, a, b, x, w)
 
     ! The eigenvalues are the nodes
     x = d
-    ! The weights are related to the squares of the first components of the eigenvectors
+    ! The weights are related to the squares of the first components of the
+    ! eigenvectors
     w = z(1, :)**2 * zmom
 
 end subroutine gauss_jacobi_gw
