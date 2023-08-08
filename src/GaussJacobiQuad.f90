@@ -5,6 +5,7 @@
 !! based on the method provided. Available methods include "recurrence".
 module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec
+use gjp_gw, only: gauss_jacobi_gw
 use gjp_types, only: dp
 implicit none
 contains
@@ -26,11 +27,13 @@ subroutine gauss_jacobi(n, a, b, x, w, method)
     end if
 
     select case (trim(method))
-    case ("recurrence")
+    case ("recurrence") ! Fails at high beta
         call gauss_jacobi_rec(n, a, b, x, w)
+    case ("gw") ! Accurate for high beta
+        call gauss_jacobi_gw(n, a, b, x, w)
     case default
         print*,"Error: Unknown method specified:", method
-        print*,"Supported methods: 'recurrence'"
+        print*,"Supported methods: 'recurrence', 'gw''"
         error stop
     end select
 end subroutine gauss_jacobi

@@ -13,6 +13,7 @@ use gjp_constants, only: pi
 implicit none
 contains
 
+! This returns unsorted roots and weights
 subroutine gauss_jacobi_rec(n, a, b, x, w)
     integer, intent(in) :: n
     real(dp), intent(in) :: a, b
@@ -20,19 +21,20 @@ subroutine gauss_jacobi_rec(n, a, b, x, w)
     real(dp), dimension(ceiling(n/2._dp)) :: x1, ders1
     real(dp), dimension(n/2) :: x2, ders2
     real(dp) :: ders(n), C
-    integer :: i
+    integer :: idx
     call recurrence(n, ceiling(n / 2._dp), a, b, x1, ders1)
     call recurrence(n, n / 2, b, a, x2, ders2)
-    do i = 1, n / 2
-        x(i) = -x2(n / 2 - i + 1)
-        ders(i) = ders2(n / 2 - i + 1)
+    do idx = 1, n / 2
+        x(idx) = -x2(n / 2 - idx + 1)
+        ders(idx) = ders2(n / 2 - idx + 1)
     end do
-    do i = 1, ceiling(n / 2._dp)
-        x(n / 2 + i) = x1(i)
-        ders(n / 2 + i) = ders1(i)
+    do idx = 1, ceiling(n / 2._dp)
+        x(n / 2 + idx) = x1(idx)
+        ders(n / 2 + idx) = ders1(idx)
     end do
     w = 1.0d0 / ((1.0d0 - x**2) * ders**2)
-    C = 2**(a + b + 1) * exp(log_gamma(n + a + 1) - log_gamma(n + a + b + 1) + &
+    C = 2**(a + b + 1) * exp(log_gamma(n + a + 1) - &
+                             log_gamma(n + a + b + 1) + &
                              log_gamma(n + b + 1) - log_gamma(n + 1._dp)); 
     w = w * C
 end subroutine gauss_jacobi_rec

@@ -1,6 +1,6 @@
 * About
 
-A permissively licensed modern implementation of Gauss-Jacobi quadrature.
+A permissively licensed modern implementation of Gauss-Jacobi quadrature which returns the weights and nodes over the standard interval $[-1, 1]$.
 ** Usage
 The most automated approach is to use the ~conda~ environment and ~fpm~ build:
 #+begin_src bash
@@ -8,7 +8,7 @@ micromamba create -f environment.yml
 micromamba activate gaussjacquad
 fpm build
 #+end_src
-** Testing
+
 An analytic result can be obtained from the ~scripts~ folder.
 #+begin_src bash
 python scripts/gen_analytic_vals.py --npts <npoints> --alpha <alpha> --beta <beta> --n_dig <precision>
@@ -21,7 +21,11 @@ fpm run gjp_quad_rec -- <npoints> <alpha> <beta>
 fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
-Currently the only supported method is "recurrence".
+Currently the only supported methods are "recurrence" and "gw" (Golub Welsch).
+
+** Notes
+The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
+should be used in such situations.
 
 ** Development
 *** Developing locally
