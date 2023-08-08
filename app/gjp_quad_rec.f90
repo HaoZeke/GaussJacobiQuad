@@ -8,7 +8,7 @@ integer :: n_points
 real(dp) :: alpha, beta
 real(dp), dimension(:), allocatable :: x, w
 character(len=128) :: arg
-integer :: i
+integer :: idx, ierr
 
 if (command_argument_count() /= 3) then
     print*,"./gjp_quad <n_points> <alpha> <beta>"
@@ -20,15 +20,23 @@ read (arg, '(i4)') n_points
 allocate (x(n_points), w(n_points))
 
 call get_command_argument(2, arg)
-read (arg, '(f8.3)') alpha
+if (index(arg, '.') == 0) then
+    print*,"alpha must include a decimal point"
+    error stop
+end if
+read (arg, *) alpha
 
 call get_command_argument(3, arg)
-read (arg, '(f8.3)') beta
+if (index(arg, '.') == 0) then
+    print*,"beta must include a decimal point"
+    error stop
+end if
+read (arg, *) beta
 
 call gauss_jacobi_rec(n_points, alpha, beta, x, w)
 
-do i = 1, n_points
-    print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(i), 'Weight: ', w(i)
+do idx = 1, n_points
+    print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
 end do
 
 deallocate (x, w)
