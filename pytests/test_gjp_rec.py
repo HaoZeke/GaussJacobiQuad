@@ -17,7 +17,15 @@ def extract_values(output_str):
 
 def run_fortran(n, alpha, beta):
     result = subprocess.run(
-        ["fpm", "run", "gjp_quad_rec", "--", str(n), str(alpha), str(beta)],
+        [
+            "fpm",
+            "run",
+            "gjp_quad_rec",
+            "--",
+            str(n),
+            "{:.1f}".format(alpha),
+            "{:.1f}".format(beta),
+        ],
         stdout=subprocess.PIPE,
     )
     return extract_values(result.stdout.decode())
@@ -43,8 +51,8 @@ def run_python(n, alpha, beta):
 @pytest.mark.parametrize(
     "n, alpha, beta",
     [
-        (3, 1.0, 5.0),
-        (5, 2.0, 3.0),
+        (3, 1, 5),
+        (5, 2, 3),
         pytest.param(
             10,
             0.0,
