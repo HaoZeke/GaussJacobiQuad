@@ -15,16 +15,17 @@ def extract_values(output_str):
     return np.array(roots), np.array(weights)
 
 
-def run_fortran(n, alpha, beta):
+def run_fortran(n, alpha, beta, method):
     result = subprocess.run(
         [
             "fpm",
             "run",
-            "gjp_quad_rec",
+            "gjp_quad",
             "--",
             str(n),
             "{:.1f}".format(alpha),
             "{:.1f}".format(beta),
+            method,
         ],
         stdout=subprocess.PIPE,
     )
@@ -49,21 +50,29 @@ def run_python(n, alpha, beta):
 
 
 @pytest.mark.parametrize(
-    "n, alpha, beta",
+    "n, alpha, beta, method",
     [
-        (3, 1, 5),
-        (5, 2, 3),
+        (3, 1, 5, "recurrence"),
+        (5, 2, 3, "recurrence"),
         pytest.param(
             10,
             0.0,
             30.0,
+            "recurrence",
             marks=pytest.mark.xfail(reason="High beta values diverge"),
-            id="highbeta_fail",
+        ),
+        (3, 1, 5, "gw"),
+        (5, 2, 3, "gw"),
+        pytest.param(
+            10,
+            0.0,
+            30.0,
+            "gw",
         ),
     ],
 )
-def test_gjp_quad_rec(n, alpha, beta):
-    fortran_roots, fortran_weights = run_fortran(n, alpha, beta)
+def test_gjp_quad_rec(n, alpha, beta, method):
+    fortran_roots, fortran_weights = run_fortran(n, alpha, beta, method)
     python_roots, python_weights = run_python(n, alpha, beta)
 
     assert np.allclose(fortran_roots, python_roots, atol=1e-14)
