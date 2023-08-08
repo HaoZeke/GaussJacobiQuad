@@ -1,3 +1,9 @@
+!> @brief Module for computing Gauss-Jacobi quadrature nodes and weights using the Golub-Welsch (GW) method
+!> @details The implementation is based on the Golub-Welsch method as used in chebfun (https://chebfun.org) and references:
+!>   [1] G. H. Golub and J. A. Welsch, "Calculation of Gauss quadrature
+!>       rules", Math. Comp. 23:221-230, 1969.
+!>   [2] N. Hale and A. Townsend, "Fast computation of Gauss-Jacobi
+!>       quadrature nodes and weights", SISC, 2012.
 module gjp_gw
 use gjp_types, only: dp, gjp_sparse_matrix
 use gjp_constants, only: pi
@@ -5,6 +11,30 @@ use gjp_lapack, only: DSTEQR
 implicit none
 contains
 
+!> @brief Computes the zeros and weights for Gauss-Jacobi quadrature.
+!>
+!> This subroutine computes the zeros (`x`) and weights (`w`) for Gauss-Jacobi quadrature
+!> by diagonalizing the Jacobi matrix. The solution involves finding the eigenvalues of the Jacobi matrix,
+!> which are the roots of the Jacobi polynomial. Since the Jacobi matrix is a symmetric tridiagonal matrix,
+!> the LAPACK DSTEQR routine is used, utilizing its specific form for tridiagonal matrices.
+!>
+!> The Jacobi matrix is represented as:
+!> \[
+!> J = \begin{bmatrix}
+!>   \alpha & \beta  & 0      & \cdots & 0      \\
+!>   \beta  & \alpha & \beta  & \cdots & 0      \\
+!>   \vdots & \vdots & \ddots & \ddots & \vdots \\
+!>   0      & 0      & \cdots & \beta  & \alpha
+!> \end{bmatrix}
+!> \]
+!>
+!> `Z` is initialized as the identity matrix, and the eigenvectors are used to compute the weights.
+!>
+!> @param n Number of nodes
+!> @param a Alpha parameter for Jacobi polynomials
+!> @param b Beta parameter for Jacobi polynomials
+!> @param x (Output) Zeros of Jacobi polynomials
+!> @param w (Output) Weights for Gauss-Jacobi quadrature
 subroutine gauss_jacobi_gw(n, a, b, x, w)
     integer, intent(in) :: n
     real(dp), intent(in) :: a, b
@@ -43,6 +73,21 @@ subroutine gauss_jacobi_gw(n, a, b, x, w)
 
 end subroutine gauss_jacobi_gw
 
+!> @brief Computes the Jacobi matrix for given parameters.
+!>
+!> The Jacobi matrix is computed as:
+!> \[
+!> J_{i,j} = \begin{cases}
+!>   \alpha & \text{if } i = j \\
+!>   \beta  & \text{if } |i-j| = 1 \\
+!>   0     & \text{otherwise}
+!> \end{cases}
+!> \]
+!>
+!> @param n Size of the matrix, number of points
+!> @param alpha Alpha parameter for Jacobi polynomials
+!> @param beta Beta parameter for Jacobi polynomials
+!> @return A gjp_sparse_matrix representing the Jacobi matrix
 function jacobi_matrix(n, alpha, beta) result(jacmat)
     integer, intent(in) :: n ! Size of the matrix, number of points
     real(dp), intent(in) :: alpha, beta
@@ -71,6 +116,18 @@ function jacobi_matrix(n, alpha, beta) result(jacmat)
     jacmat%off_diagonal(1:n - 1) = sqrt(jacmat%off_diagonal(1:n - 1))
 end function jacobi_matrix
 
+!> @brief Computes the zeroth moment for Jacobi polynomials.
+!>
+!> The zeroth moment is computed using the formula:
+!> \[
+!> \text{zmom} = 2^{(\alpha + \beta + 1)} \frac{\Gamma(\alpha + 1) \Gamma(\beta + 1)}{\Gamma(2 + \alpha + \beta)}
+!> \]
+!> Where \(\Gamma\) is the gamma function.
+!>
+!> @param alpha Alpha parameter for Jacobi polynomials
+!> @param beta Beta parameter for Jacobi polynomials
+!> @return The zeroth moment value
+!> @note The zeroth moment should always be positive
 function jacobi_zeroeth_moment(alpha, beta) result(zmom)
     real(dp), intent(in) :: alpha, beta
     real(dp) :: zmom
