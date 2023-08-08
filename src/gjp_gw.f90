@@ -4,6 +4,9 @@
 !>       rules", Math. Comp. 23:221-230, 1969.
 !>   [2] N. Hale and A. Townsend, "Fast computation of Gauss-Jacobi
 !>       quadrature nodes and weights", SISC, 2012.
+!>   [3] Kautsky, J., Elhay, S. Calculation of the weights of interpolatory
+!>   quadratures. Numer. Math. 40, 407–422 (1982).
+!>   https://doi.org/10.1007/BF01396453
 module gjp_gw
 use gjp_types, only: dp, gjp_sparse_matrix
 use gjp_constants, only: pi
