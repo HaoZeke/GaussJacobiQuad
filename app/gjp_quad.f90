@@ -1,4 +1,4 @@
-program gjp_quad_rec
+program gjp_quad
 
 use GaussJacobiQuad, only: gauss_jacobi
 use gjp_types, only: dp
@@ -9,16 +9,18 @@ real(dp) :: alpha, beta
 real(dp), dimension(:), allocatable :: x, w
 character(len=128) :: arg
 character(len=:), allocatable :: method
-integer :: idx, ierr
+integer :: idx
 
-if (command_argument_count() /= 3) then
-    print*,"Usage: ./gjp_quad_rec <n_points> <alpha> <beta>"
+if (command_argument_count() /= 4) then
+    print*,"Usage: ./gjp_quad <n_points> <alpha> <beta> <method>"
     print*,"  n_points: Number of quadrature points (integer)"
     print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
     print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
-    error stop "Must supply 3 arguments"
+    print*,"  method: Method to use for computation (supported: 'recurrence')"
+    print*," "
+    print*,"For Gauss-Jacobi quadrature, the weight function is (b-x)^alpha*(x-a)^beta."
+    error stop "Must supply 4 arguments"
 end if
-
 call get_command_argument(1, arg)
 read (arg, '(i4)') n_points
 allocate (x(n_points), w(n_points))
@@ -37,7 +39,9 @@ if (index(arg, '.') == 0) then
 end if
 read (arg, *) beta
 
-method = "recurrence"
+call get_command_argument(4, arg)
+method = trim(arg)
+
 call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
 do idx = 1, n_points
@@ -46,4 +50,4 @@ end do
 
 deallocate (x, w)
 
-end program gjp_quad_rec
+end program gjp_quad

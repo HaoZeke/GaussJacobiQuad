@@ -18,7 +18,10 @@ fpm test
 Running the implemented recursion based Gauss-Jacobi can be done via:
 #+begin_src bash
 fpm run gjp_quad_rec -- <npoints> <alpha> <beta>
+fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
+
+Currently the only supported method is "recurrence".
 
 ** Development
 *** Developing locally
