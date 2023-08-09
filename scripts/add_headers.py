@@ -2,11 +2,18 @@
 
 import os
 import re
+from datetime import datetime
 
 from jinja2 import Template
 
 # Get the Git root directory
 GITROOT = os.popen("git rev-parse --show-toplevel").read().strip()
+
+# Get the current date
+current_date = datetime.now().strftime("%Y-%m-%d")
+
+# Get the latest commit hash
+commit_hash = os.popen("git rev-parse HEAD").read().strip()[:7]
 
 # Define the header template using Jinja2
 header_template = Template(
@@ -17,6 +24,8 @@ header_template = Template(
 ! Source: {{ library_name }} Library
 ! License: MIT
 ! GitHub Repository: {{ repository_url }}
+! Date: {{ date }}
+! Commit: {{ commit }}
 ! -----------------------------------------------------------------------------
 ! This code is part of the {{ library_name }} library, providing an efficient
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
@@ -31,6 +40,8 @@ header_text = header_template.render(
     author="Rohit Goswami <rgoswami[at]ieee.org>",
     repository_url="https://github.com/HaoZeke/GaussJacobiQuad",
     library_name="GaussJacobiQuad",
+    date=current_date,
+    commit=commit_hash,
 )
 
 # Iterate over all Fortran files in the SRC directory
