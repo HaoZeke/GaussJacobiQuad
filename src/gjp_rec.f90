@@ -28,34 +28,34 @@ implicit none
 contains
 
 ! This returns unsorted roots and weights
-subroutine gauss_jacobi_rec(n, a, b, x, w)
-    integer, intent(in) :: n
-    real(dp), intent(in) :: a, b
-    real(dp), intent(out) :: x(n), w(n)
-    real(dp), dimension(ceiling(n/2._dp)) :: x1, ders1
-    real(dp), dimension(n/2) :: x2, ders2
-    real(dp) :: ders(n), C
+subroutine gauss_jacobi_rec(npts, alpha, beta, x, wts)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
+    real(dp), dimension(ceiling(npts/2._dp)) :: x1, ders1
+    real(dp), dimension(npts/2) :: x2, ders2
+    real(dp) :: ders(npts), C
     integer :: idx
-    call recurrence(n, ceiling(n / 2._dp), a, b, x1, ders1)
-    call recurrence(n, n / 2, b, a, x2, ders2)
-    do idx = 1, n / 2
-        x(idx) = -x2(n / 2 - idx + 1)
-        ders(idx) = ders2(n / 2 - idx + 1)
+    call recurrence(npts, ceiling(npts / 2._dp), alpha, beta, x1, ders1)
+    call recurrence(npts, npts / 2, beta, alpha, x2, ders2)
+    do idx = 1, npts / 2
+        x(idx) = -x2(npts / 2 - idx + 1)
+        ders(idx) = ders2(npts / 2 - idx + 1)
     end do
-    do idx = 1, ceiling(n / 2._dp)
-        x(n / 2 + idx) = x1(idx)
-        ders(n / 2 + idx) = ders1(idx)
+    do idx = 1, ceiling(npts / 2._dp)
+        x(npts / 2 + idx) = x1(idx)
+        ders(npts / 2 + idx) = ders1(idx)
     end do
-    w = 1.0d0 / ((1.0d0 - x**2) * ders**2)
-    C = 2**(a + b + 1) * exp(log_gamma(n + a + 1) - &
-                             log_gamma(n + a + b + 1) + &
-                             log_gamma(n + b + 1) - log_gamma(n + 1._dp)); 
-    w = w * C
+    wts = 1.0d0 / ((1.0d0 - x**2) * ders**2)
+    C = 2**(alpha + beta + 1) * exp(log_gamma(npts + alpha + 1) - &
+                                    log_gamma(npts + alpha + beta + 1) + &
+                                    log_gamma(npts + beta + 1) - log_gamma(npts + 1._dp))
+    wts = wts * C
 end subroutine gauss_jacobi_rec
 
-subroutine recurrence(n, n2, a, b, x, PP)
-    integer, intent(in) :: n, n2
-    real(dp), intent(in) :: a, b
+subroutine recurrence(npts, n2, alpha, beta, x, PP)
+    integer, intent(in) :: npts, n2
+    real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(n2), PP(n2)
     real(dp) :: dx(n2), P(n2)
     integer :: r(n2), l, i
@@ -66,8 +66,8 @@ subroutine recurrence(n, n2, a, b, x, PP)
     end do
 
     do i = 1, n2
-        C = (2 * r(i) + a - 0.5d0) * pi / (2 * n + a + b + 1)
-        T = C + 1 / (2 * n + a + b + 1)**2 * ((0.25d0 - a**2) / tan(0.5d0 * C) - (0.25d0 - b**2) * tan(0.5d0 * C))
+        C = (2 * r(i) + alpha - 0.5d0) * pi / (2 * npts + alpha + beta + 1)
+        T = C + 1 / (2 * npts + alpha + beta + 1)**2 * ((0.25d0 - alpha**2) / tan(0.5d0 * C) - (0.25d0 - beta**2) * tan(0.5d0 * C))
         x(i) = cos(T)
     end do
 
@@ -76,38 +76,38 @@ subroutine recurrence(n, n2, a, b, x, PP)
 
     do while (maxval(abs(dx)) > sqrt(epsilon(1.0d0)) / 1000 .and. l < 10)
         l = l + 1
-        call eval_jacobi_poly(x, n, a, b, P, PP)
+        call eval_jacobi_poly(x, npts, alpha, beta, P, PP)
         dx = -P / PP
         x = x + dx
     end do
 
-    call eval_jacobi_poly(x, n, a, b, P, PP)
+    call eval_jacobi_poly(x, npts, alpha, beta, P, PP)
 end subroutine
 
-subroutine eval_jacobi_poly(x, n, a, b, P, Pp)
-    integer, intent(in) :: n
-    real(dp), intent(in) :: a, b
+subroutine eval_jacobi_poly(x, npts, alpha, beta, P, Pp)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
     real(dp), intent(in) :: x(:)
     real(dp), dimension(size(x)), intent(out) :: P, Pp
     real(dp), dimension(size(x)) :: Pm1, Ppm1, Pa1, Ppa1
     integer :: k, i
     real(dp) :: A_val, B_val, C_val, D_val
 
-    P = 0.5d0 * (a - b + (a + b + 2) * x)
+    P = 0.5d0 * (alpha - beta + (alpha + beta + 2) * x)
     Pm1 = 1.0d0
-    Pp = 0.5d0 * (a + b + 2)
+    Pp = 0.5d0 * (alpha + beta + 2)
     Ppm1 = 0.0d0
 
-    if (n == 0) then
+    if (npts == 0) then
         P = Pm1
         Pp = Ppm1
     end if
 
-    do k = 1, n - 1
-        A_val = 2 * (k + 1) * (k + a + b + 1) * (2 * k + a + b)
-        B_val = (2 * k + a + b + 1) * (a**2 - b**2)
-        C_val = product([(2 * k + a + b + i, i=0, 2)])
-        D_val = 2 * (k + a) * (k + b) * (2 * k + a + b + 2)
+    do k = 1, npts - 1
+        A_val = 2 * (k + 1) * (k + alpha + beta + 1) * (2 * k + alpha + beta)
+        B_val = (2 * k + alpha + beta + 1) * (alpha**2 - beta**2)
+        C_val = product([(2 * k + alpha + beta + i, i=0, 2)])
+        D_val = 2 * (k + alpha) * (k + beta) * (2 * k + alpha + beta + 2)
 
         Pa1 = ((B_val + C_val * x) * P - D_val * Pm1) / A_val
         Ppa1 = ((B_val + C_val * x) * Pp + C_val * P - D_val * Ppm1) / A_val

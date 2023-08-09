@@ -24,27 +24,27 @@ use gjp_types, only: dp
 implicit none
 contains
 
-subroutine gauss_jacobi(n, a, b, x, w, method)
-    integer, intent(in) :: n
-    real(dp), intent(in) :: a, b
-    real(dp), intent(out) :: x(n), w(n)
+subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
     character(len=:), allocatable, intent(in) :: method
 
-    if (a <= -1.0_dp) then
+    if (alpha <= -1.0_dp) then
         print*,"Error: alpha must be greater than -1"
         error stop
     end if
 
-    if (b <= -1.0_dp) then
+    if (beta <= -1.0_dp) then
         print*,"Error: beta must be greater than -1"
         error stop
     end if
 
     select case (trim(method))
     case ("recurrence") ! Fails at high beta
-        call gauss_jacobi_rec(n, a, b, x, w)
+        call gauss_jacobi_rec(npts, alpha, beta, x, wts)
     case ("gw") ! Accurate for high beta
-        call gauss_jacobi_gw(n, a, b, x, w)
+        call gauss_jacobi_gw(npts, alpha, beta, x, wts)
     case default
         print*,"Error: Unknown method specified:", method
         print*,"Supported methods: 'recurrence', 'gw''"
