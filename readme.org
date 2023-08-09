@@ -38,5 +38,10 @@ pipx run pre-commit run --all-files
 # Or install the git hook to enforce this
 pipx run pre-commit install
 #+end_src
+*** Updating licenses
+When the headers in the sources need to be updated modify ~add_headers.py~ and run:
+#+begin_src sh
+python scripts/add_headers.py
+#+end_src
 * License
 MIT.
