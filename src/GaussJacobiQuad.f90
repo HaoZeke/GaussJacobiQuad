@@ -24,6 +24,24 @@ use gjp_types, only: dp
 implicit none
 contains
 
+!> @brief Compute the Gauss-Jacobi quadrature nodes and weights.
+!>
+!> This subroutine calculates the Gauss-Jacobi quadrature nodes and weights for the given parameters @f$\alpha@f$ and @f$\beta@f$,
+!> using the specified method. Gauss-Jacobi quadrature is used to approximate integrals of the form:
+!> \[
+!>   \int_{-1}^{1} (1 - x)^\alpha (1 + x)^\beta f(x) \,dx \approx \sum_{i=1}^{npts} wts_i f(x_i)
+!> \]
+!> where the weights and nodes are calculated with the Jacobi polynomial, which is defined as:
+!> \[
+!>   P_n^{(\alpha, \beta)}(x) = \frac{(\alpha + 1)_n}{n!} \sum_{k=0}^n \binom{n}{k} \frac{(\beta + 1)_{n-k}}{(n-k)!} \left( \frac{x-1}{2} \right)^k \left( \frac{x+1}{2} \right)^{n-k}
+!> \]
+!>
+!> @param[in] npts Number of quadrature points.
+!> @param[in] alpha Parameter alpha in the Jacobi polynomial. Must be greater than -1.
+!> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
+!> @param[out] x Quadrature nodes.
+!> @param[out] wts Quadrature weights.
+!> @param[in] method Method used for calculation. Supported methods are "recurrence" and "gw".
 subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta

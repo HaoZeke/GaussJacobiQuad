@@ -46,11 +46,11 @@ contains
 !>
 !> `Z` is initialized as the identity matrix, and the eigenvectors are used to compute the wts.
 !>
-!> @param npts Number of x
-!> @param alpha Alpha parameter for Jacobi polynomials
-!> @param beta Beta parameter for Jacobi polynomials
-!> @param x (Output) Zeros of Jacobi polynomials
-!> @param wts (Output) Wts for Gauss-Jacobi quadrature
+!> @param[in] npts Number of x
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
+!> @param[out] x Zeros of Jacobi polynomials
+!> @param[out] wts weights for Gauss-Jacobi quadrature
 subroutine gauss_jacobi_gw(npts, alpha, beta, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
@@ -104,9 +104,9 @@ end subroutine gauss_jacobi_gw
 !> \end{cases}
 !> \]
 !>
-!> @param n Size of the matrix, number of points
-!> @param alpha Alpha parameter for Jacobi polynomials
-!> @param beta Beta parameter for Jacobi polynomials
+!> @param[in] n Size of the matrix, number of points
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
 !> @return A gjp_sparse_matrix representing the Jacobi matrix
 function jacobi_matrix(n, alpha, beta) result(jacmat)
     integer, intent(in) :: n ! Size of the matrix, number of points
@@ -144,8 +144,8 @@ end function jacobi_matrix
 !> \]
 !> Where \(\Gamma\) is the gamma function.
 !>
-!> @param alpha Alpha parameter for Jacobi polynomials
-!> @param beta Beta parameter for Jacobi polynomials
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
 !> @return The zeroth moment value
 !> @note The zeroth moment should always be positive
 function jacobi_zeroeth_moment(alpha, beta) result(zmom)
