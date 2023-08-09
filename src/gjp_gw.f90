@@ -1,3 +1,17 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! Date: 2023-08-09
+! Commit: b04e1b3
+! -----------------------------------------------------------------------------
+! This code is part of the GaussJacobiQuad library, providing an efficient
+! implementation for Gauss-Jacobi quadrature nodes and weights computation.
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> @brief Module for computing Gauss-Jacobi quadrature nodes and weights using the Golub-Welsch (GW) method
 !> @details The implementation is based on the Golub-Welsch method as used in chebfun (https://chebfun.org) and references:
 !>   [1] G. H. Golub and J. A. Welsch, "Calculation of Gauss quadrature

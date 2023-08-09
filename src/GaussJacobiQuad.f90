@@ -1,3 +1,17 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! Date: 2023-08-09
+! Commit: b04e1b3
+! -----------------------------------------------------------------------------
+! This code is part of the GaussJacobiQuad library, providing an efficient
+! implementation for Gauss-Jacobi quadrature nodes and weights computation.
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> @brief Overall driver for Gauss-Jacobi quadrature.
 !
 !! @details This module implements the Gauss-Jacobi quadrature method for numerical integration.
