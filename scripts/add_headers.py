@@ -67,4 +67,4 @@ for root, dirs, files in os.walk(os.path.join(GITROOT, "src")):
             with open(filepath, "w") as file:
                 file.write(content)
 
-print("Headers added or updated in all Fortran files in {}/src.".format(GITROOT))
+print(f"Headers added or updated in all Fortran files in {GITROOT}/src.")
