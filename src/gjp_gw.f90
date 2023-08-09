@@ -23,7 +23,6 @@
 !>   https://doi.org/10.1007/BF01396453
 module gjp_gw
 use gjp_types, only: dp, gjp_sparse_matrix
-use gjp_constants, only: pi
 use gjp_lapack, only: DSTEQR
 implicit none
 contains
@@ -45,48 +44,52 @@ contains
 !> \end{bmatrix}
 !> \]
 !>
-!> `Z` is initialized as the identity matrix, and the eigenvectors are used to compute the weights.
+!> `Z` is initialized as the identity matrix, and the eigenvectors are used to compute the wts.
 !>
-!> @param n Number of nodes
-!> @param a Alpha parameter for Jacobi polynomials
-!> @param b Beta parameter for Jacobi polynomials
-!> @param x (Output) Zeros of Jacobi polynomials
-!> @param w (Output) Weights for Gauss-Jacobi quadrature
-subroutine gauss_jacobi_gw(n, a, b, x, w)
-    integer, intent(in) :: n
-    real(dp), intent(in) :: a, b
-    real(dp), intent(out) :: x(n), w(n)
-    real(dp) :: zmom
-    type(gjp_sparse_matrix) :: jacmat
-    real(dp) :: d(n), e(n - 1), z(n, n), work(2 * n - 2)
-    integer :: info, i
+!> @param[in] npts Number of x
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
+!> @param[out] x Zeros of Jacobi polynomials
+!> @param[out] wts weights for Gauss-Jacobi quadrature
+subroutine gauss_jacobi_gw(npts, alpha, beta, x, wts)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
+    real(dp) :: zeroeth_moment
+    type(gjp_sparse_matrix) :: jacobi_mat
+    real(dp) :: diagonal_elements(npts), &
+                off_diagonal_elements(npts - 1), &
+                eigenvectors(npts, npts), &
+                workspace(2 * npts - 2)
+    integer :: computation_info, i
 
-    jacmat = jacobi_matrix(n, a, b)
-    zmom = jacobi_zeroeth_moment(a, b)
+    jacobi_mat = jacobi_matrix(npts, alpha, beta)
+    zeroeth_moment = jacobi_zeroeth_moment(alpha, beta)
 
     ! Extract diagonal and off-diagonal elements
-    d = jacmat%diagonal(1:n)
-    e = jacmat%off_diagonal(1:n - 1)
+    diagonal_elements = jacobi_mat%diagonal(1:npts)
+    off_diagonal_elements = jacobi_mat%off_diagonal(1:npts - 1)
 
-    ! Initialize z as identity matrix
-    z = 0.0_dp
-    do i = 1, n
-        z(i, i) = 1.0_dp
+    ! Initialize eigenvectors as identity matrix
+    eigenvectors = 0.0_dp
+    do i = 1, npts
+        eigenvectors(i, i) = 1.0_dp
     end do
 
-    ! Diagonalize the Jacobi matrix.
-    call DSTEQR('V', n, d, e, z, n, work, info)
+    ! Diagonalize the Jacobi matrix using DSTEQR.
+    call DSTEQR('V', npts, diagonal_elements, off_diagonal_elements, &
+                eigenvectors, npts, workspace, computation_info)
 
-    if (info /= 0) then
-        print*,'Error in DSTEQR:', info
-        return
+    if (computation_info /= 0) then
+        write (*, *) 'Error in DSTEQR, info:', computation_info
+        error stop
     end if
 
     ! The eigenvalues are the nodes
-    x = d
+    x = diagonal_elements
     ! The weights are related to the squares of the first components of the
     ! eigenvectors
-    w = z(1, :)**2 * zmom
+    wts = eigenvectors(1, :)**2 * zeroeth_moment
 
 end subroutine gauss_jacobi_gw
 
@@ -101,9 +104,9 @@ end subroutine gauss_jacobi_gw
 !> \end{cases}
 !> \]
 !>
-!> @param n Size of the matrix, number of points
-!> @param alpha Alpha parameter for Jacobi polynomials
-!> @param beta Beta parameter for Jacobi polynomials
+!> @param[in] n Size of the matrix, number of points
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
 !> @return A gjp_sparse_matrix representing the Jacobi matrix
 function jacobi_matrix(n, alpha, beta) result(jacmat)
     integer, intent(in) :: n ! Size of the matrix, number of points
@@ -141,8 +144,8 @@ end function jacobi_matrix
 !> \]
 !> Where \(\Gamma\) is the gamma function.
 !>
-!> @param alpha Alpha parameter for Jacobi polynomials
-!> @param beta Beta parameter for Jacobi polynomials
+!> @param[in] alpha parameter for Jacobi polynomials
+!> @param[in] beta parameter for Jacobi polynomials
 !> @return The zeroth moment value
 !> @note The zeroth moment should always be positive
 function jacobi_zeroeth_moment(alpha, beta) result(zmom)

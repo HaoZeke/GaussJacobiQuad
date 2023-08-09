@@ -24,27 +24,45 @@ use gjp_types, only: dp
 implicit none
 contains
 
-subroutine gauss_jacobi(n, a, b, x, w, method)
-    integer, intent(in) :: n
-    real(dp), intent(in) :: a, b
-    real(dp), intent(out) :: x(n), w(n)
+!> @brief Compute the Gauss-Jacobi quadrature nodes and weights.
+!>
+!> This subroutine calculates the Gauss-Jacobi quadrature nodes and weights for the given parameters @f$\alpha@f$ and @f$\beta@f$,
+!> using the specified method. Gauss-Jacobi quadrature is used to approximate integrals of the form:
+!> \[
+!>   \int_{-1}^{1} (1 - x)^\alpha (1 + x)^\beta f(x) \,dx \approx \sum_{i=1}^{npts} wts_i f(x_i)
+!> \]
+!> where the weights and nodes are calculated with the Jacobi polynomial, which is defined as:
+!> \[
+!>   P_n^{(\alpha, \beta)}(x) = \frac{(\alpha + 1)_n}{n!} \sum_{k=0}^n \binom{n}{k} \frac{(\beta + 1)_{n-k}}{(n-k)!} \left( \frac{x-1}{2} \right)^k \left( \frac{x+1}{2} \right)^{n-k}
+!> \]
+!>
+!> @param[in] npts Number of quadrature points.
+!> @param[in] alpha Parameter alpha in the Jacobi polynomial. Must be greater than -1.
+!> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
+!> @param[out] x Quadrature nodes.
+!> @param[out] wts Quadrature weights.
+!> @param[in] method Method used for calculation. Supported methods are "recurrence" and "gw".
+subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
     character(len=:), allocatable, intent(in) :: method
 
-    if (a <= -1.0_dp) then
+    if (alpha <= -1.0_dp) then
         print*,"Error: alpha must be greater than -1"
         error stop
     end if
 
-    if (b <= -1.0_dp) then
+    if (beta <= -1.0_dp) then
         print*,"Error: beta must be greater than -1"
         error stop
     end if
 
     select case (trim(method))
     case ("recurrence") ! Fails at high beta
-        call gauss_jacobi_rec(n, a, b, x, w)
+        call gauss_jacobi_rec(npts, alpha, beta, x, wts)
     case ("gw") ! Accurate for high beta
-        call gauss_jacobi_gw(n, a, b, x, w)
+        call gauss_jacobi_gw(npts, alpha, beta, x, wts)
     case default
         print*,"Error: Unknown method specified:", method
         print*,"Supported methods: 'recurrence', 'gw''"

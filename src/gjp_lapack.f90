@@ -35,7 +35,7 @@ integer, parameter :: dp = kind(0.d0)
 !> @param INFO INFO = 0: successful exit. INFO = K: the algorithm failed to find all the eigenvalues, no eigenvectors or eigenvectors of order K have been found
 interface
     subroutine DSTEQR(COMPZ, N, D, E, Z, LDZ, WORK, INFO)
-        use gjp_types, only: dp
+        import :: dp
         character :: COMPZ
         integer :: N, LDZ, INFO
         real(dp) :: D(*), E(*), Z(LDZ, *), WORK(*)
