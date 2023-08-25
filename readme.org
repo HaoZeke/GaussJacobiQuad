@@ -53,5 +53,22 @@ When the headers in the sources need to be updated modify ~add_headers.py~ and r
 python scripts/add_headers.py
 #+end_src
 Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
+** Interfaces
+*** ~C~ Header
+We provide a header only interface, which bypasses passing strings between
+Fortran and C. In order to do this, there is some duplication logic in
+~GaussJacobiQuad~ and ~GaussJacobiQuadCInterp~.
+
+There is also a CLI interface to the ~C~ bound interface, ~c_cli_gjpq~. However,
+this will not be compiled by ~fpm~.
+
+#+begin_src bash
+meson setup bbdir
+meson compile -C bbdir
+./bbdir/c_cli_gjpq <npoints> <alpha> <beta> <method>
+#+end_src
+
+The ~C~ CLI might be more pleasant in that decimals do not need to be provided
+explicitly for ~alpha~ and ~beta~.
 * License
 MIT.
