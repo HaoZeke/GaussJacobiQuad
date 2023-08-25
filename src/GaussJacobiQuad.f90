@@ -48,14 +48,17 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     real(dp), intent(out) :: x(npts), wts(npts)
     character(len=:), allocatable, intent(in) :: method
 
+    if (npts <= 0) then
+        error stop "Number of points must be positive"
+    end if
+
     if (alpha <= -1.0_dp) then
-        print*,"Error: alpha must be greater than -1"
-        error stop
+        error stop "alpha must be greater than -1"
     end if
 
     if (beta <= -1.0_dp) then
-        print*,"Error: beta must be greater than -1"
-        error stop
+
+        error stop "beta must be greater than -1"
     end if
 
     select case (trim(method))
