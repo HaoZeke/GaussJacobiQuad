@@ -1,21 +1,21 @@
-! BEGIN_HEADER
-! -----------------------------------------------------------------------------
-! Gauss-Jacobi Quadrature Implementation
-! Authors: Rohit Goswami <rgoswami[at]ieee.org>
-! Source: GaussJacobiQuad Library
-! License: MIT
-! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
-! Date: 2023-08-25
-! Commit: f68c09f
-! -----------------------------------------------------------------------------
-! This code is part of the GaussJacobiQuad library, providing an efficient
-! implementation for Gauss-Jacobi quadrature nodes and weights computation.
-! -----------------------------------------------------------------------------
-! END_HEADER
+// BEGIN_HEADER
+// -----------------------------------------------------------------------------
+// Gauss-Jacobi Quadrature Implementation
+// Authors: Rohit Goswami <rgoswami[at]ieee.org>
+// Source: GaussJacobiQuad Library
+// License: MIT
+// GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+// Date: 2023-08-25
+// Commit: f68c09f
+// -----------------------------------------------------------------------------
+// This code is part of the GaussJacobiQuad library, providing an efficient
+// implementation for Gauss-Jacobi quadrature nodes and weights computation.
+// -----------------------------------------------------------------------------
+// END_HEADER
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../interfaces/GaussJacobiQuadCInterp.h"
+#include "GaussJacobiQuadCInterp.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 5) {
