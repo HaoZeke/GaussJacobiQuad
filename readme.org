@@ -70,5 +70,25 @@ meson compile -C bbdir
 
 The ~C~ CLI might be more pleasant in that decimals do not need to be provided
 explicitly for ~alpha~ and ~beta~.
+*** ~f2py~ generated interface
+The ~ISO_C_ENVIRONMENT~ variant of the code is also used for a ~python~
+interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
+#+begin_src bash
+cd interfaces/PyInterface
+f2py -c --backend meson gjquadpy.pyf ../../src/GaussJacobiQuadCCompat.f90 \
+../../src/GaussJacobiQuad.f90 ../../src/gjp_constants.f90 ../../src/gjp_gw.f90 \
+../../src/gjp_lapack.f90 ../../src/gjp_rec.f90 ../../src/gjp_types.f90 \
+deps: lapack :
+#+end_src
+Once compiled, the ~gjpquad_cli.py~ script can be used to run the code:
+#+begin_src bash
+python gjquad_cli.py --npts 5 --alpha 2 --beta 3
+Root: -6.90457750126761027E-01 Weight: 2.74101780663370022E-02
+Root: -3.26519931349000647E-01 Weight: 2.12917860603648035E-01
+Root:  8.23378495520349085E-02 Weight: 4.39084379443950568E-01
+Root:  4.75178870612831761E-01 Weight: 3.22206565472217876E-01
+Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
+#+end_src
+
 * License
 MIT.
