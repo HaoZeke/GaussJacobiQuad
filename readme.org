@@ -50,7 +50,7 @@ pipx run pre-commit install
 *** Updating licenses
 When the headers in the sources need to be updated modify ~add_headers.py~ and run:
 #+begin_src sh
-python scripts/add_headers.py
+python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,c,h"
 #+end_src
 Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
 ** Interfaces
