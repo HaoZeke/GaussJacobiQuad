@@ -71,6 +71,39 @@ Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
 ** Notes
 The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
 should be used in such situations.
+** Benchmarks
+A very preliminary set can be run once all the interfaces have been compiled:
+#+begin_src bash
+# From $GITROOT
+mv interfaces/PyInterface/gjquadpy*.so .
+hyperfine --warmup 3 --export-markdown gjp_benchmarks.md \
+    'bbdir/gjp_quad 5 2. 3. "gw"' \
+    'bbdir/c_cli_gjpq 5 2 3 gw' \
+    'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/gen_analytic_vals.py --npts 5 --alpha 2 --beta 3 --n_dig 15'
+#+end_src
+
+Which gives:
+#+begin_src bash
+Summary
+  bbdir/gjp_quad 5 2. 3. "gw" ran
+    1.00 ± 0.44 times faster than bbdir/c_cli_gjpq 5 2 3 gw
+   40.30 ± 13.43 times faster than PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3
+   88.42 ± 28.08 times faster than python scripts/gen_analytic_vals.py --npts 5 --alpha 2 --beta 3 --n_dig 15
+hyperfine --warmup 3 --export-markdown gjp_benchmarks.md      17.61s user 29.06s system 357% cpu 13.056 total
+#+end_src
+
+Or in other words:
+| Command                                                       | Mean [ms]   | Min [ms] | Max [ms] | Relative      |
+|---------------------------------------------------------------+-------------+----------+----------+---------------|
+| ~gjp_quad 5 2. 3. "gw"~                                       | 2.5 ± 0.8   |      1.7 |      6.6 | 1.00          |
+| ~c_cli_gjpq 5 2 3 gw~                                         | 2.5 ± 0.8   |      1.7 |      7.4 | 1.00 ± 0.44   |
+| ~gjquad_cli.py --npts 5 --alpha 2 --beta 3~                   | 99.8 ± 10.2 |     95.2 |    146.3 | 40.30 ± 13.43 |
+| ~gen_analytic_vals.py --npts 5 --alpha 2 --beta 3 --n_dig 15~ | 219.0 ± 3.3 |    216.4 |    224.2 | 88.42 ± 28.08 |
+
+Which suggests what one might suspect, that there is a large overhead in calling
+~python~ , and that the ~C~ and ~Fortran~ variants are almost exactly as fast as
+each other.
 ** Development
 *** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
