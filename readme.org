@@ -22,7 +22,6 @@ fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
 Currently the only supported methods are "recurrence" and "gw" (Golub Welsch).
-
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
 
@@ -32,28 +31,7 @@ meson compile -C bbdir
 ./bbdir/gjp_quad <npoints> <alpha> <beta> <method>
 #+end_src
 
-** Notes
-The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
-should be used in such situations.
-
-** Development
-*** Developing locally
-A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
-set it up locally as well (using [[https://pypa.github.io/pipx][pipx]] for isolation):
-
-#+begin_src sh
-# Run before commiting
-pipx run pre-commit run --all-files
-# Or install the git hook to enforce this
-pipx run pre-commit install
-#+end_src
-*** Updating licenses
-When the headers in the sources need to be updated modify ~add_headers.py~ and run:
-#+begin_src sh
-python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,c,h"
-#+end_src
-Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
-** Interfaces
+*** Interfaces
 *** ~C~ Header
 We provide a header only interface, which bypasses passing strings between
 Fortran and C. In order to do this, there is some duplication logic in
@@ -90,5 +68,25 @@ Root:  4.75178870612831761E-01 Weight: 3.22206565472217876E-01
 Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
 #+end_src
 
+** Notes
+The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
+should be used in such situations.
+** Development
+*** Developing locally
+A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
+set it up locally as well (using [[https://pypa.github.io/pipx][pipx]] for isolation):
+
+#+begin_src sh
+# Run before commiting
+pipx run pre-commit run --all-files
+# Or install the git hook to enforce this
+pipx run pre-commit install
+#+end_src
+*** Updating licenses
+When the headers in the sources need to be updated modify ~add_headers.py~ and run:
+#+begin_src sh
+python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,c,h"
+#+end_src
+Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
 * License
 MIT.
