@@ -64,3 +64,11 @@ gjp_cinterp = library('gjp_cinterp',
                       link_with: [gjplib],
                       install: true,
 )
+
+c_cli_gjpq = executable('c_cli_gjpq',
+                       sources: [
+                         'interfaces/c_cli_gjpq.c',
+                       ],
+                       link_with: [gjp_cinterp],
+                       install: true,
+)
