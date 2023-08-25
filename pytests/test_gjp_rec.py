@@ -36,7 +36,7 @@ def run_python(n, alpha, beta):
     result = subprocess.run(
         [
             "python",
-            "scripts/gen_analytic_vals.py",
+            "scripts/sympy_gauss_jac.py",
             "--npts",
             str(n),
             "--alpha",
