@@ -53,3 +53,22 @@ gjp_quad_gw = executable('gjp_quad_gw',
                       link_with: [gjplib],
                       install: true,
 )
+
+# ---------------------- Interfaces
+
+gjp_cinterp = library('gjp_cinterp',
+                      sources: [
+                        'src/GaussJacobiQuadCCompat.f90',
+                        'interfaces/CInterface/GaussJacobiQuadCInterp.h',
+                      ],
+                      link_with: [gjplib],
+                      install: true,
+)
+
+c_cli_gjpq = executable('c_cli_gjpq',
+                       sources: [
+                         'interfaces/CInterface/c_cli_gjpq.c',
+                       ],
+                       link_with: [gjp_cinterp],
+                       install: true,
+)

@@ -1,0 +1,29 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module gjquadpy ! in
+    interface  ! in :gjquadpy
+        module gaussjacobiquadccompat ! in :gjquadpy:GaussJacobiQuadCCompat.f90
+            use iso_c_binding, only: c_double,c_int
+            use gaussjacobiquad, only: gauss_jacobi_rec,gauss_jacobi_gw
+            subroutine gauss_jacobi_rec_c(npts,alpha,beta,x,wts) ! in :gjquadpy:GaussJacobiQuadCCompat.f90:gaussjacobiquadccompat
+                integer(kind=c_int) intent(in) :: npts
+                real(kind=c_double) intent(in) :: alpha
+                real(kind=c_double) intent(in) :: beta
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: x
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: wts
+            end subroutine gauss_jacobi_rec_c
+            subroutine gauss_jacobi_gw_c(npts,alpha,beta,x,wts) ! in :gjquadpy:GaussJacobiQuadCCompat.f90:gaussjacobiquadccompat
+                integer(kind=c_int) intent(in) :: npts
+                real(kind=c_double) intent(in) :: alpha
+                real(kind=c_double) intent(in) :: beta
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: x
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: wts
+            end subroutine gauss_jacobi_gw_c
+        end module gaussjacobiquadccompat
+    end interface
+end python module gjquadpy
+
+! This file was auto-generated with f2py (version:2.0.0.dev0+git20230825.8c078de).
+! See:
+! https://web.archive.org/web/20140822061353/http://cens.ioc.ee/projects/f2py2e

@@ -5,8 +5,8 @@
 ! Source: GaussJacobiQuad Library
 ! License: MIT
 ! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
-! Date: 2023-08-09
-! Commit: b04e1b3
+! Date: 2023-08-25
+! Commit: f68c09f
 ! -----------------------------------------------------------------------------
 ! This code is part of the GaussJacobiQuad library, providing an efficient
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
@@ -48,14 +48,17 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     real(dp), intent(out) :: x(npts), wts(npts)
     character(len=:), allocatable, intent(in) :: method
 
+    if (npts <= 0) then
+        error stop "Number of points must be positive"
+    end if
+
     if (alpha <= -1.0_dp) then
-        print*,"Error: alpha must be greater than -1"
-        error stop
+        error stop "alpha must be greater than -1"
     end if
 
     if (beta <= -1.0_dp) then
-        print*,"Error: beta must be greater than -1"
-        error stop
+
+        error stop "beta must be greater than -1"
     end if
 
     select case (trim(method))

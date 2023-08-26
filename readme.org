@@ -11,7 +11,7 @@ fpm build
 
 An analytic result can be obtained from the ~scripts~ folder.
 #+begin_src bash
-python scripts/gen_analytic_vals.py --npts <npoints> --alpha <alpha> --beta <beta> --n_dig <precision>
+python scripts/sympy_gauss_jac.py --npts <npoints> --alpha <alpha> --beta <beta> --n_dig <precision>
 fpm test
 #+end_src
 
@@ -22,7 +22,6 @@ fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
 Currently the only supported methods are "recurrence" and "gw" (Golub Welsch).
-
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
 
@@ -32,10 +31,93 @@ meson compile -C bbdir
 ./bbdir/gjp_quad <npoints> <alpha> <beta> <method>
 #+end_src
 
+*** Interfaces
+*** ~C~ Header
+We provide a header only interface, which bypasses passing strings between
+Fortran and C. In order to do this, there is some duplication logic in
+~GaussJacobiQuad~ and ~GaussJacobiQuadCInterp~.
+
+There is also a CLI interface to the ~C~ bound interface, ~c_cli_gjpq~. However,
+this will not be compiled by ~fpm~.
+
+#+begin_src bash
+meson setup bbdir
+meson compile -C bbdir
+./bbdir/c_cli_gjpq <npoints> <alpha> <beta> <method>
+#+end_src
+
+The ~C~ CLI might be more pleasant in that decimals do not need to be provided
+explicitly for ~alpha~ and ~beta~.
+*** ~f2py~ generated interface
+The ~ISO_C_ENVIRONMENT~ variant of the code is also used for a ~python~
+interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
+#+begin_src bash
+cd interfaces/PyInterface
+f2py -c --backend meson gjquadpy.pyf ../../src/GaussJacobiQuadCCompat.f90 \
+../../src/GaussJacobiQuad.f90 ../../src/gjp_constants.f90 ../../src/gjp_gw.f90 \
+../../src/gjp_lapack.f90 ../../src/gjp_rec.f90 ../../src/gjp_types.f90 \
+deps: lapack :
+#+end_src
+Once compiled, the ~gjpquad_cli.py~ script can be used to run the code:
+#+begin_src bash
+python gjquad_cli.py --npts 5 --alpha 2 --beta 3
+Root: -6.90457750126761027E-01 Weight: 2.74101780663370022E-02
+Root: -3.26519931349000647E-01 Weight: 2.12917860603648035E-01
+Root:  8.23378495520349085E-02 Weight: 4.39084379443950568E-01
+Root:  4.75178870612831761E-01 Weight: 3.22206565472217876E-01
+Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
+#+end_src
+
 ** Notes
 The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
 should be used in such situations.
+** Benchmarks
+A very preliminary set can be run once all the interfaces have been compiled:
+#+begin_src bash
+# From $GITROOT
+mv interfaces/PyInterface/gjquadpy*.so .
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md \
+    'bbdir/gjp_quad 5 2. 3. "gw"' \
+    'bbdir/c_cli_gjpq 5 2 3 gw' \
+    'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15'
+#+end_src
 
+Which gives:
+#+begin_src bash
+ummary
+  bbdir/c_cli_gjpq 5 2 3 gw ran
+    1.03 ± 0.45 times faster than bbdir/gjp_quad 5 2. 3. "gw"
+   39.08 ± 11.48 times faster than PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3
+   55.71 ± 16.51 times faster than python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3
+   86.73 ± 24.86 times faster than python scripts/sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md       32.65s user 61.31s system 469% cpu 20.004 total
+#+end_src
+
+Or in other words:
+
+| Command                                                     | Mean [ms]    | Min [ms] | Max [ms] | Relative      |
+|-------------------------------------------------------------+--------------+----------+----------+---------------|
+| =gjp_quad 5 2. 3. "gw"=                                     | 2.6 ± 0.8    |      1.8 |      7.8 | 1.03 ± 0.45   |
+| =c_cli_gjpq 5 2 3 gw=                                       | 2.5 ± 0.7    |      1.8 |      8.4 | 1.00          |
+| =gjquad_cli.py --npts 5 --alpha 2 --beta 3=                 | 97.5 ± 6.3   |     95.4 |    130.8 | 39.08 ± 11.48 |
+| =scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3=            | 139.0 ± 10.6 |    132.4 |    173.4 | 55.71 ± 16.51 |
+| =sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15= | 216.4 ± 1.7  |    214.7 |    219.7 | 86.73 ± 24.86 |
+
+Which suggests what one might suspect, that there is a large overhead in calling
+~python~ , and that the ~C~ and ~Fortran~ variants are almost exactly as fast as
+each other. However, the ~f2py~ variant is still way faster than the existing
+~python~ implementations.
+
+#+begin_src bash
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md \
+    'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3'
+Summary
+  PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3 ran
+    1.38 ± 0.11 times faster than python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3
+#+end_src
 ** Development
 *** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
@@ -50,7 +132,7 @@ pipx run pre-commit install
 *** Updating licenses
 When the headers in the sources need to be updated modify ~add_headers.py~ and run:
 #+begin_src sh
-python scripts/add_headers.py
+python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,c,h"
 #+end_src
 Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
 * License

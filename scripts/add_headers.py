@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import re
 from datetime import datetime
@@ -44,27 +45,50 @@ header_text = header_template.render(
     commit=commit_hash,
 )
 
-# Iterate over all Fortran files in the SRC directory
-for root, dirs, files in os.walk(os.path.join(GITROOT, "src")):
-    for filename in files:
-        if filename.endswith(".f90"):
-            filepath = os.path.join(root, filename)
 
-            with open(filepath, "r") as file:
-                content = file.read()
+def add_headers(directories, file_types):
+    for directory in directories:
+        # Iterate over all files in the specified directory
+        for root, dirs, files in os.walk(directory):
+            for filename in files:
+                if any(filename.endswith(suffix) for suffix in file_types):
+                    filepath = os.path.join(root, filename)
 
-            # Check for the existing header and replace or append
-            if "BEGIN_HEADER" in content and "END_HEADER" in content:
-                content = re.sub(
-                    r"! BEGIN_HEADER.*?! END_HEADER\n",
-                    header_text,
-                    content,
-                    flags=re.DOTALL,
-                )
-            else:
-                content = header_text + content
+                    with open(filepath, "r") as file:
+                        content = file.read()
 
-            with open(filepath, "w") as file:
-                file.write(content)
+                    # Check for the existing header and replace or append
+                    if "BEGIN_HEADER" in content and "END_HEADER" in content:
+                        content = re.sub(
+                            r"! BEGIN_HEADER.*?! END_HEADER\n",
+                            header_text,
+                            content,
+                            flags=re.DOTALL,
+                        )
+                    else:
+                        content = header_text + content
 
-print(f"Headers added or updated in all Fortran files in {GITROOT}/src.")
+                    with open(filepath, "w") as file:
+                        file.write(content)
+
+        print(f"Headers added or updated in all files in {directory}.")
+
+
+# Command-line arguments
+parser = argparse.ArgumentParser(description="Add headers to source files.")
+parser.add_argument(
+    "--dirs", type=str, required=True, nargs="+", help="Directory(s) to process"
+)
+parser.add_argument(
+    "--ftypes",
+    type=str,
+    required=True,
+    help="Comma-separated list of file types to process",
+)
+
+args = parser.parse_args()
+
+directories = args.dirs
+file_types = args.ftypes.split(",")
+
+add_headers(directories, file_types)
