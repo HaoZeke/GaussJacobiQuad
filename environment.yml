@@ -25,3 +25,6 @@ dependencies:
   - pytest
   # Headers
   - jinja2
+  # Documentation
+  - doxygen==1.9.1 # for doxyYoda
+  - graphviz # for dot
