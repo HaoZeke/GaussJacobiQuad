@@ -26,5 +26,6 @@ dependencies:
   # Headers
   - jinja2
   # Documentation
+  - pandoc
   - doxygen==1.9.1 # for doxyYoda
   - graphviz # for dot

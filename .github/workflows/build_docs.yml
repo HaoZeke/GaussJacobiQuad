@@ -32,6 +32,7 @@ jobs:
       - name: Generate Docs
         shell: bash -el {0}
         run: |
+          pandoc readme.org -t gfm+smart -o README.md
           doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
       - name: Archive artifact
         shell: sh
