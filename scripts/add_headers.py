@@ -18,35 +18,44 @@ commit_hash = os.popen("git rev-parse HEAD").read().strip()[:7]
 
 # Define the header template using Jinja2
 header_template = Template(
-    """! BEGIN_HEADER
-! -----------------------------------------------------------------------------
-! Gauss-Jacobi Quadrature Implementation
-! Authors: {{ author }}
-! Source: {{ library_name }} Library
-! License: MIT
-! GitHub Repository: {{ repository_url }}
-! Date: {{ date }}
-! Commit: {{ commit }}
-! -----------------------------------------------------------------------------
-! This code is part of the {{ library_name }} library, providing an efficient
-! implementation for Gauss-Jacobi quadrature nodes and weights computation.
-! -----------------------------------------------------------------------------
-! END_HEADER
+    """{{cchar}} BEGIN_HEADER
+{{cchar}} -----------------------------------------------------------------------------
+{{cchar}} Gauss-Jacobi Quadrature Implementation
+{{cchar}} Authors: {{author}}
+{{cchar}} Source: {{library_name}} Library
+{{cchar}} License: MIT
+{{cchar}} GitHub Repository: {{repository_url}}
+{{cchar}} Date: {{date}}
+{{cchar}} Commit: {{commit}}
+{{cchar}} -----------------------------------------------------------------------------
+{{cchar}} This code is part of the {{library_name}} library, providing an efficient
+{{cchar}} implementation for Gauss-Jacobi quadrature nodes and weights computation.
+{{cchar}} -----------------------------------------------------------------------------
+{{cchar}} END_HEADER
 
 """
 )
 
-# Fill in the template variables
-header_text = header_template.render(
+
+def add_headers(
+    directories,
+    file_types,
+    cchar="!",
     author="Rohit Goswami <rgoswami[at]ieee.org>",
     repository_url="https://github.com/HaoZeke/GaussJacobiQuad",
     library_name="GaussJacobiQuad",
     date=current_date,
     commit=commit_hash,
-)
-
-
-def add_headers(directories, file_types):
+):
+    # Fill in the template variables
+    header_text = header_template.render(
+        author=author,
+        repository_url=repository_url,
+        library_name=library_name,
+        date=current_date,
+        commit=commit_hash,
+        cchar=cchar,
+    )
     for directory in directories:
         # Iterate over all files in the specified directory
         for root, dirs, files in os.walk(directory):
@@ -60,7 +69,7 @@ def add_headers(directories, file_types):
                     # Check for the existing header and replace or append
                     if "BEGIN_HEADER" in content and "END_HEADER" in content:
                         content = re.sub(
-                            r"! BEGIN_HEADER.*?! END_HEADER\n",
+                            rf"{cchar} BEGIN_HEADER.*?{cchar} END_HEADER\n",
                             header_text,
                             content,
                             flags=re.DOTALL,
@@ -71,7 +80,7 @@ def add_headers(directories, file_types):
                     with open(filepath, "w") as file:
                         file.write(content)
 
-        print(f"Headers added or updated in all files in {directory}.")
+        print("Headers added or updated in all files in" f" {directory} using {cchar}.")
 
 
 # Command-line arguments
@@ -85,10 +94,8 @@ parser.add_argument(
     required=True,
     help="Comma-separated list of file types to process",
 )
+parser.add_argument("--cchar", type=str, required=True, help="Comment character")
 
 args = parser.parse_args()
-
-directories = args.dirs
 file_types = args.ftypes.split(",")
-
-add_headers(directories, file_types)
+add_headers(args.dirs, file_types, args.cchar)
