@@ -29,3 +29,6 @@ dependencies:
   - pandoc
   - doxygen==1.9.1 # for doxyYoda
   - graphviz # for dot
+  # Release management
+  - towncrier
+  - tbump
