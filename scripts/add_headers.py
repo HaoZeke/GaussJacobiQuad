@@ -75,7 +75,7 @@ def add_headers(
                             flags=re.DOTALL,
                         )
                     else:
-                        content = header_text.render(cchar=cchar) + content
+                        content = header_text + content
 
                     with open(filepath, "w") as file:
                         file.write(content)
