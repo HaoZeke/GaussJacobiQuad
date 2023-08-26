@@ -6,7 +6,7 @@
 # License: MIT
 # GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
 # Date: 2023-08-26
-# Commit: 954667c
+# Commit: 5dd0ffe
 # -----------------------------------------------------------------------------
 # This code is part of the GaussJacobiQuad library, providing an efficient
 # implementation for Gauss-Jacobi quadrature nodes and weights computation.
