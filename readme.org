@@ -55,10 +55,15 @@ The ~ISO_C_ENVIRONMENT~ variant of the code is also used for a ~python~
 interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
 #+begin_src bash
 cd interfaces/PyInterface
-f2py -c --backend meson gjquadpy.pyf ../../src/GaussJacobiQuadCCompat.f90 \
-../../src/GaussJacobiQuad.f90 ../../src/gjp_constants.f90 ../../src/gjp_gw.f90 \
-../../src/gjp_lapack.f90 ../../src/gjp_rec.f90 ../../src/gjp_types.f90 \
-deps: lapack :
+f2py -c --backend meson gjquadpy.pyf \
+    --dep lapack \
+    ../../src/GaussJacobiQuadCCompat.f90 \
+    ../../src/GaussJacobiQuad.f90 \
+    ../../src/gjp_constants.f90 \
+    ../../src/gjp_gw.f90 \
+    ../../src/gjp_lapack.f90 \
+    ../../src/gjp_rec.f90 \
+    ../../src/gjp_types.f90
 #+end_src
 Once compiled, the ~gjpquad_cli.py~ script can be used to run the code:
 #+begin_src bash
