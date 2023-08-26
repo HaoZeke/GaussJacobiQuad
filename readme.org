@@ -1,4 +1,7 @@
-* About
+* GaussJacobiQuad [[https://zenodo.org/badge/latestdoi/667604312][file:https://zenodo.org/badge/667604312.svg]] [[https://github.com/HaoZeke/GaussJacobiQuad/actions/workflows/build_test.yml][file:https://github.com/HaoZeke/GaussJacobiQuad/actions/workflows/build_test.yml/badge.svg]] [[https://github.com/HaoZeke/GaussJacobiQuad/actions/workflows/build_docs.yml][file:https://github.com/HaoZeke/GaussJacobiQuad/actions/workflows/build_docs.yml/badge.svg]]
+
+
+** About
 
 A permissively licensed modern implementation of Gauss-Jacobi quadrature which returns the weights and nodes over the standard interval ~[-1, 1]~.
 ** Usage
