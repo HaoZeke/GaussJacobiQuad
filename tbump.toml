@@ -23,11 +23,28 @@ tag_template = "v{new_version}"
 # section containing the path of the file, relative to the
 # tbump.toml location.
 [[file]]
-src = "..."
+src = "apidocs/Doxygen-GaussJacobiQuad.cfg"
+[[file]]
+src = "fpm.toml"
+[[file]]
+src = "meson.build"
 
 # You can specify a list of commands to
 # run after the files have been patched
 # and before the git commit is made
+
+[[before_commit]]
+name = 'update fortran license headers'
+cmd = "python scripts/add_headers.py --dirs src/ interfaces/ --ftypes 'f90,f77' --cchar '!'"
+[[before_commit]]
+name = 'update C license headers'
+cmd = "python scripts/add_headers.py --dirs interfaces --ftypes 'c,h' --cchar '//'"
+[[before_commit]]
+name = 'update Python license headers'
+cmd = "python scripts/add_headers.py --dirs interfaces scripts --ftypes 'py' --cchar '#'"
+[[before_commit]]
+name = 'generate news'
+cmd = "towncrier build --version $(tbump current-version)"
 
 #  [[before_commit]]
 #  name = "check changelog"
