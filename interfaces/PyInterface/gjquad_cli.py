@@ -1,3 +1,15 @@
+"""!
+@brief This script computes Gauss-Jacobi quadrature roots and weights using
+GaussJacobiQuadPy.
+
+@details
+The script takes polynomial degree, alpha, beta, and method parameters to
+compute Gauss-Jacobi quadrature roots and weights. It calls the GaussJacobiQuad
+library for the calculations.
+
+@author Rohit Goswami
+@date 26-08-2023
+"""
 import argparse
 
 import gjquadpy

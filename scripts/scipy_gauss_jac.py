@@ -1,3 +1,14 @@
+"""!
+@brief This script computes Gauss-Jacobi quadrature roots and weights using SymPy.
+
+@details
+The script takes polynomial degree, alpha, and beta parameters to compute
+Gauss-Jacobi quadrature roots and weights.  It uses scipy.special.roots_jacobi
+for the calculations.
+
+@author Rohit Goswami
+@date 26-08-2023
+"""
 import argparse
 
 from scipy.special import roots_jacobi
