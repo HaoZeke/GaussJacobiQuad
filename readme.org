@@ -1,6 +1,6 @@
 * About
 
-A permissively licensed modern implementation of Gauss-Jacobi quadrature which returns the weights and nodes over the standard interval $[-1, 1]$.
+A permissively licensed modern implementation of Gauss-Jacobi quadrature which returns the weights and nodes over the standard interval ~[-1, 1]~.
 ** Usage
 The most automated approach is to use the ~conda~ environment and ~fpm~ build:
 #+begin_src bash
@@ -32,7 +32,7 @@ meson compile -C bbdir
 #+end_src
 
 *** Interfaces
-*** ~C~ Header
+*** C/C++ header interface
 We provide a header only interface, which bypasses passing strings between
 Fortran and C. In order to do this, there is some duplication logic in
 ~GaussJacobiQuad~ and ~GaussJacobiQuadCInterp~.
@@ -48,7 +48,7 @@ meson compile -C bbdir
 
 The ~C~ CLI might be more pleasant in that decimals do not need to be provided
 explicitly for ~alpha~ and ~beta~.
-*** ~f2py~ generated interface
+*** f2py generated interface
 The ~ISO_C_ENVIRONMENT~ variant of the code is also used for a ~python~
 interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
 #+begin_src bash
