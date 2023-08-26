@@ -76,34 +76,48 @@ A very preliminary set can be run once all the interfaces have been compiled:
 #+begin_src bash
 # From $GITROOT
 mv interfaces/PyInterface/gjquadpy*.so .
-hyperfine --warmup 3 --export-markdown gjp_benchmarks.md \
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md \
     'bbdir/gjp_quad 5 2. 3. "gw"' \
     'bbdir/c_cli_gjpq 5 2 3 gw' \
     'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3' \
     'python scripts/sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15'
 #+end_src
 
 Which gives:
 #+begin_src bash
-Summary
-  bbdir/gjp_quad 5 2. 3. "gw" ran
-    1.00 ± 0.44 times faster than bbdir/c_cli_gjpq 5 2 3 gw
-   40.30 ± 13.43 times faster than PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3
-   88.42 ± 28.08 times faster than python scripts/sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15
-hyperfine --warmup 3 --export-markdown gjp_benchmarks.md      17.61s user 29.06s system 357% cpu 13.056 total
+ummary
+  bbdir/c_cli_gjpq 5 2 3 gw ran
+    1.03 ± 0.45 times faster than bbdir/gjp_quad 5 2. 3. "gw"
+   39.08 ± 11.48 times faster than PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3
+   55.71 ± 16.51 times faster than python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3
+   86.73 ± 24.86 times faster than python scripts/sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md       32.65s user 61.31s system 469% cpu 20.004 total
 #+end_src
 
 Or in other words:
-| Command                                                       | Mean [ms]   | Min [ms] | Max [ms] | Relative      |
-|---------------------------------------------------------------+-------------+----------+----------+---------------|
-| ~gjp_quad 5 2. 3. "gw"~                                       | 2.5 ± 0.8   |      1.7 |      6.6 | 1.00          |
-| ~c_cli_gjpq 5 2 3 gw~                                         | 2.5 ± 0.8   |      1.7 |      7.4 | 1.00 ± 0.44   |
-| ~gjquad_cli.py --npts 5 --alpha 2 --beta 3~                   | 99.8 ± 10.2 |     95.2 |    146.3 | 40.30 ± 13.43 |
-| ~sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15~ | 219.0 ± 3.3 |    216.4 |    224.2 | 88.42 ± 28.08 |
+
+| Command                                                     | Mean [ms]    | Min [ms] | Max [ms] | Relative      |
+|-------------------------------------------------------------+--------------+----------+----------+---------------|
+| =gjp_quad 5 2. 3. "gw"=                                     | 2.6 ± 0.8    |      1.8 |      7.8 | 1.03 ± 0.45   |
+| =c_cli_gjpq 5 2 3 gw=                                       | 2.5 ± 0.7    |      1.8 |      8.4 | 1.00          |
+| =gjquad_cli.py --npts 5 --alpha 2 --beta 3=                 | 97.5 ± 6.3   |     95.4 |    130.8 | 39.08 ± 11.48 |
+| =scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3=            | 139.0 ± 10.6 |    132.4 |    173.4 | 55.71 ± 16.51 |
+| =sympy_gauss_jac.py --npts 5 --alpha 2 --beta 3 --n_dig 15= | 216.4 ± 1.7  |    214.7 |    219.7 | 86.73 ± 24.86 |
 
 Which suggests what one might suspect, that there is a large overhead in calling
 ~python~ , and that the ~C~ and ~Fortran~ variants are almost exactly as fast as
-each other.
+each other. However, the ~f2py~ variant is still way faster than the existing
+~python~ implementations.
+
+#+begin_src bash
+hyperfine --warmup 10 --export-markdown gjp_benchmarks.md \
+    'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
+    'python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3'
+Summary
+  PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3 ran
+    1.38 ± 0.11 times faster than python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3
+#+end_src
 ** Development
 *** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
