@@ -8,135 +8,120 @@ contains
 !> @brief Implicitly-shifted Modified QL factorization algorithm for symmetric tridiagonal matrices.
 !>
 !> This subroutine diagonalizes a real, symmetric, tridiagonal matrix using the implicitly-shifted Modified QL factorization algorithm.
-!> The eigenvalues are overwritten on the diagonal of the matrix, while the eigenvectors are stored in the array `z`. This is an internal
+!> The eigenvalues are overwritten on the diagonal of the matrix, while the eigenvectors are stored in the array `sol_vec`. This is an internal
 !> function typically used in the context of computing Gauss-Jacobi quadrature points and weights.
 !>
 !> This function is an adaptation of the Implicitly-shifted QL algorithm. It is specifically optimized for tridiagonal matrices,
 !> which is the form that Jacobi matrices often take. This is a modernized version of the algorithm presented in Algorithm 655
 !> which in turn is a slightly modified variant of an EISPACK routine.
 !>
-!> @param[in] n The size of the matrix, i.e., number of rows or columns.
-!> @param[inout] d On entry, the diagonal elements of the tridiagonal matrix. On exit, the eigenvalues in ascending order.
-!> @param[inout] e On entry, the off-diagonal elements of the tridiagonal matrix. On exit, the values are overwritten.
-!> @param[inout] z On entry, the initial guesses for the eigenvectors. On exit, the computed eigenvectors.
+!> @param[in] mat_size The size of the matrix, i.e., number of rows or columns.
+!> @param[inout] diag On entry, the diagonal elements of the tridiagonal matrix. On exit, the eigenvalues in ascending order.
+!> @param[inout] off_diag On entry, the off-diagonal elements of the tridiagonal matrix. On exit, the values are overwritten.
+!> @param[inout] sol_vec On entry, the initial guesses for the eigenvectors. On exit, the computed eigenvectors.
 !>
-!> @note This subroutine has an iteration limit (`itn`) set to 30. An error is reported if the limit is exceeded.
+!> @note This subroutine has an iteration limit (`max_iter`) set to 30. An error is reported if the limit is exceeded.
 !>
-!> @warning Make sure to allocate sufficient space for the arrays `d`, `e`, and `z` before calling this function.
-subroutine imtqlx(n, d, e, z)
+!> @warning Make sure to allocate sufficient space for the arrays `diag`, `off_diag`, and `sol_vec` before calling this function.
+subroutine imtqlx(mat_size, diag, off_diag, sol_vec)
     implicit none
 
     ! Inputs
-    integer, intent(in) :: n
-    real(dp), intent(inout) :: d(n)
-    real(dp), intent(inout) :: e(n)
-    real(dp), intent(inout) :: z(n)
+    integer, intent(in) :: mat_size
+    real(dp), intent(inout) :: diag(mat_size)
+    real(dp), intent(inout) :: off_diag(mat_size)
+    real(dp), intent(inout) :: sol_vec(mat_size)
 
     ! Local variables
-    real(dp) :: prec, p, g, r, s, f, b, c
-    integer :: l, m, ii, i, j, k
+    real(dp) :: precision, pivot_val, g_val, rot_val, scale_val, f_val, b_val, cos_val
+    integer :: lower_bound, upper_bound, inner_i, i, iter_count
     integer, parameter :: max_iter = 30
-    real(dp), allocatable :: Bjk(:, :)
-    integer :: nu, JK
 
-    ! Initialize precision
-    prec = epsilon(prec)
-
-    ! Allocate and initialize Bjk
-    allocate (Bjk(n, 2 * max_iter))
-    Bjk = 0.0_dp
+    ! Initialize machine precision
+    precision = epsilon(precision)
 
     ! Set the last off-diagonal element to zero
-    e(n) = 0.0_dp
+    off_diag(mat_size) = 0.0_dp
 
-    ! Main loop
-    do l = 1, n
-        j = 0
-        do while (j < max_iter)
-            do m = l, n
-                if (m == n) exit
-                if (abs(e(m)) <= prec * (abs(d(m)) + abs(d(m + 1)))) exit
+    ! Main loop over all diagonal elements (Eigenvalues)
+    do lower_bound = 1, mat_size
+        iter_count = 0 ! Initialize iteration counter for the inner loop
+
+        ! Inner loop for convergence criteria (max iterations)
+        do while (iter_count < max_iter)
+            ! Loop to find upper bound for the current lower bound
+            do upper_bound = lower_bound, mat_size
+                if (upper_bound == mat_size) exit
+                if (abs(off_diag(upper_bound)) <= precision * (abs(diag(upper_bound)) + abs(diag(upper_bound + 1)))) exit
             end do
 
-            p = d(l)
-            if (m == l) exit
+            ! Check for convergence
+            pivot_val = diag(lower_bound)
+            if (upper_bound == lower_bound) exit ! Converged
 
-            if (j > max_iter) then
+            ! Check for iteration limit
+            if (iter_count > max_iter) then
                 print*," "
                 print*,"IMTQLX - Fatal error!"
                 print*,"Iteration limit exceeded."
-                print*,"J = ", j
-                print*,"L = ", l
-                print*,"M = ", m
-                print*,"N = ", n
-                error stop "Terminating due to iteration limit exceeded."
+                stop "Terminating due to iteration limit exceeded."
             end if
 
-            j = j + 1
-            g = (d(l + 1) - p) / (2.0_dp * e(l))
-            r = sqrt(g * g + 1.0_dp)
-            g = d(m) - p + e(l) / (g + sign(r, g))
-            s = 1.0_dp
-            c = 1.0_dp
-            p = 0.0_dp
-            do ii = 1, m - l
-                i = m - ii
-                f = s * e(i)
-                b = c * e(i)
+            iter_count = iter_count + 1 ! Update iteration count
 
-                if (abs(g) <= abs(f)) then
-                    c = g / f
-                    r = sqrt(c * c + 1.0_dp)
-                    e(i + 1) = f * r
-                    s = 1.0_dp / r
-                    c = c * s
+            ! Calculation of g_val based on pivot and off-diagonal elements
+            g_val = (diag(lower_bound + 1) - pivot_val) / (2.0_dp * off_diag(lower_bound))
+            rot_val = sqrt(g_val * g_val + 1.0_dp)
+            g_val = diag(upper_bound) - pivot_val + off_diag(lower_bound) / (g_val + sign(rot_val, g_val))
+
+            ! Initialize rotation parameters
+            scale_val = 1.0_dp
+            cos_val = 1.0_dp
+            pivot_val = 0.0_dp
+
+            ! Loop for the implicit QR factorization
+            do inner_i = 1, upper_bound - lower_bound
+                i = upper_bound - inner_i
+                f_val = scale_val * off_diag(i)
+                b_val = cos_val * off_diag(i)
+
+                ! Update by Givens rotation
+                if (abs(g_val) <= abs(f_val)) then
+                    cos_val = g_val / f_val
+                    rot_val = sqrt(cos_val * cos_val + 1.0_dp)
+                    off_diag(i + 1) = f_val * rot_val
+                    scale_val = 1.0_dp / rot_val
+                    cos_val = cos_val * scale_val
                 else
-                    s = f / g
-                    r = sqrt(s * s + 1.0_dp)
-                    e(i + 1) = g * r
-                    c = 1.0_dp / r
-                    s = s * c
+                    scale_val = f_val / g_val
+                    rot_val = sqrt(scale_val * scale_val + 1.0_dp)
+                    off_diag(i + 1) = g_val * rot_val
+                    cos_val = 1.0_dp / rot_val
+                    scale_val = scale_val * cos_val
                 end if
 
-                g = d(i + 1) - p
-                r = (d(i) - g) * s + 2.0_dp * c * b
-                p = s * r
-                d(i + 1) = g + p
-                g = c * r - b
-                f = z(i + 1)
-                z(i + 1) = s * z(i) + c * f
-                z(i) = c * z(i) - s * f
+                ! Update diagonal and off-diagonal elements
+                g_val = diag(i + 1) - pivot_val
+                rot_val = (diag(i) - g_val) * scale_val + 2.0_dp * cos_val * b_val
+                pivot_val = scale_val * rot_val
+                diag(i + 1) = g_val + pivot_val
+                g_val = cos_val * rot_val - b_val
+
+                ! Update solution vector
+                f_val = sol_vec(i + 1)
+                sol_vec(i + 1) = scale_val * sol_vec(i) + cos_val * f_val
+                sol_vec(i) = cos_val * sol_vec(i) - scale_val * f_val
             end do
 
-            d(l) = d(l) - p
-            e(l) = g
-            e(m) = 0.0_dp
+            ! Update diagonal and off-diagonal elements after QR step
+            diag(lower_bound) = diag(lower_bound) - pivot_val
+            off_diag(lower_bound) = g_val
+            off_diag(upper_bound) = 0.0_dp
         end do
     end do
 
-    ! Clean up
-    deallocate (Bjk)
-
-    ! Sorting
-    ! do ii = 2, n
-    !     i = ii - 1
-    !     k = i
-    !     p = d(i)
-    !     do j = ii, n
-    !         if (d(j) < p) then
-    !             k = j
-    !             p = d(j)
-    !         end if
-    !     end do
-    !     if (k /= i) then
-    !         d(k) = d(i)
-    !         d(i) = p
-    !         p = z(i)
-    !         z(i) = z(k)
-    !         z(k) = p
-    !     end if
-    ! end do
-    call dsort2a(n, d, z)
+    ! Sort the solution after convergence
+    call dsort2a(mat_size, diag, sol_vec)
 end subroutine
 
 ! Sorts x and performs the same swaps on y
