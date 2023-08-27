@@ -46,7 +46,7 @@ subroutine gauss_jacobi_rec(npts, alpha, beta, x, wts)
         x(npts / 2 + idx) = x1(idx)
         ders(npts / 2 + idx) = ders1(idx)
     end do
-    wts = 1.0d0 / ((1.0d0 - x**2) * ders**2)
+    wts = 1.0_dp / ((1.0_dp - x**2) * ders**2)
     C = 2**(alpha + beta + 1) * exp(log_gamma(npts + alpha + 1) - &
                                     log_gamma(npts + alpha + beta + 1) + &
                                     log_gamma(npts + beta + 1) - log_gamma(npts + 1._dp))
@@ -66,15 +66,15 @@ subroutine recurrence(npts, n2, alpha, beta, x, PP)
     end do
 
     do i = 1, n2
-        C = (2 * r(i) + alpha - 0.5d0) * pi / (2 * npts + alpha + beta + 1)
-        T = C + 1 / (2 * npts + alpha + beta + 1)**2 * ((0.25d0 - alpha**2) / tan(0.5d0 * C) - (0.25d0 - beta**2) * tan(0.5d0 * C))
+        C = (2 * r(i) + alpha - 0.5_dp) * pi / (2 * npts + alpha + beta + 1)
+     T = C + 1 / (2 * npts + alpha + beta + 1)**2 * ((0.25_dp - alpha**2) / tan(0.5_dp * C) - (0.25_dp - beta**2) * tan(0.5_dp * C))
         x(i) = cos(T)
     end do
 
-    dx = 1.0d0
+    dx = 1.0_dp
     l = 0
 
-    do while (maxval(abs(dx)) > sqrt(epsilon(1.0d0)) / 1000 .and. l < 10)
+    do while (maxval(abs(dx)) > sqrt(epsilon(1.0_dp)) / 1000 .and. l < 10)
         l = l + 1
         call eval_jacobi_poly(x, npts, alpha, beta, P, PP)
         dx = -P / PP
@@ -93,10 +93,10 @@ subroutine eval_jacobi_poly(x, npts, alpha, beta, P, Pp)
     integer :: k, i
     real(dp) :: A_val, B_val, C_val, D_val
 
-    P = 0.5d0 * (alpha - beta + (alpha + beta + 2) * x)
-    Pm1 = 1.0d0
-    Pp = 0.5d0 * (alpha + beta + 2)
-    Ppm1 = 0.0d0
+    P = 0.5_dp * (alpha - beta + (alpha + beta + 2) * x)
+    Pm1 = 1.0_dp
+    Pp = 0.5_dp * (alpha + beta + 2)
+    Ppm1 = 0.0_dp
 
     if (npts == 0) then
         P = Pm1
