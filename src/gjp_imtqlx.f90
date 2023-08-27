@@ -1,5 +1,4 @@
 module gjp_imtqlx
-use gjp_lapack, only: drot, drotg
 use gjp_types, only: dp
 implicit none
 
