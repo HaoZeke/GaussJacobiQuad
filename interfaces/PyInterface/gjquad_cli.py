@@ -30,7 +30,7 @@ import gjquadpy
 
 
 def main(n, alpha, beta, meth):
-    if meth == "recurrence":
+    if meth == "rec":
         roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_rec_c(
             n, alpha, beta
         )
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--alpha", type=float, default=0, help="Alpha parameter.")
     parser.add_argument("--beta", type=float, default=12, help="Beta parameter.")
     parser.add_argument(
-        "--meth", type=str, default="gw", help="Method.", choices=["gw", "recurrence"]
+        "--meth", type=str, default="gw", help="Method.", choices=["gw", "rec"]
     )
 
     args = parser.parse_args()

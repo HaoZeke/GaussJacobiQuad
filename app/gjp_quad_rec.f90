@@ -37,7 +37,7 @@ if (index(arg, '.') == 0) then
 end if
 read (arg, *) beta
 
-method = "recurrence"
+method = "rec"
 call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
 do idx = 1, n_points

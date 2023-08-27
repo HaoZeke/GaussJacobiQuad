@@ -23,7 +23,7 @@ fpm run gjp_quad_rec -- <npoints> <alpha> <beta>
 fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
-Currently the only supported methods are "recurrence" and "gw" (Golub Welsch).
+Currently the only supported methods are "rec" and "gw" (Golub Welsch).
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
 
@@ -76,7 +76,7 @@ Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
 #+end_src
 
 ** Notes
-The ~recurrence~ method fails for high values of ~beta~ so the ~gw~ method
+The ~rec~ method fails for high values of ~beta~ so the ~gw~ method
 should be used in such situations.
 ** Benchmarks
 A very preliminary set can be run once all the interfaces have been compiled:

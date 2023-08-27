@@ -16,11 +16,11 @@
 !
 !! @details This module implements the Gauss-Jacobi quadrature method for numerical integration.
 !! It provides a subroutine for obtaining the weights and nodes, which dispatches to multiple implementations
-!! based on the method provided. Available methods include "recurrence".
+!! based on the method provided. Available methods include "rec".
 module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec
 use gjp_gw, only: gauss_jacobi_gw
-use gjp_665, only: gauss_jacobi_665
+use gjp_algo665, only: gauss_jacobi_algo665
 use gjp_types, only: dp
 implicit none
 contains
@@ -42,7 +42,7 @@ contains
 !> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
 !> @param[out] x Quadrature nodes.
 !> @param[out] wts Quadrature weights.
-!> @param[in] method Method used for calculation. Supported methods are "recurrence" and "gw".
+!> @param[in] method Method used for calculation. Supported methods are "rec" and "gw".
 subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
@@ -63,7 +63,7 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     end if
 
     select case (trim(method))
-    case ("recurrence") ! Fails at high beta
+    case ("rec") ! Fails at high beta
         call gauss_jacobi_rec(npts, alpha, beta, x, wts)
     case ("gw") ! Accurate for high beta
         call gauss_jacobi_gw(npts, alpha, beta, x, wts)
@@ -71,7 +71,7 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
         call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     case default
         print*,"Error: Unknown method specified:", method
-        print*,"Supported methods: 'recurrence', 'gw''"
+        print*,"Supported methods: 'rec', 'gw', 'algo665'"
         error stop
     end select
 end subroutine gauss_jacobi

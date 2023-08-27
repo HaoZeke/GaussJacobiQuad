@@ -16,7 +16,7 @@ if (command_argument_count() /= 4) then
     print*,"  n_points: Number of quadrature points (integer)"
     print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
     print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
-    print*,"  method: Method to use for computation (supported: 'recurrence')"
+    print*,"  method: Method to use for computation (supported: 'rec', 'gw', 'algo665')"
     print*," "
     print*,"For Gauss-Jacobi quadrature, the weight function is (b-x)^alpha*(x-a)^beta."
     error stop "Must supply 4 arguments"
