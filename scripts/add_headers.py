@@ -31,6 +31,10 @@ header_template = Template(
 {{cchar}} This code is part of the {{library_name}} library, providing an efficient
 {{cchar}} implementation for Gauss-Jacobi quadrature nodes and weights computation.
 {{cchar}} -----------------------------------------------------------------------------
+{{cchar}} To cite this software:
+{{cchar}} Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
+{{cchar}} Zenodo: https://doi.org/10.5281/ZENODO.8285112
+{{cchar}} ---------------------------------------------------------------------
 {{cchar}} END_HEADER
 
 """
@@ -83,19 +87,19 @@ def add_headers(
         print("Headers added or updated in all files in" f" {directory} using {cchar}.")
 
 
-# Command-line arguments
-parser = argparse.ArgumentParser(description="Add headers to source files.")
-parser.add_argument(
-    "--dirs", type=str, required=True, nargs="+", help="Directory(s) to process"
-)
-parser.add_argument(
-    "--ftypes",
-    type=str,
-    required=True,
-    help="Comma-separated list of file types to process",
-)
-parser.add_argument("--cchar", type=str, required=True, help="Comment character")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Add headers to source files.")
+    parser.add_argument(
+        "--dirs", type=str, required=True, nargs="+", help="Directory(s) to process"
+    )
+    parser.add_argument(
+        "--ftypes",
+        type=str,
+        required=True,
+        help="Comma-separated list of file types to process",
+    )
+    parser.add_argument("--cchar", type=str, required=True, help="Comment character")
 
-args = parser.parse_args()
-file_types = args.ftypes.split(",")
-add_headers(args.dirs, file_types, args.cchar)
+    args = parser.parse_args()
+    file_types = args.ftypes.split(",")
+    add_headers(args.dirs, file_types, args.cchar)

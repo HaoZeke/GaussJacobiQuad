@@ -6,11 +6,15 @@
 ! License: MIT
 ! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
 ! Date: 2023-08-28
-! Commit: 69e8946
+! Commit: c442f77
 ! -----------------------------------------------------------------------------
 ! This code is part of the GaussJacobiQuad library, providing an efficient
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
 ! -----------------------------------------------------------------------------
+! To cite this software:
+! Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
+! Zenodo: https://doi.org/10.5281/ZENODO.8285112
+! ---------------------------------------------------------------------
 ! END_HEADER
 module gjp_imtqlx
 use gjp_types, only: dp
@@ -75,7 +79,7 @@ subroutine imtqlx(mat_size, diag, off_diag, sol_vec)
             ! Check for iteration limit
             if (iter_count > max_iter) then
                 print*," "
-                print*,"IMTQLX - Fatal error!"
+                print*,"IMTQLX - Fatal error."
                 print*,"Iteration limit exceeded."
                 stop "Terminating due to iteration limit exceeded."
             end if

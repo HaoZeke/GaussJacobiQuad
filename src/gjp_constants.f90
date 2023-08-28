@@ -6,11 +6,15 @@
 ! License: MIT
 ! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
 ! Date: 2023-08-28
-! Commit: 69e8946
+! Commit: c442f77
 ! -----------------------------------------------------------------------------
 ! This code is part of the GaussJacobiQuad library, providing an efficient
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
 ! -----------------------------------------------------------------------------
+! To cite this software:
+! Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
+! Zenodo: https://doi.org/10.5281/ZENODO.8285112
+! ---------------------------------------------------------------------
 ! END_HEADER
 !> @brief Constants contain more digits than double precision, so that
 !> they are rounded correctly.
@@ -41,4 +45,4 @@ real(dp), parameter :: c_2006 = 137.035999679_dp
 real(dp), parameter :: c_2002 = 137.03599911_dp
 real(dp), parameter :: c_1998 = 137.03599976_dp
 real(dp), parameter :: c_1986 = 137.0359895_dp ! To compare with dftatom
-end module
+end module gjp_constants
