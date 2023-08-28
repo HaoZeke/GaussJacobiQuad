@@ -20,7 +20,7 @@
 !! using the `iso_c_binding` module for the necessary type conversions.
 module GaussJacobiQuadCCompat
 use iso_c_binding, only: c_double, c_int
-use GaussJacobiQuad, only: gauss_jacobi_rec, gauss_jacobi_gw
+use GaussJacobiQuad, only: gauss_jacobi_rec, gauss_jacobi_gw, gauss_jacobi_algo665
 implicit none
 contains
 
