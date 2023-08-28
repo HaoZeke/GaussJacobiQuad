@@ -31,6 +31,10 @@ header_template = Template(
 {{cchar}} This code is part of the {{library_name}} library, providing an efficient
 {{cchar}} implementation for Gauss-Jacobi quadrature nodes and weights computation.
 {{cchar}} -----------------------------------------------------------------------------
+{{cchar}} To cite this software:
+{{cchar}} Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
+{{cchar}} Zenodo: https://doi.org/10.5281/ZENODO.8285112
+{{cchar}} ---------------------------------------------------------------------
 {{cchar}} END_HEADER
 
 """
