@@ -58,4 +58,21 @@ subroutine gauss_jacobi_gw_c(npts, alpha, beta, x, wts) bind(C, name="gauss_jaco
     call gauss_jacobi_gw(npts, alpha, beta, x, wts)
 end subroutine gauss_jacobi_gw_c
 
+!> @brief C-compatible wrapper for `gauss_jacobi_algo665` subroutine.
+!>
+!> This subroutine is a C-compatible wrapper that calls the original `gauss_jacobi_algo665`
+!> subroutine for calculating Gauss-Jacobi quadrature nodes and weights using the "algo665" method.
+!>
+!> @param[in] npts Number of quadrature points.
+!> @param[in] alpha Parameter alpha in the Jacobi polynomial. Must be greater than -1.
+!> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
+!> @param[out] x Quadrature nodes.
+!> @param[out] wts Quadrature weights.
+subroutine gauss_jacobi_algo665_c(npts, alpha, beta, x, wts) bind(C, name="gauss_jacobi_algo665_c")
+    integer(c_int), intent(in) :: npts
+    real(c_double), intent(in) :: alpha, beta
+    real(c_double), intent(out) :: x(npts), wts(npts)
+    call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
+end subroutine gauss_jacobi_algo665_c
+
 end module GaussJacobiQuadCCompat
