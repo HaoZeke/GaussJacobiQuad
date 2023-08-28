@@ -21,6 +21,7 @@ module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec
 use gjp_gw, only: gauss_jacobi_gw
 use gjp_algo665, only: gauss_jacobi_algo665
+use gjp_gst, only: gauss_jacobi_gst
 use gjp_types, only: dp
 implicit none
 contains
@@ -69,6 +70,8 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
         call gauss_jacobi_gw(npts, alpha, beta, x, wts)
     case ("algo665")
         call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
+    case ("gst")
+        call gauss_jacobi_gst(npts, alpha, beta, x, wts)
     case default
         print*,"Error: Unknown method specified:", method
         print*,"Supported methods: 'rec', 'gw', 'algo665'"
