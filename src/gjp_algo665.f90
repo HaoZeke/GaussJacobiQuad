@@ -77,7 +77,7 @@ subroutine gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     ! Diagonalize the Jacobi matrix using the modified implicitly shifted QL method.
     call imtqlx(npts, x, off_diagonal_elements, wts)
 
-    ! Return the corrected weights
+    ! The weights are related to the squares of the the eigenvectors
     wts = wts**2
 
 end subroutine gauss_jacobi_algo665
