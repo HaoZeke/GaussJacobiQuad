@@ -33,6 +33,17 @@ meson compile -C bbdir
 ./bbdir/gjp_quad <npoints> <alpha> <beta> <method>
 #+end_src
 
+*** External Fortran libaries
+We support and encourage users to generate single file versions of the algorithms here to include in their code bases. This can be done with the ~scripts/add_headers.py~ script:
+#+begin_src bash
+# Strips comments by default
+python scripts/export_single.py --modulename "gjp_algo665"
+python scripts/export_single.py --modulename "gjp_gw" --keep-comments
+#+end_src
+These can be dropped into any code base or compiled as is into a shared library.
+#+begin_src bash
+gfortran dist/gjp_algo665_single.f90 --shared -fPIC -o libgjp_algo665.so
+#+end_src
 *** Interfaces
 *** C/C++ header interface
 We provide a header only interface, which bypasses passing strings between
