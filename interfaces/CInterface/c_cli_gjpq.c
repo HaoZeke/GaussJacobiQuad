@@ -32,14 +32,17 @@ int main(int argc, char *argv[]) {
     double beta = atof(argv[3]);
     const char *method = argv[4];
 
-    double x[n_points];
-    double wts[n_points];
+    double *x = (double*) malloc((size_t) n_points * sizeof(double));
+    double *wts = (double*) malloc((size_t) n_points * sizeof(double));
 
     gauss_jacobi_c(&n_points, &alpha, &beta, x, wts, method);
 
     for (int i = 0; i < n_points; ++i) {
         printf("Root: %e, Weight: %e\n", x[i], wts[i]);
     }
+
+    free(x);
+    free(wts);
 
     return EXIT_SUCCESS;
 }
