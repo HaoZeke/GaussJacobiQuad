@@ -73,7 +73,7 @@ gjp_quad_algo665 = executable('gjp_quad_algo665',
 gjp_cinterp = library('gjp_cinterp',
                       sources: [
                         'src/GaussJacobiQuadCCompat.f90',
-                        'interfaces/CInterface/GaussJacobiQuadCInterp.h',
+                        'interfaces/CInterface/GaussJacobiQuadCInterp.c',
                       ],
                       link_with: [gjplib],
                       install: true,
