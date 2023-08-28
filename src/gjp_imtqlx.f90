@@ -42,7 +42,7 @@ subroutine imtqlx(mat_size, diag, off_diag, sol_vec)
     ! Inputs
     integer, intent(in) :: mat_size
     real(dp), intent(inout) :: diag(mat_size)
-    real(dp), intent(inout) :: off_diag(mat_size)
+    real(dp), intent(inout) :: off_diag(mat_size - 1)
     real(dp), intent(inout) :: sol_vec(mat_size)
 
     ! Local variables
@@ -54,7 +54,7 @@ subroutine imtqlx(mat_size, diag, off_diag, sol_vec)
     precision = epsilon(precision)
 
     ! Set the last off-diagonal element to zero
-    off_diag(mat_size) = 0.0_dp
+    off_diag(mat_size - 1) = 0.0_dp
 
     ! Main loop over all diagonal elements (Eigenvalues)
     do lower_bound = 1, mat_size
