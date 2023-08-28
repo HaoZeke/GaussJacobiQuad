@@ -20,6 +20,13 @@ python module gjquadpy ! in
                 real(kind=c_double) dimension(npts),intent(out),depend(npts) :: x
                 real(kind=c_double) dimension(npts),intent(out),depend(npts) :: wts
             end subroutine gauss_jacobi_gw_c
+            subroutine gauss_jacobi_algo665_c(npts,alpha,beta,x,wts) ! in :gjquadpy:GaussJacobiQuadCCompat.f90:gaussjacobiquadccompat
+                integer(kind=c_int) intent(in) :: npts
+                real(kind=c_double) intent(in) :: alpha
+                real(kind=c_double) intent(in) :: beta
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: x
+                real(kind=c_double) dimension(npts),intent(out),depend(npts) :: wts
+            end subroutine gauss_jacobi_algo665_c
         end module gaussjacobiquadccompat
     end interface
 end python module gjquadpy

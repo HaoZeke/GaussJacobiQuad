@@ -52,13 +52,13 @@ def run_python(n, alpha, beta):
 @pytest.mark.parametrize(
     "n, alpha, beta, method",
     [
-        (3, 1, 5, "recurrence"),
-        (5, 2, 3, "recurrence"),
+        (3, 1, 5, "rec"),
+        (5, 2, 3, "rec"),
         pytest.param(
             10,
             0.0,
             30.0,
-            "recurrence",
+            "rec",
             marks=pytest.mark.xfail(reason="High beta values diverge"),
         ),
         (3, 1, 5, "gw"),

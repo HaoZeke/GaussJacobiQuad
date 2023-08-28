@@ -12,18 +12,19 @@
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
 ! -----------------------------------------------------------------------------
 ! END_HEADER
-!> @brief Module for computing Gauss-Jacobi quadrature nodes and weights using the Golub-Welsch (GW) method
-!> @details The implementation is based on the Golub-Welsch method as used in chebfun (https://chebfun.org) and references:
-!>   [1] G. H. Golub and J. A. Welsch, "Calculation of Gauss quadrature
-!>       rules", Math. Comp. 23:221-230, 1969.
-!>   [2] N. Hale and A. Townsend, "Fast computation of Gauss-Jacobi
-!>       quadrature nodes and weights", SISC, 2012.
-!>   [3] Kautsky, J., Elhay, S. Calculation of the weights of interpolatory
-!>   quadratures. Numer. Math. 40, 407–422 (1982).
-!>   https://doi.org/10.1007/BF01396453
-module gjp_gw
+!> @brief This module provides routines for numerical integration using Gauss-Jacobi quadrature.
+!! @details The implementation is based on the GW method as implemented in the GaussJacobiQuad
+!! with a modernized version of the implicit QL in Algorithm 655 from ACM Collected Algorithms.
+!!
+!! References:
+!!  - Elhay, S., & Kautsky, J. (1987). Algorithm 655: IQPACK: FORTRAN Subroutines for the Weights
+!!    of Interpolatory Quadratures. ACM Transactions on Mathematical Software, 13(4), 399-415.
+!!    DOI: 10.1145/35078.214351
+!!  - Martin, C., & Wilkinson, J. H. (1968). The implicit QL algorithm. Numerische Mathematik, 12(5), 377-383.
+!!    DOI: 10.1007/BF02165404module gjp_algo665
+module gjp_algo665
 use gjp_types, only: dp, gjp_sparse_matrix
-use gjp_lapack, only: DSTEQR
+use gjp_imtqlx, only: imtqlx
 use gjp_common, only: jacobi_matrix, jacobi_zeroeth_moment
 implicit none
 contains
@@ -52,7 +53,7 @@ contains
 !> @param[in] beta parameter for Jacobi polynomials
 !> @param[out] x Zeros of Jacobi polynomials
 !> @param[out] wts weights for Gauss-Jacobi quadrature
-subroutine gauss_jacobi_gw(npts, alpha, beta, x, wts)
+subroutine gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
@@ -61,8 +62,8 @@ subroutine gauss_jacobi_gw(npts, alpha, beta, x, wts)
     real(dp) :: diagonal_elements(npts), &
                 off_diagonal_elements(npts - 1), &
                 eigenvectors(npts, npts), &
-                workspace(2 * npts - 2)
-    integer :: computation_info, i
+                wodpspace(2 * npts - 2)
+    integer :: computation_info, idx
 
     jacobi_mat = jacobi_matrix(npts, alpha, beta)
     zeroeth_moment = jacobi_zeroeth_moment(alpha, beta)
@@ -71,27 +72,17 @@ subroutine gauss_jacobi_gw(npts, alpha, beta, x, wts)
     diagonal_elements = jacobi_mat%diagonal(1:npts)
     off_diagonal_elements = jacobi_mat%off_diagonal(1:npts - 1)
 
-    ! Initialize eigenvectors as identity matrix
-    eigenvectors = 0.0_dp
-    do i = 1, npts
-        eigenvectors(i, i) = 1.0_dp
-    end do
-
-    ! Diagonalize the Jacobi matrix using DSTEQR.
-    call DSTEQR('V', npts, diagonal_elements, off_diagonal_elements, &
-                eigenvectors, npts, workspace, computation_info)
-
-    if (computation_info /= 0) then
-        write (*, *) 'Error in DSTEQR, info:', computation_info
-        error stop
-    end if
-
-    ! The eigenvalues are the nodes
+    ! Initialize weights and knot points
+    wts = 0.0_dp
     x = diagonal_elements
-    ! The weights are related to the squares of the first components of the
-    ! eigenvectors
-    wts = eigenvectors(1, :)**2 * zeroeth_moment
+    wts(1) = sqrt(zeroeth_moment)
 
-end subroutine gauss_jacobi_gw
+    ! Diagonalize the Jacobi matrix using the modified implicitly shifted QL method.
+    call imtqlx(npts, x, off_diagonal_elements, wts)
 
-end module gjp_gw
+    ! Return the corrected weights
+    wts = wts**2
+
+end subroutine gauss_jacobi_algo665
+
+end module gjp_algo665

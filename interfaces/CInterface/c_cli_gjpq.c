@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "  n_points: Number of quadrature points (integer)\n");
         fprintf(stderr, "  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)\n");
         fprintf(stderr, "  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)\n");
-        fprintf(stderr, "  method: Method to use for computation (supported: 'recurrence', 'gw')\n");
+        fprintf(stderr, "  method: Method to use for computation (supported: 'rec', 'gw', 'algo665')\n");
         return EXIT_FAILURE;
     }
 

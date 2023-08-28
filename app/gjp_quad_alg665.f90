@@ -1,4 +1,4 @@
-program gjp_quad_rec
+program gjp_quad_algo665
 
 use GaussJacobiQuad, only: gauss_jacobi
 use gjp_types, only: dp
@@ -12,7 +12,7 @@ character(len=:), allocatable :: method
 integer :: idx, ierr
 
 if (command_argument_count() /= 3) then
-    print*,"Usage: ./gjp_quad_rec <n_points> <alpha> <beta>"
+    print*,"Usage: ./gjp_quad_algo665 <n_points> <alpha> <beta>"
     print*,"  n_points: Number of quadrature points (integer)"
     print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
     print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
@@ -37,7 +37,7 @@ if (index(arg, '.') == 0) then
 end if
 read (arg, *) beta
 
-method = "rec"
+method = "algo665"
 call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
 do idx = 1, n_points
@@ -46,4 +46,4 @@ end do
 
 deallocate (x, w)
 
-end program gjp_quad_rec
+end program gjp_quad_algo665
