@@ -51,7 +51,7 @@ meson compile -C bbdir
 The ~C~ CLI might be more pleasant in that decimals do not need to be provided
 explicitly for ~alpha~ and ~beta~.
 *** f2py generated interface
-The ~ISO_C_ENVIRONMENT~ variant of the code is also used for a ~python~
+The ~ISO_C_BINDING~ variant of the code is also used for a ~python~
 interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
 #+begin_src bash
 cd interfaces/PyInterface
@@ -60,10 +60,12 @@ f2py -c --backend meson gjquadpy.pyf \
     ../../src/GaussJacobiQuadCCompat.f90 \
     ../../src/GaussJacobiQuad.f90 \
     ../../src/gjp_constants.f90 \
-    ../../src/gjp_gw.f90 \
-    ../../src/gjp_lapack.f90 \
+    ../../src/gjp_types.f90 \
     ../../src/gjp_rec.f90 \
-    ../../src/gjp_types.f90
+    ../../src/gjp_common.f90 \
+    ../../src/gjp_lapack.f90 \
+    ../../src/gjp_gw.f90 \
+    ../../src/gjp_algo665.f90
 #+end_src
 Once compiled, the ~gjpquad_cli.py~ script can be used to run the code:
 #+begin_src bash
@@ -76,7 +78,7 @@ Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
 #+end_src
 
 ** Notes
-The ~rec~ method fails for high values of ~beta~ so the ~gw~ method
+- The ~rec~ method fails for high values of ~beta~ so the ~gw~ method
 should be used in such situations.
 ** Benchmarks
 A very preliminary set can be run once all the interfaces have been compiled:
