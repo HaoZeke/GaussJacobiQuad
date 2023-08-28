@@ -44,7 +44,7 @@ void gauss_jacobi_c(int* npts, double* alpha, double* beta, double x[], double w
         gauss_jacobi_rec_c(npts, alpha, beta, x, wts);
     } else if (strcmp(method, "gw") == 0) {
         gauss_jacobi_gw_c(npts, alpha, beta, x, wts);
-    } else if (strcmp(method, "gw") == 0) {
+    } else if (strcmp(method, "algo665") == 0) {
         gauss_jacobi_algo665_c(npts, alpha, beta, x, wts);
     } else {
         fprintf(stderr, "Error: Unknown method specified: %s\n", method);
