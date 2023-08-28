@@ -7,6 +7,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import add_headers
 import fortdepend
 
 
@@ -38,12 +39,12 @@ def export_single(modulename, strip_comments=True, outname=None):
     if outname is None:
         outname = f"{modulename}_single.f90"
 
-    prj_srcs = Path(get_git_root()) / "src"
+    prj_srcs = get_git_root() / "src"
     os.chdir(prj_srcs)  # Needed for fortdepend
 
     gaussjacobiquad = fortdepend.FortranProject()
     concat_files = gaussjacobiquad.get_all_used_files(modulename)
-    print(concat_files)
+    print(f"Concatenating in reverse order {concat_files}")
 
     exp_dat = []
 
@@ -55,14 +56,18 @@ def export_single(modulename, strip_comments=True, outname=None):
         f_out.write("".join(exp_dat))
 
 
-parser = argparse.ArgumentParser(description="Export single file algorithms.")
-parser.add_argument("--modulename", type=str, required=True, help="Module to export")
-parser.add_argument(
-    "--outname", type=str, required=False, help="Defaults to modulename_single.f90"
-)
-parser.add_argument(
-    "--strip-comments", type=bool, default=True, help="Should comments be stripped?"
-)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Export single file algorithms.")
+    parser.add_argument(
+        "--modulename", type=str, required=True, help="Module to export"
+    )
+    parser.add_argument(
+        "--outname", type=str, required=False, help="Defaults to modulename_single.f90"
+    )
+    parser.add_argument(
+        "--strip-comments", type=bool, default=True, help="Should comments be stripped?"
+    )
 
-args = parser.parse_args()
-export_single(args.modulename, args.strip_comments, args.outname)
+    args = parser.parse_args()
+    export_single(args.modulename, args.strip_comments, args.outname)
+    add_headers.add_headers([get_git_root() / "dist"], ["f90"])
