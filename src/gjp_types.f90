@@ -6,11 +6,15 @@
 ! License: MIT
 ! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
 ! Date: 2023-08-28
-! Commit: 69e8946
+! Commit: c442f77
 ! -----------------------------------------------------------------------------
 ! This code is part of the GaussJacobiQuad library, providing an efficient
 ! implementation for Gauss-Jacobi quadrature nodes and weights computation.
 ! -----------------------------------------------------------------------------
+! To cite this software:
+! Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
+! Zenodo: https://doi.org/10.5281/ZENODO.8285112
+! ---------------------------------------------------------------------
 ! END_HEADER
 !> @brief Module for defining types and precision levels for Gauss-Jacobi Polynomial (GJP) calculations.
 !!
