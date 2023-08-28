@@ -9,7 +9,7 @@ real(dp) :: alpha, beta
 real(dp), dimension(:), allocatable :: x, w
 character(len=128) :: arg
 character(len=:), allocatable :: method
-integer :: idx, ierr
+integer :: idx
 
 if (command_argument_count() /= 3) then
     print*,"Usage: ./gjp_quad_algo665 <n_points> <alpha> <beta>"

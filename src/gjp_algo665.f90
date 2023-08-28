@@ -60,10 +60,7 @@ subroutine gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     real(dp) :: zeroeth_moment
     type(gjp_sparse_matrix) :: jacobi_mat
     real(dp) :: diagonal_elements(npts), &
-                off_diagonal_elements(npts - 1), &
-                eigenvectors(npts, npts), &
-                wodpspace(2 * npts - 2)
-    integer :: computation_info, idx
+                off_diagonal_elements(npts - 1)
 
     jacobi_mat = jacobi_matrix(npts, alpha, beta)
     zeroeth_moment = jacobi_zeroeth_moment(alpha, beta)
