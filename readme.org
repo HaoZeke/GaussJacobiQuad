@@ -80,6 +80,7 @@ Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
 ** Notes
 - The ~rec~ method fails for high values of ~beta~ so the ~gw~ method
 should be used in such situations.
+- ~algo665~ is an in-place variant of ~gw~ and is much faster when many points are needed
 ** Benchmarks
 A very preliminary set can be run once all the interfaces have been compiled:
 #+begin_src bash
