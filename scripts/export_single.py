@@ -65,8 +65,18 @@ if __name__ == "__main__":
         "--outname", type=str, required=False, help="Defaults to modulename_single.f90"
     )
     parser.add_argument(
-        "--strip-comments", type=bool, default=True, help="Should comments be stripped?"
+        "--strip-comments",
+        dest="strip_comments",
+        action="store_true",
+        help="Remove comments",
     )
+    parser.add_argument(
+        "--keep-comments",
+        dest="strip_comments",
+        action="store_false",
+        help="Keep comments",
+    )
+    parser.set_defaults(strip_comments=True)
 
     args = parser.parse_args()
     export_single(args.modulename, args.strip_comments, args.outname)
