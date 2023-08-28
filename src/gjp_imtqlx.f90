@@ -79,7 +79,7 @@ subroutine imtqlx(mat_size, diag, off_diag, sol_vec)
             ! Check for iteration limit
             if (iter_count > max_iter) then
                 print*," "
-                print*,"IMTQLX - Fatal error!"
+                print*,"IMTQLX - Fatal error."
                 print*,"Iteration limit exceeded."
                 stop "Terminating due to iteration limit exceeded."
             end if
