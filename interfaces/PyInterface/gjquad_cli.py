@@ -34,11 +34,7 @@ def main(n, alpha, beta, meth):
         roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_rec_c(
             n, alpha, beta
         )
-    elif meth == "gw":
-        roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_gw_c(
-            n, alpha, beta
-        )
-    elif meth == "algo665":
+    elif meth in ["gw", "algo665"]:
         roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_gw_c(
             n, alpha, beta
         )
