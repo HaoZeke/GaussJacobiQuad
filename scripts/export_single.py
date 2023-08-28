@@ -48,7 +48,7 @@ def export_single(modulename, strip_comments=True, outname=None):
 
     exp_dat = []
 
-    for idx, fname in enumerate(reversed(concat_files)):
+    for fname in reversed(concat_files):
         processed_content = process_files(prj_srcs / fname, strip_comments)
         exp_dat.append(processed_content)
 
