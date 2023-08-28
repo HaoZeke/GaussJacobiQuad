@@ -80,4 +80,4 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     end select
 end subroutine gauss_jacobi
 
-end module
+end module GaussJacobiQuad

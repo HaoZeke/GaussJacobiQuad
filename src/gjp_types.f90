@@ -51,4 +51,4 @@ type gjp_sparse_matrix
     real(dp), allocatable :: off_diagonal(:) !< Off-diagonal elements of the Jacobi matrix.
 end type gjp_sparse_matrix
 
-end module
+end module gjp_types
