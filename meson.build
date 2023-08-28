@@ -1,6 +1,9 @@
 project('gaussjacobiquad', ['c', 'fortran'],
        version: '0.1.0',
-  default_options : ['warning_level=5', 'cpp_std=c++17'])
+  default_options : [
+    'warning_level=everything',
+    'buildtype=release',
+  ])
 # IMPORTANT!! warning_level=3 passes -fimplicit-none
 # Many of the older Fortran codes need implicit typing
 
