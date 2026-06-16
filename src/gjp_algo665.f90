@@ -64,14 +64,15 @@ subroutine gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     real(dp) :: zeroeth_moment
     type(gjp_sparse_matrix) :: jacobi_mat
     real(dp) :: diagonal_elements(npts), &
-                off_diagonal_elements(npts - 1)
+                off_diagonal_elements(npts)
 
     jacobi_mat = jacobi_matrix(npts, alpha, beta)
     zeroeth_moment = jacobi_zeroeth_moment(alpha, beta)
 
     ! Extract diagonal and off-diagonal elements
     diagonal_elements = jacobi_mat%diagonal(1:npts)
-    off_diagonal_elements = jacobi_mat%off_diagonal(1:npts - 1)
+    off_diagonal_elements(1:npts - 1) = jacobi_mat%off_diagonal(1:npts - 1)
+    off_diagonal_elements(npts) = 0.0_dp
 
     ! Initialize weights and knot points
     wts = 0.0_dp
