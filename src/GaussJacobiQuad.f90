@@ -20,7 +20,7 @@
 !
 !! @details This module implements the Gauss-Jacobi quadrature method for numerical integration.
 !! It provides a subroutine for obtaining the weights and nodes, which dispatches to multiple implementations
-!! based on the method provided. Available methods include "rec".
+!! based on the method provided.
 module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec
 use gjp_gw, only: gauss_jacobi_gw
@@ -46,7 +46,7 @@ contains
 !> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
 !> @param[out] x Quadrature nodes.
 !> @param[out] wts Quadrature weights.
-!> @param[in] method Method used for calculation. Supported methods are "rec" and "gw".
+!> @param[in] method Method used for calculation. Supported methods are "rec", "gw", and "algo665".
 subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta

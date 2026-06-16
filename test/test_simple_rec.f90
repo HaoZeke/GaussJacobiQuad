@@ -7,7 +7,9 @@ real(dp), dimension(n) :: x, w
 integer :: i
 open (unit=10, file='gauss_jacobi_output.txt', status='unknown')
 
-call gauss_jacobi(n, a, b, x, w)
+character(len=:), allocatable :: method
+method = "rec"
+call gauss_jacobi(n, a, b, x, w, method)
 
 do i = 1, n
     write (10, *) 'Root: ', x(i), ' Weight: ', w(i)
