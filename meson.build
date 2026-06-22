@@ -1,5 +1,6 @@
 project('gaussjacobiquad', ['c', 'fortran'],
        version: '0.1.0',
+       meson_version: '0.1.0',
   default_options : [
     'warning_level=everything',
     'buildtype=release',
@@ -9,6 +10,7 @@ project('gaussjacobiquad', ['c', 'fortran'],
 
 _args = [] # Extra arguments
 _deps = [] # Dependencies
+_inc = include_directories('interfaces/CInterface')
 
 # ---------------------- Dependencies
 _deps += dependency('lapack')
@@ -18,7 +20,7 @@ cc = meson.get_compiler('c')
 
 # ---------------------- Library
 
-gjplib = library('GaussJacobiQaud',
+gjplib = library('GaussJacobiQuad',
               sources: [
                 'src/gjp_constants.f90',
                 'src/gjp_types.f90',
@@ -33,6 +35,10 @@ gjplib = library('GaussJacobiQaud',
               dependencies: _deps,
               install: true,
 )
+
+# Public C header (header-only style API surface for C/C++ callers)
+install_headers('interfaces/CInterface/GaussJacobiQuadCInterp.h',
+                subdir: 'GaussJacobiQuad')
 
 # ---------------------- Applications
 
@@ -75,6 +81,7 @@ gjp_cinterp = library('gjp_cinterp',
                         'src/GaussJacobiQuadCCompat.f90',
                         'interfaces/CInterface/GaussJacobiQuadCInterp.c',
                       ],
+                      include_directories: _inc,
                       link_with: [gjplib],
                       install: true,
 )
@@ -83,6 +90,29 @@ c_cli_gjpq = executable('c_cli_gjpq',
                        sources: [
                          'interfaces/CInterface/c_cli_gjpq.c',
                        ],
+                       include_directories: _inc,
                        link_with: [gjp_cinterp],
                        install: true,
+)
+
+# ---------------------- Export for meson subprojects / system install
+
+gaussjacobiquad_dep = declare_dependency(
+  link_with: [gjplib, gjp_cinterp],
+  include_directories: _inc,
+  dependencies: _deps,
+  version: meson.project_version(),
+)
+
+# Allow parent projects doing subproject('gaussjacobiquad') to pick this up.
+meson.override_dependency('gaussjacobiquad', gaussjacobiquad_dep)
+
+# pkg-config for external C/Fortran consumers after `meson install`
+pkg = import('pkgconfig')
+pkg.generate(
+  name: 'gaussjacobiquad',
+  description: 'Gauss-Jacobi quadrature (Fortran library with C interop)',
+  version: meson.project_version(),
+  libraries: [gjplib, gjp_cinterp],
+  subdirs: 'GaussJacobiQuad',
 )

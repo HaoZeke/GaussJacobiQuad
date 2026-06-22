@@ -4,14 +4,23 @@ license = "MIT"
 author = "Rohit Goswami"
 maintainer = "rog32@hi.is"
 copyright = "Copyright 2023--present, featom developers"
+homepage = "https://github.com/HaoZeke/GaussJacobiQuad"
+description = "Modern Fortran Gauss-Jacobi quadrature (nodes and weights on [-1, 1]) with C and Python interfaces"
+
+[library]
+source-dir = "src"
+
 [build]
 auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
 link = ["openblas"]
+
+# Install static library + .mod files (not only executables) for fpm consumers.
 [install]
-library = false
+library = true
+
 [fortran]
 implicit-typing = false
 implicit-external = false

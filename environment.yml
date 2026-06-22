@@ -1,7 +1,7 @@
 # To use:
 #
 #   $ mamba env create -f environment.yml
-#   $ mamba activate rgpotpy
+#   $ mamba activate gaussjacquad
 #
 name: gaussjacquad
 channels:
@@ -29,6 +29,6 @@ dependencies:
   - pandoc
   - doxygen==1.9.1 # for doxyYoda
   - graphviz # for dot
-  # Release management
+  # Release management (changelog fragments; semver/tags via cocogitto `cog`,
+  # install separately: cargo install cocogitto  — not on conda-forge everywhere)
   - towncrier
-  - tbump

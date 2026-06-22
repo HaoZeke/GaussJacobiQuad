@@ -1,16 +1,67 @@
 name: Release
+
+# Creates a GitHub Release when a semver tag (vX.Y.Z) is pushed. Tags are
+# produced locally by `cog bump` (see docs/release.md); this workflow does not
+# choose versions. Zenodo watches the GitHub Release for DOI minting.
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (e.g. v0.2.0); defaults to the triggering ref on tag push"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
+            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
-
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "error: tag $TAG does not exist in this checkout" >&2
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+          # Prefer NEWS.md section for this version when present; else GH notes.
+          NOTES_ARGS=(--generate-notes)
+          VER="${TAG#v}"
+          if [ -f NEWS.md ] && grep -q "^${VER} " NEWS.md 2>/dev/null; then
+            # Extract the section for this version (until next version heading or EOF)
+            awk -v ver="$VER" '
+              $0 ~ "^" ver " " {grab=1; print; next}
+              grab && /^[0-9]+\.[0-9]+\.[0-9]+ / {exit}
+              grab {print}
+            ' NEWS.md > /tmp/release-notes.md
+            if [ -s /tmp/release-notes.md ]; then
+              NOTES_ARGS=(--notes-file /tmp/release-notes.md)
+            fi
+          fi
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            "${NOTES_ARGS[@]}"
