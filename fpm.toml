@@ -11,7 +11,7 @@ auto-examples = true
 module-naming = false
 link = ["openblas"]
 [install]
-library = false
+library = true
 [fortran]
 implicit-typing = false
 implicit-external = false

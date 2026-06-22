@@ -1,16 +1,84 @@
 name: Release
+
 on:
   push:
     tags: ["v*"]
+
+permissions:
+  contents: write
+
 jobs:
   release:
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install cocogitto (cog)
+        env:
+          COG_VERSION: "7.0.0"
+        run: |
+          set -euo pipefail
+          asset="cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          url="https://github.com/cocogitto/cocogitto/releases/download/${COG_VERSION}/${asset}"
+          curl -fsSL "$url" -o /tmp/cog.tgz
+          tar -xzf /tmp/cog.tgz -C /tmp
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 "/tmp/x86_64-unknown-linux-musl/cog" "$HOME/.local/bin/cog"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cog --version
+
+      - name: Extract release notes from NEWS.md
+        id: notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VER="${TAG#v}"
+          NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+          python3 - "$VER" "$NOTES_FILE" <<'PY'
+          import re, sys
+          from pathlib import Path
+
+          ver, out_path = sys.argv[1], Path(sys.argv[2])
+          text = Path("NEWS.md").read_text(encoding="utf-8")
+          pat = re.compile(
+              rf"^##[^\n]*\b{re.escape(ver)}\b[^\n]*$",
+              re.MULTILINE,
+          )
+          m = pat.search(text)
+          if not m:
+              out_path.write_text(
+                  f"Release {ver}.\n\nSee NEWS.md for details.\n",
+                  encoding="utf-8",
+              )
+              raise SystemExit(0)
+          start = m.end()
+          nxt = re.search(r"^##\s", text[start:], re.MULTILINE)
+          body = text[start : start + nxt.start() if nxt else None].strip()
+          heading = m.group(0).lstrip("#").strip()
+          out_path.write_text(f"## {heading}\n\n{body}\n", encoding="utf-8")
+          PY
+          echo "notes_file=${NOTES_FILE}" >> "${GITHUB_OUTPUT}"
+          echo "---- release notes preview ----"
+          head -n 40 "${NOTES_FILE}" || true
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
-
+          TAG: ${{ github.ref_name }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists; updating notes."
+            gh release edit "${TAG}" --repo "${{ github.repository }}" --notes-file "${NOTES_FILE}"
+          else
+            gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --title "${TAG}" \
+              --notes-file "${NOTES_FILE}"
+          fi

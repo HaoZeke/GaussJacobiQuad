@@ -1,12 +1,12 @@
-# Uncomment this if your project is hosted on GitHub:
-github_url = "https://github.com/HaoZeke/GaussJacobiQuad/"
+# DEPRECATED — version bumps are handled by cocogitto (`cog bump`).
+# See RELEASE.md and cog.toml. This file is kept only so any external
+# references fail loudly with a clear message.
+#
+# Migration: use `cog bump --auto` (or --minor / --patch / --major) instead of `tbump`.
 
 [version]
 current = "0.1.0"
 
-# Example of a semver regexp.
-# Make sure this matches current_version before
-# using tbump
 regex = '''
   (?P<major>\d+)
   \.
@@ -16,42 +16,8 @@ regex = '''
   '''
 
 [git]
-message_template = "REL: Bump to v{new_version}"
+message_template = "chore(release): prepare v{new_version}"
 tag_template = "v{new_version}"
 
-# For each file to patch, add a [[file]] config
-# section containing the path of the file, relative to the
-# tbump.toml location.
-[[file]]
-src = "apidocs/Doxygen-GaussJacobiQuad.cfg"
-[[file]]
-src = "fpm.toml"
-[[file]]
-src = "meson.build"
-
-# You can specify a list of commands to
-# run after the files have been patched
-# and before the git commit is made
-
-[[before_commit]]
-name = 'update fortran license headers'
-cmd = "python scripts/add_headers.py --dirs src/ interfaces/ --ftypes 'f90,f77' --cchar '!'"
-[[before_commit]]
-name = 'update C license headers'
-cmd = "python scripts/add_headers.py --dirs interfaces --ftypes 'c,h' --cchar '//'"
-[[before_commit]]
-name = 'update Python license headers'
-cmd = "python scripts/add_headers.py --dirs interfaces scripts --ftypes 'py' --cchar '#'"
-[[before_commit]]
-name = 'generate news'
-cmd = "towncrier build --version $(tbump current-version)"
-
-#  [[before_commit]]
-#  name = "check changelog"
-#  cmd = "grep -q {new_version} Changelog.rst"
-
-# Or run some commands after the git tag and the branch
-# have been pushed:
-#  [[after_push]]
-#  name = "publish"
-#  cmd = "./publish.sh"
+# Intentionally empty: do not run tbump file patches or towncrier.
+# All versioned files are updated by cog pre_bump_hooks in cog.toml.

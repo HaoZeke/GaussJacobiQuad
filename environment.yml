@@ -1,7 +1,11 @@
 # To use:
 #
 #   $ mamba env create -f environment.yml
-#   $ mamba activate rgpotpy
+#   $ mamba activate gaussjacquad
+#
+# Release tooling (cocogitto / `cog`) is a Rust binary; install separately with:
+#   cargo install cocogitto
+# or download a release from https://github.com/cocogitto/cocogitto/releases
 #
 name: gaussjacquad
 channels:
@@ -29,6 +33,3 @@ dependencies:
   - pandoc
   - doxygen==1.9.1 # for doxyYoda
   - graphviz # for dot
-  # Release management
-  - towncrier
-  - tbump

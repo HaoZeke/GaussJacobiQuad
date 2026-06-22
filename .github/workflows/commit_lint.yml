@@ -1,0 +1,62 @@
+name: Commit lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  cog-check:
+    name: Conventional commits (cog check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install cocogitto (cog)
+        env:
+          COG_VERSION: "7.0.0"
+        run: |
+          set -euo pipefail
+          asset="cocogitto-${COG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          url="https://github.com/cocogitto/cocogitto/releases/download/${COG_VERSION}/${asset}"
+          curl -fsSL "$url" -o /tmp/cog.tgz
+          tar -xzf /tmp/cog.tgz -C /tmp
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 "/tmp/x86_64-unknown-linux-musl/cog" "$HOME/.local/bin/cog"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cog --version
+
+      - name: Verify commits
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cog --version
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE"
+            HEAD="$PR_HEAD"
+          elif [ -n "${BEFORE:-}" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            BASE="$BEFORE"
+            HEAD="$AFTER"
+          else
+            # First push of a branch or missing before SHA: lint since latest tag.
+            cog check --from-latest-tag --ignore-merge-commits --ignore-fixup-commits
+            exit 0
+          fi
+          if [ "$(git rev-list --count "${BASE}..${HEAD}")" = "0" ]; then
+            echo "No new commits in range; checking since latest tag."
+            cog check --from-latest-tag --ignore-merge-commits --ignore-fixup-commits
+          else
+            cog check "${BASE}..${HEAD}" --ignore-merge-commits --ignore-fixup-commits
+          fi

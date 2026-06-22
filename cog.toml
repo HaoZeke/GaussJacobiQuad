@@ -1,0 +1,65 @@
+# Cocogitto (cog) — single source of truth for commits, changelog, and releases.
+# Replaces the former tbump + towncrier + newsfragments workflow.
+
+from_latest_tag = true
+ignore_merge_commits = true
+ignore_fixup_commits = true
+tag_prefix = "v"
+branch_whitelist = ["main"]
+skip_ci = "[skip ci]"
+
+# Bump version strings in package manifests and docs before the release commit.
+pre_bump_hooks = [
+    "sed -i 's/^version = \".*\"/version = \"{{version}}\"/' fpm.toml",
+    "sed -i \"s/version: '[0-9.]*'/version: '{{version}}'/\" meson.build",
+    "sed -i 's/^PROJECT_NUMBER.*/PROJECT_NUMBER          = \"{{version}}\"/' apidocs/Doxygen-GaussJacobiQuad.cfg",
+    "sed -i 's/^version: .*/version: v{{version}}/' CITATION.cff",
+    "python scripts/add_headers.py --dirs src/ interfaces/ --ftypes 'f90,f77' --cchar '!' || true",
+    "python scripts/add_headers.py --dirs interfaces --ftypes 'c,h' --cchar '//' || true",
+    "python scripts/add_headers.py --dirs interfaces scripts --ftypes 'py' --cchar '#' || true",
+]
+
+# After the tag exists locally, push branch + tag so the release workflow runs.
+post_bump_hooks = [
+    "git push origin HEAD",
+    "git push origin {{version_tag}}",
+]
+
+# Map conventional-commit types to changelog sections and semver bumps.
+[commit_types]
+feat     = { changelog_title = "Features", bump_minor = true }
+fix      = { changelog_title = "Bug Fixes", bump_patch = true }
+docs     = { changelog_title = "Documentation" }
+style    = { changelog_title = "Style" }
+refactor = { changelog_title = "Refactoring" }
+perf     = { changelog_title = "Performance", bump_patch = true }
+test     = { changelog_title = "Tests" }
+build    = { changelog_title = "Build System" }
+ci       = { changelog_title = "Continuous Integration" }
+chore    = { changelog_title = "Chores", omit_from_changelog = true }
+revert   = { changelog_title = "Reverts" }
+# Project-legacy aliases still accepted in history; prefer the types above going forward.
+enh      = { changelog_title = "Features", bump_minor = true }
+bug      = { changelog_title = "Bug Fixes", bump_patch = true }
+maint    = { changelog_title = "Maintenance", omit_from_changelog = true }
+bld      = { changelog_title = "Build System" }
+rel      = { changelog_title = "Releases", omit_from_changelog = true }
+doc      = { changelog_title = "Documentation" }
+
+[changelog]
+path = "NEWS.md"
+template = "remote"
+remote = "github.com"
+owner = "HaoZeke"
+repository = "GaussJacobiQuad"
+authors = [
+    { signature = "Rohit Goswami", username = "HaoZeke" },
+    { signature = "rgoswami", username = "HaoZeke" },
+]
+
+[git_hooks.commit-msg]
+script = """
+#!/usr/bin/env sh
+set -eu
+cog verify --file "$1"
+"""
