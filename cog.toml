@@ -1,0 +1,69 @@
+## Cocogitto (cog) release engineering for GaussJacobiQuad.
+## See docs/release.md for the full workflow.
+##
+## Version bump (on main, from a clean tree):
+##   cog bump --auto --annotated 'Release v{{version}}'
+##   # or: cog bump --minor / --major / --version X.Y.Z
+##
+## NEWS.md is owned by towncrier (newsfragments/); cog does not write it.
+
+from_latest_tag = true
+ignore_merge_commits = true
+disable_changelog = true
+disable_bump_commit = false
+skip_ci = "[skip ci]"
+branch_whitelist = ["main"]
+tag_prefix = "v"
+
+pre_bump_hooks = [
+  "bash scripts/set_version.sh {{version}}",
+  "python scripts/add_headers.py --dirs src/ interfaces/ --ftypes 'f90,f77' --cchar '!'",
+  "python scripts/add_headers.py --dirs interfaces --ftypes 'c,h' --cchar '//'",
+  "python scripts/add_headers.py --dirs interfaces scripts --ftypes 'py' --cchar '#'",
+  "sh -c 'command -v towncrier >/dev/null && towncrier build --version {{version}} --yes || echo \"towncrier not installed; skipping NEWS.md\"'",
+]
+
+post_bump_hooks = [
+  "echo 'Release v{{version}} tagged. Next: git push origin main --follow-tags'",
+]
+
+# Accept both standard conventional types and the project's historical styles
+# (enh/bug/maint/doc/bld/tst/CI/REL, plus Title-Case variants via lowercase
+# normalizer in commits going forward).
+[commit_types]
+feat = { changelog_title = "Features" }
+fix = { changelog_title = "Bugfixes" }
+docs = { changelog_title = "Documentation" }
+style = { changelog_title = "Style" }
+refactor = { changelog_title = "Refactoring" }
+perf = { changelog_title = "Performance" }
+test = { changelog_title = "Tests" }
+build = { changelog_title = "Buildsystem" }
+ci = { changelog_title = "Continuous Integration" }
+chore = { changelog_title = "Maintenance" }
+revert = { changelog_title = "Reverts" }
+# Historical / project-specific types (kept for PR lint of older branches)
+enh = { changelog_title = "Features" }
+bug = { changelog_title = "Bugfixes" }
+maint = { changelog_title = "Maintenance" }
+doc = { changelog_title = "Documentation" }
+bld = { changelog_title = "Buildsystem" }
+tst = { changelog_title = "Tests" }
+rel = { changelog_title = "Releases" }
+# Title-case prefixes used in early commits (cocogitto is case-sensitive on type)
+ENH = { changelog_title = "Features" }
+BUG = { changelog_title = "Bugfixes" }
+MAINT = { changelog_title = "Maintenance" }
+DOC = { changelog_title = "Documentation" }
+BLD = { changelog_title = "Buildsystem" }
+TST = { changelog_title = "Tests" }
+CI = { changelog_title = "Continuous Integration" }
+REL = { changelog_title = "Releases" }
+
+[changelog]
+path = "NEWS.md"
+authors = [
+  { username = "HaoZeke", signature = "Rohit Goswami" },
+]
+
+[bump_profiles]
