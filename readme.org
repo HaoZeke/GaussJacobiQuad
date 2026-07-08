@@ -42,6 +42,11 @@ fpm run --flag "-fcoarray=single" gjp_quad -- 64 0.5 0.5 rec_caf
 # Timed driver ~gjp_bench_caf~ measures only the shipped ~rec_caf~ call.
 # Example confirmed speedup (rg.terra, npts=6144, α=β=0.5, 7 trials):
 #   1 image mean ≈ 2.01 s → 4 images mean ≈ 1.03 s (≈1.94×).
+#
+# Reproducible toolchain / CI image (Nix dockerTools): see ~docker/caf/~.
+#   cd docker/caf && nix develop          # gfortran+MPICH+OpenCoarrays shell
+#   nix build .#oci && docker load < result
+# Workflow: ~.github/workflows/caf_multiimage.yml~
 #+end_src
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
