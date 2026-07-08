@@ -180,6 +180,10 @@ MIT.
 *** Citation
 If you use this library (including the interfaces) please remember to cite it as:
 
+Method literature (Golub–Welsch, ACM 655, Hale–Townsend, Bogaert, GLR, Cuppen)
+is tracked in ookcite collection =GaussJacobiQuad= and exported to [[file:docs/refs.bib][docs/refs.bib]]
+(see also [[file:docs/METHODS.org][docs/METHODS.org]] § References).
+
 #+begin_quote
 Rohit Goswami. (2023). HaoZeke/GaussJacobiQuad: GaussJacobiQuad I (v0.1.0). Zenodo. https://doi.org/10.5281/ZENODO.8285112
 #+end_quote

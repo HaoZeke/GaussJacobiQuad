@@ -24,8 +24,9 @@
 !!  - Elhay, S., & Kautsky, J. (1987). Algorithm 655: IQPACK: FORTRAN Subroutines for the Weights
 !!    of Interpolatory Quadratures. ACM Transactions on Mathematical Software, 13(4), 399-415.
 !!    DOI: 10.1145/35078.214351
-!!  - Martin, C., & Wilkinson, J. H. (1968). The implicit QL algorithm. Numerische Mathematik, 12(5), 377-383.
-!!    DOI: 10.1007/BF02165404module gjp_algo665
+!!  - Martin, R. S., & Wilkinson, J. H. (1968). The implicit QL algorithm. Numerische Mathematik, 12(5), 377-383.
+!!    DOI: 10.1007/bf02161360
+!!  Bibliography: docs/refs.bib (ookcite collection GaussJacobiQuad)
 module gjp_algo665
 use gjp_types, only: dp, gjp_sparse_matrix
 use gjp_imtqlx, only: imtqlx

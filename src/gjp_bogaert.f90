@@ -8,6 +8,7 @@
 !> find; one recurrence pass for weights).
 !>
 !> Requires n >= 21 and alpha = beta = 0. Callers must reject/fallback otherwise.
+!> DOI: 10.1137/140954969 (Bogaert 2014); see docs/refs.bib key bogaertIterationfreeComputationGausslegendre2014
 module gjp_bogaert
 use gjp_types, only: dp
 use gjp_constants, only: pi

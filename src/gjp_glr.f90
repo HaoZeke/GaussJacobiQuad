@@ -12,6 +12,7 @@
 !> Green / SL form of the Jacobi equation; Newton uses the three-term recurrence
 !> for P and P′. Single-rule phase march is sequential; glr_caf runs that march
 !> on image 1 and broadcasts (honest CAF: no fake node partition of a chain).
+!> DOI: 10.1137/06067016x (Glaser–Liu–Rokhlin 2007); see docs/refs.bib key glaserFastAlgorithmCalculation2007
 module gjp_glr
 use gjp_types, only: dp
 use gjp_constants, only: pi

@@ -94,3 +94,30 @@ export GJP_CINTERP=$(find bbdir -name libgjp_cinterp.so | head -1)
 python scripts/sympy_accuracy.py --table sympy_accuracy_table.txt
 pytest pytests/test_sympy_accuracy.py -v
 #+end_src
+
+** References (ookcite collection =GaussJacobiQuad=)
+
+Machine-managed bibliography: [[file:refs.bib][docs/refs.bib]] (export from ookcite
+collection =GaussJacobiQuad=). DOIs validated; keys are Better-BibTeX style from ookcite.
+
+| Method / topic | Primary refs (BibTeX keys) |
+|----------------|---------------------------|
+| Software cite | =goswamiHaozekegaussjacobiquadGaussjacobiquadI2023= |
+| =gw= Golub–Welsch | =golubCalculationGaussQuadrature1969= |
+| =algo665= / =imtqlx= | =elhayAlgorithm6551987=, =martinImplicitqlAlgorithm1968= |
+| =algo665_dc= Cuppen | =cuppenDivideConquerMethod1980=, =guDivideandconquerAlgorithmSymmetric1995= |
+| =rec= Hale–Townsend | =haleFastAccurateComputation2013= |
+| =bogaert= | =bogaertIterationfreeComputationGausslegendre2014= |
+| =glr= Prüfer phase | =glaserFastAlgorithmCalculation2007= |
+
+Bibliography (APA, from ookcite):
+
+1. Bogaert, I. (2014). Iteration-Free Computation of Gauss--Legendre Quadrature Nodes and Weights. /SIAM Journal on Scientific Computing/, /36/(3), A1008–A1026. https://doi.org/10.1137/140954969
+2. Cuppen, J. J. M. (1980). A divide and conquer method for the symmetric tridiagonal eigenproblem. /Numerische Mathematik/, /36/(2), 177–195. https://doi.org/10.1007/bf01396757
+3. Elhay, S., & Kautsky, J. (1987). Algorithm 655. /ACM Transactions on Mathematical Software/, /13/(4), 399–415. https://doi.org/10.1145/35078.214351
+4. Glaser, A., Liu, X., & Rokhlin, V. (2007). A Fast Algorithm for the Calculation of the Roots of Special Functions. /SIAM Journal on Scientific Computing/, /29/(4), 1420–1438. https://doi.org/10.1137/06067016x
+5. Golub, G. H., & Welsch, J. H. (1969). Calculation of Gauss quadrature rules. /Mathematics of Computation/, /23/(106), 221–230. https://doi.org/10.1090/s0025-5718-69-99647-1
+6. Goswami, R. (2023). HaoZeke/GaussJacobiQuad: GaussJacobiQuad I. Zenodo. https://doi.org/10.5281/zenodo.8285112
+7. Gu, M., & Eisenstat, S. C. (1995). A Divide-and-Conquer Algorithm for the Symmetric Tridiagonal Eigenproblem. /SIAM Journal on Matrix Analysis and Applications/, /16/(1), 172–191. https://doi.org/10.1137/s0895479892241287
+8. Hale, N., & Townsend, A. (2013). Fast and Accurate Computation of Gauss--Legendre and Gauss--Jacobi Quadrature Nodes and Weights. /SIAM Journal on Scientific Computing/, /35/(2), A652–A674. https://doi.org/10.1137/120889873
+9. Martin, R. S., & Wilkinson, J. H. (1968). The implicit QL algorithm. /Numerische Mathematik/, /12/(5), 377–383. https://doi.org/10.1007/bf02161360

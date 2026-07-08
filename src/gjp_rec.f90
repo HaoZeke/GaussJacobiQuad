@@ -25,6 +25,7 @@
 !! and the paper:
 !! Hale and Townsend, Fast and accurate computation of Gauss–Legendre and
 !! Gauss–Jacobi quadrature nodes and weights, SIAM J. Sci. Comp. 2013
+!! DOI: 10.1137/120889873; docs/refs.bib key haleFastAccurateComputation2013
 !!
 !! Coarray Fortran: `gauss_jacobi_rec_caf` partitions independent Newton node
 !! indices across images (`this_image` / `num_images`), then gathers via coarrays.
