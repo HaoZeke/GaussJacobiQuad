@@ -78,3 +78,19 @@ count. Weights use a few steps of inverse iteration on =(T - λI)= and
 
 See also =scripts/imtqlx_parallel_math.py= for why a *single* QL sweep cannot
 be reordered, and how Cuppen creates independent leaves.
+
+** SymPy accuracy reference
+
+High-precision checks use =sympy.integrals.quadrature.gauss_jacobi= via
+=scripts/sympy_accuracy.py= (and =pytests/test_sympy_accuracy.py=). The harness
+calls the *shipped* library entry (=gauss_jacobi= Python/C ABI → Fortran kernels)
+for each cell of a regime matrix (mild Jacobi, high α/β, Legendre =n≥21=, auto);
+it does *not* hard-code golden node tables. Out-of-regime =bogaert= (α≠0 or β≠0)
+is asserted as a policy error, not an accuracy pass.
+
+#+begin_src bash
+# after meson build of libgjp_cinterp
+export GJP_CINTERP=$(find bbdir -name libgjp_cinterp.so | head -1)
+python scripts/sympy_accuracy.py --table sympy_accuracy_table.txt
+pytest pytests/test_sympy_accuracy.py -v
+#+end_src

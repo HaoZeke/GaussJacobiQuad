@@ -29,11 +29,16 @@ uses sympy.integrals.quadrature.gauss_jacobi for the calculations.
 """
 import argparse
 
+from sympy import nsimplify
 from sympy.integrals.quadrature import gauss_jacobi
 
 
 def main(n, alpha, beta, n_dig):
-    roots, weights = gauss_jacobi(n=n, alpha=alpha, beta=beta, n_digits=n_dig)
+    # exact α,β — raw floats make sympy.gauss_jacobi unstable
+    roots, weights = gauss_jacobi(
+        n=n, alpha=nsimplify(alpha, rational=True),
+        beta=nsimplify(beta, rational=True), n_digits=n_dig
+    )
     for idx, root in enumerate(roots):
         sign = " " if root >= 0 else ""
         root_str = f"{float(root):23.17E}"
