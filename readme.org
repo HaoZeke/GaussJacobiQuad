@@ -30,6 +30,8 @@ Supported methods: ~rec~ / ~rec_caf~ (recurrence; ~rec_caf~ partitions Newton no
 tridiagonal eigensolve per rule does not split across images).
 
 *** Coarray Fortran (~rec_caf~)
+Full library CAF API notes: [[file:docs/CAF.org][docs/CAF.org]].
+
 Independent half-interval Newton roots are owned round-robin across images
 (~this_image~ / ~num_images~), then gathered with coarrays and ~sync all~.
 With one image every index is owned by image 1 (same nodes/weights as ~rec~).
