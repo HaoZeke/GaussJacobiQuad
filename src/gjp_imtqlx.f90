@@ -167,4 +167,112 @@ subroutine dsort2a(n, x, y)
     end do
 end subroutine dsort2a
 
+!> Same QL as imtqlx, but accumulates full orthogonal Q (starts as identity).
+!> Used as the leaf solver in Cuppen divide-and-conquer.
+subroutine imtqlx_full(mat_size, diag, off_diag, qmat)
+    integer, intent(in) :: mat_size
+    real(dp), intent(inout) :: diag(mat_size)
+    real(dp), intent(inout) :: off_diag(mat_size)
+    real(dp), intent(inout) :: qmat(mat_size, mat_size)
+
+    real(dp) :: precision, pivot_val, g_val, rot_val, scale_val, f_val, b_val, cos_val
+    real(dp) :: qi, qip1
+    integer :: lower_bound, upper_bound, inner_i, i, iter_count, col
+    integer, parameter :: max_iter = 30
+
+    precision = epsilon(precision)
+    off_diag(mat_size) = 0.0_dp
+
+    do lower_bound = 1, mat_size
+        iter_count = 0
+        do while (iter_count < max_iter)
+            do upper_bound = lower_bound, mat_size
+                if (upper_bound == mat_size) exit
+                if (abs(off_diag(upper_bound)) <= precision * (abs(diag(upper_bound)) + abs(diag(upper_bound + 1)))) exit
+            end do
+
+            pivot_val = diag(lower_bound)
+            if (upper_bound == lower_bound) exit
+
+            if (iter_count > max_iter) then
+                error stop "imtqlx_full: iteration limit exceeded"
+            end if
+            iter_count = iter_count + 1
+
+            g_val = (diag(lower_bound + 1) - pivot_val) / (2.0_dp * off_diag(lower_bound))
+            rot_val = sqrt(g_val * g_val + 1.0_dp)
+            g_val = diag(upper_bound) - pivot_val + off_diag(lower_bound) / (g_val + sign(rot_val, g_val))
+            scale_val = 1.0_dp
+            cos_val = 1.0_dp
+            pivot_val = 0.0_dp
+
+            do inner_i = 1, upper_bound - lower_bound
+                i = upper_bound - inner_i
+                f_val = scale_val * off_diag(i)
+                b_val = cos_val * off_diag(i)
+
+                if (abs(g_val) <= abs(f_val)) then
+                    cos_val = g_val / f_val
+                    rot_val = sqrt(cos_val * cos_val + 1.0_dp)
+                    off_diag(i + 1) = f_val * rot_val
+                    scale_val = 1.0_dp / rot_val
+                    cos_val = cos_val * scale_val
+                else
+                    scale_val = f_val / g_val
+                    rot_val = sqrt(scale_val * scale_val + 1.0_dp)
+                    off_diag(i + 1) = g_val * rot_val
+                    cos_val = 1.0_dp / rot_val
+                    scale_val = scale_val * cos_val
+                end if
+
+                g_val = diag(i + 1) - pivot_val
+                rot_val = (diag(i) - g_val) * scale_val + 2.0_dp * cos_val * b_val
+                pivot_val = scale_val * rot_val
+                diag(i + 1) = g_val + pivot_val
+                g_val = cos_val * rot_val - b_val
+
+                ! Z <- Z G : mix columns i and i+1 on every row (sol_vec is row 1)
+                do col = 1, mat_size
+                    qi = qmat(col, i)
+                    qip1 = qmat(col, i + 1)
+                    qmat(col, i + 1) = scale_val * qi + cos_val * qip1
+                    qmat(col, i) = cos_val * qi - scale_val * qip1
+                end do
+            end do
+
+            diag(lower_bound) = diag(lower_bound) - pivot_val
+            off_diag(lower_bound) = g_val
+            off_diag(upper_bound) = 0.0_dp
+        end do
+    end do
+
+    call dsort2a_q(mat_size, diag, qmat)
+end subroutine imtqlx_full
+
+!> Sort eigenvalues and permute columns of Q the same way.
+subroutine dsort2a_q(n, x, qmat)
+    integer, intent(in) :: n
+    real(dp), intent(inout) :: x(n)
+    real(dp), intent(inout) :: qmat(n, n)
+    integer :: i, j, min_idx, row
+    real(dp) :: temp
+
+    do i = 1, n - 1
+        min_idx = i
+        do j = i + 1, n
+            if (x(j) < x(min_idx)) min_idx = j
+        end do
+        if (min_idx /= i) then
+            temp = x(i)
+            x(i) = x(min_idx)
+            x(min_idx) = temp
+            do row = 1, n
+                temp = qmat(row, i)
+                qmat(row, i) = qmat(row, min_idx)
+                qmat(row, min_idx) = temp
+            end do
+        end if
+    end do
+end subroutine dsort2a_q
+
 end module gjp_imtqlx

@@ -24,7 +24,7 @@
 module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec, gauss_jacobi_rec_caf
 use gjp_gw, only: gauss_jacobi_gw
-use gjp_algo665, only: gauss_jacobi_algo665
+use gjp_algo665, only: gauss_jacobi_algo665, gauss_jacobi_algo665_dc
 use gjp_caf, only: gauss_jacobi_batch_caf
 use gjp_types, only: dp
 implicit none
@@ -80,10 +80,17 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
         call gauss_jacobi_gw(npts, alpha, beta, x, wts)
     case ("algo665", "algo665_caf")
         call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
+    case ("algo665_dc")
+        ! Cuppen + imtqlx leaves (serial secular)
+        call gauss_jacobi_algo665_dc(npts, alpha, beta, x, wts, use_caf=.false.)
+    case ("algo665_dc_caf")
+        ! Cuppen + imtqlx leaves + CAF-parallel secular roots
+        call gauss_jacobi_algo665_dc(npts, alpha, beta, x, wts, use_caf=.true.)
     case default
         print*,"Error: Unknown method specified:", method
-        print*,"Supported methods: 'rec', 'rec_caf', 'gw', 'gw_caf', 'algo665', 'algo665_caf'"
-        print*,"For multi-image speedup on gw/algo665, use gauss_jacobi_batch_caf."
+        print*,"Supported: rec, rec_caf, gw, gw_caf, algo665, algo665_caf,"
+        print*,"           algo665_dc, algo665_dc_caf"
+        print*,"For multi-rule batch CAF: gauss_jacobi_batch_caf."
         error stop
     end select
 end subroutine gauss_jacobi

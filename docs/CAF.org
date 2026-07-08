@@ -14,6 +14,8 @@ GaussJacobiQuad supports Coarray Fortran (CAF) for multi-image runs.
 | =rec_caf= | Same math; roots owned across images |
 | =gw= / =gw_caf= | Golub-Welsch + LAPACKE =dsteqr= (one rule is serial) |
 | =algo665= / =algo665_caf= | Golub-Welsch + =imtqlx= QL (one rule is serial) |
+| =algo665_dc= | Cuppen D&C + =imtqlx= leaves (same GW problem) |
+| =algo665_dc_caf= | same; CAF hooks on merge (leaf-level structure) |
 
 Aliases =gw_caf= / =algo665_caf= accept multi-image launch but do *not* split a
 single eigensolve. Use the batch API for multi-image speedup on those methods.

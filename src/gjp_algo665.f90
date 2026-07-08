@@ -29,6 +29,7 @@
 module gjp_algo665
 use gjp_types, only: dp, gjp_sparse_matrix
 use gjp_imtqlx, only: imtqlx
+use gjp_imtqlx_dc, only: imtqlx_dc, imtqlx_dc_caf
 use gjp_common, only: jacobi_matrix, jacobi_zeroeth_moment
 implicit none
 contains
@@ -86,5 +87,35 @@ subroutine gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     wts = wts**2
 
 end subroutine gauss_jacobi_algo665
+
+!> Same Golub-Welsch / ACM-655 *problem* as gauss_jacobi_algo665, but the
+!> tridiagonal eigen-solve is Cuppen divide-and-conquer with imtqlx leaves
+!> and (optionally) CAF-parallel secular roots. See scripts/imtqlx_parallel_math.py.
+subroutine gauss_jacobi_algo665_dc(npts, alpha, beta, x, wts, use_caf)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
+    logical, intent(in), optional :: use_caf
+    real(dp) :: zeroeth_moment, q1(npts)
+    type(gjp_sparse_matrix) :: jacobi_mat
+    real(dp) :: diagonal_elements(npts), off_diagonal_elements(npts)
+    logical :: caf
+
+    caf = .false.
+    if (present(use_caf)) caf = use_caf
+
+    jacobi_mat = jacobi_matrix(npts, alpha, beta)
+    zeroeth_moment = jacobi_zeroeth_moment(alpha, beta)
+    diagonal_elements = jacobi_mat%diagonal(1:npts)
+    off_diagonal_elements(1:npts - 1) = jacobi_mat%off_diagonal(1:npts - 1)
+    off_diagonal_elements(npts) = 0.0_dp
+
+    if (caf) then
+        call imtqlx_dc_caf(npts, diagonal_elements, off_diagonal_elements, x, q1)
+    else
+        call imtqlx_dc(npts, diagonal_elements, off_diagonal_elements, x, q1)
+    end if
+    wts = zeroeth_moment * (q1**2)
+end subroutine gauss_jacobi_algo665_dc
 
 end module gjp_algo665
