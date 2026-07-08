@@ -1,9 +1,10 @@
 [build-system]
+# numpy is a runtime dependency only; the C extension does not need it to build.
+# Requiring it here forces manylinux to compile numpy from source under old GCC.
 requires = [
   "meson-python>=0.15",
   "meson>=1.2",
   "ninja",
-  "numpy>=1.20",
 ]
 build-backend = "mesonpy"
 
@@ -55,9 +56,11 @@ archs = ["auto64"]
 build-frontend = "build"
 test-requires = ["pytest", "numpy"]
 test-command = "pytest {project}/python/tests -q"
+# manylinux2014 ships GCC 10.2; 2_28 has a newer toolchain for Fortran/C mixed builds
+manylinux-x86_64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]
-before-all = "yum install -y gcc-gfortran openblas-devel || (apt-get update && apt-get install -y gfortran libopenblas-dev)"
+before-all = "yum install -y gcc-gfortran openblas-devel || dnf install -y gcc-gfortran openblas-devel || (apt-get update && apt-get install -y gfortran libopenblas-dev)"
 environment = { PKG_CONFIG_PATH = "/usr/lib64/pkgconfig:/usr/lib/pkgconfig" }
 
 [tool.pytest.ini_options]
