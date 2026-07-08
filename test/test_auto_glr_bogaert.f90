@@ -62,6 +62,23 @@ if (me == 1) print '(A,ES12.5,A,ES12.5)', "glr vs algo665 max|dx|=", max_dx, " m
 if (max_dx > tol .or. max_dw > 1.0e-6_dp) ok = .false.
 deallocate (x, w, xref, wref)
 
+! --- GLR vs algo665 (Legendre; phase-march path) ---
+n = 64
+allocate (x(n), w(n), xref(n), wref(n))
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, xref, wref, "algo665")
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, x, w, "glr")
+max_dx = maxval(abs(x - xref))
+max_dw = maxval(abs(w - wref))
+if (me == 1) print '(A,ES12.5,A,ES12.5)', "glr Legendre vs algo665 max|dx|=", max_dx, " max|dw|=", max_dw
+if (max_dx > tol .or. max_dw > 1.0e-6_dp) ok = .false.
+! nodes must be strictly increasing (phase-chain order)
+if (any([(x(i) >= x(i+1), i=1, n-1)])) then
+    if (me == 1) print *, "FAIL glr nodes not strictly increasing"
+    ok = .false.
+end if
+deallocate (x, w, xref, wref)
+
+
 ! --- Auto entry (omit method) two regimes ---
 n = 48
 allocate (x(n), w(n), xref(n), wref(n))

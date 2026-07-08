@@ -18,7 +18,7 @@ GaussJacobiQuad supports Coarray Fortran (CAF) for multi-image runs.
 | =algo665_dc= | Cuppen D&C + =imtqlx= leaves (same GW problem) |
 | =algo665_dc_caf= | same; CAF hooks on merge (leaf-level structure) |
 | =sturm= / =sturm_caf= | Sturm bisection + inv. iteration; CAF over eigenvalue index |
-| =glr= / =glr_caf= | Prüfer phase + Newton; CAF over root index |
+| =glr= / =glr_caf= | Prüfer phase-by-π *chain* + Newton; =glr_caf= = image-1 march + broadcast |
 | =bogaert= | Legendre asymptotics (α=β=0, =n≥21=); single-image |
 
 Aliases =gw_caf= / =algo665_caf= accept multi-image launch but do *not* split a
