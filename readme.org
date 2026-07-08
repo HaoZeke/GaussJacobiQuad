@@ -76,48 +76,34 @@ These can be dropped into any code base or compiled as is into a shared library.
 gfortran dist/gjp_algo665_single.f90 --shared -fPIC -o libgjp_algo665.so
 #+end_src
 *** Interfaces
-*** C/C++ header interface
-We provide a header only interface, which bypasses passing strings between
-Fortran and C. In order to do this, there is some duplication logic in
-~GaussJacobiQuad~ and ~GaussJacobiQuadCInterp~.
+See [[file:interfaces/README.org][interfaces/README.org]] for full C/C++ and Python usage.
 
-There is also a CLI interface to the ~C~ bound interface, ~c_cli_gjpq~. However,
-this will not be compiled by ~fpm~.
+*** C/C++ interface
+Preferred entry: ~gauss_jacobi_rule_c~ (by-value scalars, optional method, status
+codes). Header: ~interfaces/CInterface/GaussJacobiQuadCInterp.h~. Methods:
+~auto~, ~rec~, ~gw~, ~algo665~, ~algo665_dc~, ~sturm~, ~glr~, ~bogaert~.
 
 #+begin_src bash
-meson setup bbdir
+meson setup bbdir -Dfcoarray=single
 meson compile -C bbdir
-./bbdir/c_cli_gjpq <npoints> <alpha> <beta> <method>
+./bbdir/c_cli_gjpq 32 0 0 auto
+./bbdir/c_cli_gjpq 40 0.5 0.5 glr
+meson test -C bbdir c_rule
 #+end_src
 
-The ~C~ CLI might be more pleasant in that decimals do not need to be provided
-explicitly for ~alpha~ and ~beta~.
-*** f2py generated interface
-The ~ISO_C_BINDING~ variant of the code is also used for a ~python~
-interface generated with ~f2py~. It is easiest to use with the new ~meson~ back-end:
+Decimals are not required for ~alpha~/~beta~ on the C CLI. Omit ~method~ for auto.
+
+*** Python interface (ctypes → C ABI)
 #+begin_src bash
-cd interfaces/PyInterface
-f2py -c --backend meson gjquadpy.pyf \
-    --dep lapack \
-    ../../src/GaussJacobiQuadCCompat.f90 \
-    ../../src/GaussJacobiQuad.f90 \
-    ../../src/gjp_constants.f90 \
-    ../../src/gjp_types.f90 \
-    ../../src/gjp_rec.f90 \
-    ../../src/gjp_common.f90 \
-    ../../src/gjp_lapack.f90 \
-    ../../src/gjp_gw.f90 \
-    ../../src/gjp_algo665.f90
+export GJP_CINTERP=$(find bbdir -name libgjp_cinterp.so | head -1)
+export PYTHONPATH=$PWD/interfaces/PyInterface:$PYTHONPATH
+python -c "from gauss_jacobi_quad import gauss_jacobi; x,w=gauss_jacobi(32,0,0); print(x[:2], w[:2])"
+python interfaces/PyInterface/gjquad_cli.py --npts 40 --alpha 0.5 --beta 0.5 --meth glr
+pytest pytests/test_c_py_bindings.py
 #+end_src
-Once compiled, the ~gjpquad_cli.py~ script can be used to run the code:
-#+begin_src bash
-python gjquad_cli.py --npts 5 --alpha 2 --beta 3
-Root: -6.90457750126761027E-01 Weight: 2.74101780663370022E-02
-Root: -3.26519931349000647E-01 Weight: 2.12917860603648035E-01
-Root:  8.23378495520349085E-02 Weight: 4.39084379443950568E-01
-Root:  4.75178870612831761E-01 Weight: 3.22206565472217876E-01
-Root:  7.92794294644228348E-01 Weight: 6.50476830805121059E-02
-#+end_src
+
+~method=None~/~auto~ uses the same policy as Fortran. Invalid ~bogaert~ raises
+~GaussJacobiError~ (status code) instead of aborting the process.
 
 ** Notes
 - The ~rec~ method fails for high values of ~beta~ so the ~gw~ method

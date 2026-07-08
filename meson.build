@@ -10,19 +10,31 @@ project('gaussjacobiquad', ['c', 'fortran'],
 _args = [] # Extra arguments
 _deps = [] # Dependencies
 
+# Languages / compilers
+cc = meson.get_compiler('c')
+_fc = meson.get_compiler('fortran')
+
 # Coarray Fortran for rec_caf (this_image / num_images / coarrays).
 # Override with -Dfcoarray=lib when linking OpenCoarrays multi-image.
-_fc = meson.get_compiler('fortran')
 _caf_mode = get_option('fcoarray')
 if _fc.get_id() == 'gcc'
   _args += '-fcoarray=' + _caf_mode
 endif
 
 # ---------------------- Dependencies
-_deps += dependency('lapack')
-
-# Languages
-cc = meson.get_compiler('c')
+# Prefer OpenBLAS (BLAS+LAPACK). Fall back to lapack pkg-config.
+_ob = dependency('openblas', required: false)
+if _ob.found()
+  _deps += _ob
+else
+  # Honor LIBRARY_PATH / linker search path for OpenBLAS
+  _oblib = cc.find_library('openblas', required: false)
+  if _oblib.found()
+    _deps += _oblib
+  else
+    _deps += dependency('lapack')
+  endif
+endif
 
 # ---------------------- Library
 
@@ -87,14 +99,20 @@ gjp_quad_algo665 = executable('gjp_quad_algo665',
                       install: true,
 )
 
-# ---------------------- Interfaces
+# ---------------------- Interfaces (C/C++ ABI)
+
+# Install public C header
+install_headers('interfaces/CInterface/GaussJacobiQuadCInterp.h')
 
 gjp_cinterp = library('gjp_cinterp',
                       sources: [
                         'src/GaussJacobiQuadCCompat.f90',
                         'interfaces/CInterface/GaussJacobiQuadCInterp.c',
                       ],
+                      include_directories: include_directories('interfaces/CInterface'),
+                      fortran_args: _args,
                       link_with: [gjplib],
+                      dependencies: _deps,
                       install: true,
 )
 
@@ -102,6 +120,17 @@ c_cli_gjpq = executable('c_cli_gjpq',
                        sources: [
                          'interfaces/CInterface/c_cli_gjpq.c',
                        ],
+                       include_directories: include_directories('interfaces/CInterface'),
                        link_with: [gjp_cinterp],
                        install: true,
 )
+
+test_c_rule = executable('test_c_rule',
+                        sources: [
+                          'interfaces/CInterface/test_c_rule.c',
+                        ],
+                        include_directories: include_directories('interfaces/CInterface'),
+                        link_with: [gjp_cinterp],
+                        install: false,
+)
+test('c_rule', test_c_rule)

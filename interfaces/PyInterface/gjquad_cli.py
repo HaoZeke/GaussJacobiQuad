@@ -1,74 +1,41 @@
-# BEGIN_HEADER
-# -----------------------------------------------------------------------------
-# Gauss-Jacobi Quadrature Implementation
-# Authors: Rohit Goswami <rgoswami[at]ieee.org>
-# Source: GaussJacobiQuad Library
-# License: MIT
-# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
-# Date: 2023-08-28
-# Commit: c442f77
-# -----------------------------------------------------------------------------
-# This code is part of the GaussJacobiQuad library, providing an efficient
-# implementation for Gauss-Jacobi quadrature nodes and weights computation.
-# -----------------------------------------------------------------------------
-# To cite this software:
-# Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
-# Zenodo: https://doi.org/10.5281/ZENODO.8285112
-# ---------------------------------------------------------------------
-# END_HEADER
-"""!
-@brief This script computes Gauss-Jacobi quadrature roots and weights using
-GaussJacobiQuadPy.
+#!/usr/bin/env python3
+"""CLI for GaussJacobiQuad Python bindings (ctypes C ABI)."""
+from __future__ import annotations
 
-@details
-The script takes polynomial degree, alpha, beta, and method parameters to
-compute Gauss-Jacobi quadrature roots and weights. It calls the GaussJacobiQuad
-library for the calculations.
-
-@author Rohit Goswami
-@date 26-08-2023
-"""
 import argparse
+import sys
+from pathlib import Path
 
-import gjquadpy
+# Allow running from repo without install
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from gauss_jacobi_quad import GaussJacobiError, gauss_jacobi  # noqa: E402
 
 
-def main(n, alpha, beta, meth):
-    if meth == "rec":
-        roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_rec_c(
-            n, alpha, beta
-        )
-    elif meth == "gw":
-        roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_gw_c(
-            n, alpha, beta
-        )
-    elif meth == "algo665":
-        roots, weights = gjquadpy.gaussjacobiquadccompat.gauss_jacobi_algo665_c(
-            n, alpha, beta
-        )
-    # print(f"method: {meth}, npts: {n}, alpha: {alpha}, beta: {beta}, range: [-1, 1]")
-    for idx, root in enumerate(roots):
+def main() -> int:
+    p = argparse.ArgumentParser(description="Gauss–Jacobi nodes/weights via C ABI")
+    p.add_argument("--npts", type=int, default=5)
+    p.add_argument("--alpha", type=float, default=0.0)
+    p.add_argument("--beta", type=float, default=0.0)
+    p.add_argument(
+        "--meth",
+        "--method",
+        dest="method",
+        default="auto",
+        help="auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert",
+    )
+    args = p.parse_args()
+    meth = None if args.method in (None, "", "auto") else args.method
+    try:
+        roots, weights = gauss_jacobi(args.npts, args.alpha, args.beta, method=meth)
+    except GaussJacobiError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    for root, weight in zip(roots, weights):
         sign = " " if root >= 0 else ""
-        root_str = f"{root:23.17E}"
-        weight_str = f"{weights[idx]:23.17E}"
-        print(f"Root:{sign} {root_str} Weight: {weight_str}")
+        print(f"Root:{sign} {root:23.17E} Weight: {weight:23.17E}")
+    return 0
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Compute Gauss-Jacobi quadrature via GaussJacobiQuad."
-    )
-    parser.add_argument("--npts", type=int, default=5, help="Degree of the polynomial.")
-    parser.add_argument("--alpha", type=float, default=0, help="Alpha parameter.")
-    parser.add_argument("--beta", type=float, default=12, help="Beta parameter.")
-    parser.add_argument(
-        "--meth",
-        type=str,
-        default="gw",
-        help="Method.",
-        choices=["gw", "rec", "algo665"],
-    )
-
-    args = parser.parse_args()
-
-    main(args.npts, args.alpha, args.beta, args.meth)
+    raise SystemExit(main())
