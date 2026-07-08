@@ -52,6 +52,17 @@ def test_auto_and_glr():
     assert np.allclose(wg[np.argsort(xg)], wa[np.argsort(xa)], atol=1e-11)
 
 
+def test_glr_high_ab_matches_algo665():
+    """Regression: large α,β used to skip the leftmost root in GLR."""
+    n, a, b = 50, 5.0, 5.0
+    xg, wg = gauss_jacobi(n, a, b, method="glr")
+    xa, wa = gauss_jacobi(n, a, b, method="algo665")
+    assert xg.shape == (n,)
+    assert np.all(np.diff(np.sort(xg)) > 0)
+    assert np.allclose(np.sort(xg), np.sort(xa), atol=1e-12)
+    assert np.allclose(wg[np.argsort(xg)], wa[np.argsort(xa)], atol=1e-11)
+
+
 def test_methods_rec_gw_sturm():
     for meth in ("rec", "gw", "algo665", "sturm"):
         x, w = gauss_jacobi(8, 0.0, 0.0, method=meth)

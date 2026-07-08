@@ -1,0 +1,127 @@
+name: Benchmark PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: main
+            sha: ${{ github.event.pull_request.base.sha || github.sha }}
+          - label: pr
+            sha: ${{ github.event.pull_request.head.sha || github.sha }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout target commit (keep PR benchmark suite)
+        run: |
+          mkdir -p /tmp/_bench_preserve
+          cp -r benchmarks/ /tmp/_bench_preserve/
+          cp asv.conf.json /tmp/_bench_preserve/
+          git checkout -f ${{ matrix.sha }}
+          git clean -fd
+          rm -rf benchmarks
+          cp -r /tmp/_bench_preserve/benchmarks/ benchmarks/
+          cp /tmp/_bench_preserve/asv.conf.json asv.conf.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran libopenblas-dev pkg-config ninja-build
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install package + asv
+        run: |
+          export LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LIBRARY_PATH:-}
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install -U pip meson-python meson ninja numpy scipy asv
+          # Editable/path install of the extension wheel
+          uv pip install -v .
+          python -c "from gauss_jacobi_quad import gauss_jacobi; print(gauss_jacobi(8,0,0)[0][:2])"
+
+      - name: Run ASV
+        run: |
+          source .venv/bin/activate
+          asv machine --yes
+          asv run -E "existing:$(which python)" \
+            --set-commit-hash ${{ matrix.sha }} \
+            --record-samples --quick
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ matrix.label }}
+          path: .asv/results/
+          retention-days: 7
+
+  combine:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Download main results
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-main
+          path: results/
+
+      - name: Download PR results
+        uses: actions/download-artifact@v4
+        with:
+          name: bench-pr
+          path: results/
+
+      - name: Compare with asv-spyglass
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.sha }}"
+          PR_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          BASE_PREFIX="${BASE_SHA:0:8}"
+          PR_PREFIX="${PR_SHA:0:8}"
+          BASE_FILE=$(find results -name "${BASE_PREFIX}*.json" | head -1)
+          PR_FILE=$(find results -name "${PR_PREFIX}*.json" | head -1)
+          BCONF=$(find results -name "benchmarks.json" | head -1)
+          echo "Base file: $BASE_FILE"
+          echo "PR file: $PR_FILE"
+          echo "Benchmarks: $BCONF"
+          BCONF_ARG=""
+          if [ -n "$BCONF" ]; then
+            BCONF_ARG="$BCONF"
+          fi
+          uvx --from "git+https://github.com/airspeed-velocity/asv_spyglass.git" \
+            asv-spyglass compare "$BASE_FILE" "$PR_FILE" $BCONF_ARG \
+            --label-before main --label-after pr \
+            > results/comparison.txt || true
+          if [ ! -s results/comparison.txt ]; then
+            echo "::error::asv-spyglass compare produced no output"
+            exit 1
+          fi
+          cat results/comparison.txt
+
+      - name: Write metadata
+        run: |
+          echo "main_sha=${{ github.event.pull_request.base.sha || github.sha }}" > results/metadata.txt
+          echo "pr_sha=${{ github.event.pull_request.head.sha || github.sha }}" >> results/metadata.txt
+
+      - name: Upload combined results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results/
+          retention-days: 7

@@ -3,6 +3,8 @@
 ## Features
 
 - Add Bogaert Legendre asymptotics (`bogaert`), Glaser–Liu–Rokhlin-style Prüfer+Newton (`glr`/`glr_caf`), and a single public entry `gauss_jacobi_rule` with optional method / `auto` selection via `select_method_auto`. (bogaert_glr_auto)
+- Fix `glr` for high α,β: Bessel-endpoint first-root starter + left-root guard (was skipping the leftmost zero and lagging by one index vs SciPy). (glr_high_ab)
+- Add ASV benchmark campaign on PRs (`Benchmark PR` + `asv-perch` commenter), with wall-time and SciPy `max|Δx|` trackers. (asv_pr)
 - Improve C/C++ ergonomics (`gauss_jacobi_rule_c` with status codes and auto method) and ship a CPython extension wheel (`gauss_jacobi_quad._core`) over ISO_C_BINDING with multi-phase init and free-threading slots (ctypes remains a development path). (c_py_bindings)
 - Add Coarray batch API `gauss_jacobi_batch_caf` so independent rules for rec, gw, and algo665 are partitioned across images (multi-image speedup for eigensolve methods). (caf_batch)
 - Add Coarray Fortran path `rec_caf`: partition independent recurrence Newton nodes across images and gather with coarrays (`this_image` / `num_images` / `sync all`). Build with `-fcoarray=single` (or multi-image CAF when available). (caf_rec)

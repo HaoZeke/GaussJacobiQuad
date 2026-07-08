@@ -82,11 +82,15 @@ subroutine glr_phase_march_nodes(npts, alpha, beta, x, ders)
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), ders(npts)
     integer :: k
-    real(dp) :: xk, dk, xprev
+    real(dp) :: xk, dk, xprev, x_lo, gap
 
-    ! Leftmost root (ascending order): asymptotic for k=1 then Newton
+    ! Leftmost root: Bessel-endpoint asymptotic (not bulk cosθ) then Newton.
+    ! Cosθ starters drift right for large α,β and Newton can latch onto root 2,
+    ! which skips a zero and collapses the chain (duplicate right end).
     call first_root_starter(npts, alpha, beta, xk)
     call newton_polish(npts, alpha, beta, xk, dk)
+    ! If Newton jumped right of the true first zero, re-bracket from the left.
+    call ensure_leftmost_root(npts, alpha, beta, xk, dk)
     x(1) = xk
     ders(1) = dk
 
@@ -95,10 +99,17 @@ subroutine glr_phase_march_nodes(npts, alpha, beta, x, ders)
         ! March phase by exactly π past the previous zero → next-root guess
         xk = phase_march_pi(npts, alpha, beta, xprev)
         call newton_polish(npts, alpha, beta, xk, dk)
-        ! Enforce strict increase (phase march should already; guard FP)
-        if (xk <= x(k - 1)) then
-            xk = 0.5_dp * (x(k - 1) + min(1.0_dp - 10.0_dp * x_eps, &
-                                           x(k - 1) + max(1.0e-8_dp, 2.0_dp / real(npts, dp))))
+        ! Enforce strict increase: bracket (xprev, xk] if Newton retreated
+        if (xk <= xprev + 10.0_dp * x_eps) then
+            gap = max(1.0e-8_dp, 2.0_dp / real(npts, dp))
+            x_lo = xprev + gap * 0.25_dp
+            xk = min(1.0_dp - 10.0_dp * x_eps, xprev + gap)
+            call newton_bracket(npts, alpha, beta, x_lo, xk, dk)
+        end if
+        ! Guard against latching onto the previous root (same basin)
+        if (abs(xk - xprev) < 1.0e-12_dp * (1.0_dp + abs(xprev))) then
+            xk = min(1.0_dp - 10.0_dp * x_eps, xprev + max(1.0e-6_dp, pi / &
+                 (rho_jacobi(npts, alpha, beta, xprev) * real(npts, dp))))
             call newton_polish(npts, alpha, beta, xk, dk)
         end if
         x(k) = xk
@@ -106,22 +117,126 @@ subroutine glr_phase_march_nodes(npts, alpha, beta, x, ders)
     end do
 end subroutine glr_phase_march_nodes
 
-!> Asymptotic starter for the *leftmost* Jacobi zero only (not per-index HT).
+!> First positive zero of J_ν (McMahon / NIST leading terms). ν ≥ 0.
+pure real(dp) function bessel_j_first_zero(nu) result(j)
+    real(dp), intent(in) :: nu
+    real(dp) :: cbrt, inv
+
+    if (nu <= 0.0_dp) then
+        ! J_0 first zero
+        j = 2.404825557695773_dp
+        return
+    end if
+    ! j_{ν,1} ≈ ν + 1.8557571 ν^{1/3} + 1.033150 / ν^{1/3}  (s=1 McMahon)
+    cbrt = nu**(1.0_dp / 3.0_dp)
+    inv = 1.0_dp / cbrt
+    j = nu + 1.855757081467_dp * cbrt + 1.033150_dp * inv
+end function bessel_j_first_zero
+
+!> Asymptotic starter for the *leftmost* Jacobi zero (near x = −1).
+!> Uses x ≈ −1 + j_{β,1}² / (2 N²), N = n + (α+β+1)/2 (endpoint Bessel scale).
 subroutine first_root_starter(npts, alpha, beta, x0)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x0
-    real(dp) :: theta, nn, ab
+    real(dp) :: nn, Nscale, jbeta, theta, ab
 
     nn = real(npts, dp)
-    ab = alpha + beta
-    ! θ measured from +1: largest θ → leftmost x = cos θ
-    ! k = n → leftmost in the usual cos-enumeration with index from the right
-    theta = pi * (nn - 0.25_dp + 0.5_dp * beta) / (nn + 0.5_dp * (ab + 1.0_dp))
-    x0 = cos(theta)
+    Nscale = nn + 0.5_dp * (alpha + beta + 1.0_dp)
+    jbeta = bessel_j_first_zero(max(0.0_dp, beta))
+    x0 = -1.0_dp + (jbeta * jbeta) / (2.0_dp * Nscale * Nscale)
+
+    ! Mild α,β: cosθ bulk formula is fine and slightly better at tiny n
+    if (max(abs(alpha), abs(beta)) <= 1.0_dp .and. npts >= 8) then
+        ab = alpha + beta
+        theta = pi * (nn - 0.25_dp + 0.5_dp * beta) / (nn + 0.5_dp * (ab + 1.0_dp))
+        x0 = cos(theta)
+    end if
+
     if (x0 <= -1.0_dp) x0 = -1.0_dp + 100.0_dp * x_eps
     if (x0 >= 1.0_dp) x0 = 1.0_dp - 100.0_dp * x_eps
 end subroutine first_root_starter
+
+!> If the polished root is not the leftmost (P changes sign further left, or |P|
+!> large while a left interval still has a zero), pull left with bisection.
+subroutine ensure_leftmost_root(npts, alpha, beta, xk, dk)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(inout) :: xk
+    real(dp), intent(out) :: dk
+    real(dp) :: p, pp, p_left, x_left, x_try
+    integer :: it
+
+    call eval_jacobi_scalar(xk, npts, alpha, beta, p, pp)
+    x_left = -1.0_dp + 100.0_dp * x_eps
+    call eval_jacobi_scalar(x_left, npts, alpha, beta, p_left, pp)
+
+    ! Sign change on (-1, xk) ⇒ a root was skipped to the left
+    if (p_left * p < 0.0_dp .or. abs(p) > 1.0e-6_dp * (1.0_dp + abs(pp))) then
+        if (p_left * p < 0.0_dp) then
+            call newton_bracket(npts, alpha, beta, x_left, xk, dk)
+            return
+        end if
+        ! Walk left with small steps looking for a sign change
+        x_try = xk
+        do it = 1, 64
+            x_try = x_try - max(1.0e-4_dp, 0.5_dp / real(npts, dp))
+            if (x_try <= x_left) exit
+            call eval_jacobi_scalar(x_try, npts, alpha, beta, p, pp)
+            if (p_left * p < 0.0_dp) then
+                xk = x_try
+                call newton_bracket(npts, alpha, beta, x_left, xk, dk)
+                return
+            end if
+        end do
+    end if
+    call eval_jacobi_scalar(xk, npts, alpha, beta, p, pp)
+    dk = pp
+end subroutine ensure_leftmost_root
+
+!> Bisection then Newton on a bracket (lo, hi] known to contain one zero.
+subroutine newton_bracket(npts, alpha, beta, lo, hi, dk)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(inout) :: lo, hi
+    real(dp), intent(out) :: dk
+    real(dp) :: a, b, mid, pa, pb, pm, pp
+    integer :: it
+
+    a = lo
+    b = hi
+    if (a > b) then
+        mid = a
+        a = b
+        b = mid
+    end if
+    a = clamp_x(a)
+    b = clamp_x(b)
+    call eval_jacobi_scalar(a, npts, alpha, beta, pa, pp)
+    call eval_jacobi_scalar(b, npts, alpha, beta, pb, pp)
+    if (pa * pb > 0.0_dp) then
+        ! No proven bracket: Newton from midpoint
+        mid = 0.5_dp * (a + b)
+        call newton_polish(npts, alpha, beta, mid, dk)
+        hi = mid
+        return
+    end if
+    do it = 1, 60
+        mid = 0.5_dp * (a + b)
+        call eval_jacobi_scalar(mid, npts, alpha, beta, pm, pp)
+        if (abs(b - a) < 1.0e-14_dp * (1.0_dp + abs(mid))) exit
+        if (pa * pm <= 0.0_dp) then
+            b = mid
+            pb = pm
+        else
+            a = mid
+            pa = pm
+        end if
+    end do
+    mid = 0.5_dp * (a + b)
+    call newton_polish(npts, alpha, beta, mid, dk)
+    hi = mid
+end subroutine newton_bracket
 
 !> Integrate dθ/dx = ρ(x) from just right of x_prev until Δθ = π (RK4).
 !> Equivalently integrate dx/dθ = 1/ρ with θ: 0 → π. Returns x_next guess.
@@ -130,7 +245,7 @@ function phase_march_pi(npts, alpha, beta, x_prev) result(x_next)
     real(dp), intent(in) :: alpha, beta, x_prev
     real(dp) :: x_next
     real(dp) :: th, h, xx, k1, k2, k3, k4, rho
-    integer :: s
+    integer :: s, nstep
 
     ! Start slightly to the right of the previous zero (increasing x)
     xx = x_prev + max(1.0e-12_dp, 1.0e-4_dp / real(npts, dp))
@@ -139,9 +254,14 @@ function phase_march_pi(npts, alpha, beta, x_prev) result(x_next)
         return
     end if
 
-    h = pi / real(rk_steps_per_pi, dp)
+    ! More RK steps when α,β large (endpoint corrections steepen ρ)
+    nstep = rk_steps_per_pi
+    if (max(abs(alpha), abs(beta)) > 2.0_dp) nstep = 2 * rk_steps_per_pi
+    if (max(abs(alpha), abs(beta)) > 5.0_dp) nstep = 4 * rk_steps_per_pi
+
+    h = pi / real(nstep, dp)
     th = 0.0_dp
-    do s = 1, rk_steps_per_pi
+    do s = 1, nstep
         rho = rho_jacobi(npts, alpha, beta, xx)
         if (rho <= 0.0_dp) exit
         ! dx/dθ = 1/ρ
@@ -161,19 +281,23 @@ end function phase_march_pi
 
 !> Local wave number for Jacobi Prüfer (bulk LG + endpoint corrections).
 !> ρ² ≈ λ/(1−x²) + (1−α²)/(4(1−x)²) + (1−β²)/(4(1+x)²), λ = n(n+α+β+1).
+!> When endpoint terms make r2 negative (α or β > 1 near the ends), floor with
+!> a fraction of the bulk term so phase march still advances.
 pure real(dp) function rho_jacobi(n, alpha, beta, x) result(rho)
     integer, intent(in) :: n
     real(dp), intent(in) :: alpha, beta, x
-    real(dp) :: lam, den, xm, xp, r2
+    real(dp) :: lam, den, xm, xp, r2, bulk
 
     lam = real(n, dp) * (real(n, dp) + alpha + beta + 1.0_dp)
     den = 1.0_dp - x * x
     if (den < 1.0e-30_dp) den = 1.0e-30_dp
     xm = max(1.0e-14_dp, 1.0_dp - x)
     xp = max(1.0e-14_dp, 1.0_dp + x)
-    r2 = lam / den + (1.0_dp - alpha * alpha) / (4.0_dp * xm * xm) + &
+    bulk = lam / den
+    r2 = bulk + (1.0_dp - alpha * alpha) / (4.0_dp * xm * xm) + &
          (1.0_dp - beta * beta) / (4.0_dp * xp * xp)
-    if (r2 < 0.0_dp) r2 = lam / den
+    if (r2 < 0.05_dp * bulk) r2 = 0.05_dp * bulk
+    if (r2 < 0.0_dp) r2 = bulk
     rho = sqrt(r2)
 end function rho_jacobi
 
@@ -189,15 +313,19 @@ subroutine newton_polish(npts, alpha, beta, xk, dk)
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(inout) :: xk
     real(dp), intent(out) :: dk
-    real(dp) :: p, pp, dx
+    real(dp) :: p, pp, dx, x_old
     integer :: it
 
     do it = 1, newton_max_it
         call eval_jacobi_scalar(xk, npts, alpha, beta, p, pp)
         if (abs(pp) < epsilon(1.0_dp)) exit
         dx = -p / pp
+        ! Damp large steps so we do not jump over a neighboring zero
+        if (abs(dx) > 0.25_dp) dx = sign(0.25_dp, dx)
+        x_old = xk
         xk = clamp_x(xk + dx)
         if (abs(dx) < 1.0e-14_dp * (1.0_dp + abs(xk))) exit
+        if (abs(xk - x_old) < 1.0e-16_dp) exit
     end do
     call eval_jacobi_scalar(xk, npts, alpha, beta, p, pp)
     dk = pp
