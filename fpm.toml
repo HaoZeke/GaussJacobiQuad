@@ -8,10 +8,12 @@ copyright = "Copyright 2023--present, featom developers"
 # Build with gfortran CAF support, e.g.:
 #   fpm build --flag "-fcoarray=single"
 #   fpm test  --flag "-fcoarray=single"
-# Multi-image (OpenCoarrays / libcaf_mpi), when available:
-#   fpm build --flag "-fcoarray=lib" --link-flag "-lcaf_mpi"
-#   cafrun -n 4 fpm run gjp_quad -- 64 0.5 0.5 rec_caf
-#   # or: mpiexec -n 4 ./build/.../gjp_quad 64 0.5 0.5 rec_caf
+# Multi-image via OpenCoarrays (libcaf_mpi). Prefer MPICH with gfortran ≥14/15
+# (OpenMPI is rejected by OpenCoarrays for that toolchain). Timed driver:
+#   fpm build --flag "-fcoarray=lib" \
+#     --link-flag "-L$OC/lib -lcaf_mpi -L$MPICH/lib -lmpifort -lmpi"
+#   cafrun -n 4 ./build/*/app/gjp_bench_caf 6144 0.5 0.5 7 3
+# Confirmed on rg.terra: npts=6144, 1→4 images ≈1.94× on rec_caf compute.
 [build]
 auto-executables = true
 auto-tests = true

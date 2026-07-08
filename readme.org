@@ -35,10 +35,13 @@ With one image every index is owned by image 1 (same nodes/weights as ~rec~).
 # 1-image (always available with gfortran)
 fpm run --flag "-fcoarray=single" gjp_quad -- 64 0.5 0.5 rec_caf
 
-# Multi-image when OpenCoarrays (or equivalent) is installed:
-#   fpm build --flag "-fcoarray=lib" --link-flag "-lcaf_mpi"
-#   cafrun -n 4 ./build/*/gjp_quad 64 0.5 0.5 rec_caf
-#   # or: mpiexec -n 4 ...
+# Multi-image (OpenCoarrays + MPICH recommended for gfortran ≥14):
+#   fpm build --flag "-fcoarray=lib" \
+#     --link-flag "-L$OC/lib -lcaf_mpi -L$MPICH/lib -lmpifort -lmpi"
+#   cafrun -n 4 ./build/*/app/gjp_bench_caf 6144 0.5 0.5 7 3
+# Timed driver ~gjp_bench_caf~ measures only the shipped ~rec_caf~ call.
+# Example confirmed speedup (rg.terra, npts=6144, α=β=0.5, 7 trials):
+#   1 image mean ≈ 2.01 s → 4 images mean ≈ 1.03 s (≈1.94×).
 #+end_src
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
