@@ -1,16 +1,22 @@
 /*
- * CPython extension for GaussJacobiQuad.
+ * CPython extension for GaussJacobiQuad (Stable ABI / Limited API).
  *
  * Calls ISO_C_BINDING C ABI: gauss_jacobi_rule_c / gjp_status_string
  * (same objects as libgjp_cinterp, linked into this module).
  *
+ * - Built with Py_LIMITED_API 0x03090000 → one abi3 wheel for CPython 3.9+
  * - Multi-phase module init (PEP 489): PyModuleDef_Init + Py_mod_exec
  * - Module state (exception type is not a process-global static)
  * - Heap / dynamic exception type via PyErr_NewException
- * - Free-threaded CPython 3.13+: Py_mod_gil = Py_MOD_GIL_NOT_USED
- * - Multi-interpreter: Py_MOD_PER_INTERPRETER_GIL_SUPPORTED (3.12+)
+ *
+ * Free-threaded CPython is a different ABI and cannot load abi3 wheels;
+ * freethreading slots are omitted under the Limited API build.
  */
 #define PY_SSIZE_T_CLEAN
+/* One wheel for 3.9+: must be defined before Python.h */
+#ifndef Py_LIMITED_API
+#  define Py_LIMITED_API 0x03090000
+#endif
 #include <Python.h>
 
 #include "GaussJacobiQuadCInterp.h"
@@ -23,7 +29,7 @@ typedef struct {
     PyObject *error; /* heap exception type */
 } gjp_module_state;
 
-static inline gjp_module_state *
+static gjp_module_state *
 gjp_state(PyObject *module)
 {
     return (gjp_module_state *)PyModule_GetState(module);
@@ -66,8 +72,6 @@ gjp_set_error(PyObject *module, int status, const char *method)
 
 /*
  * rule(npts, alpha, beta, method=None) -> (nodes: list[float], weights: list[float])
- * or with numpy if available we still return lists for minimal deps in C;
- * __init__.py can wrap to ndarray.
  */
 static PyObject *
 gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
@@ -77,6 +81,7 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
     double alpha = 0.0, beta = 0.0;
     const char *method = NULL;
     PyObject *method_obj = Py_None;
+    PyObject *method_bytes = NULL; /* keep alive for Limited API UTF-8 */
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ndd|O:rule", kwlist,
                                      &npts_ss, &alpha, &beta, &method_obj))
@@ -90,9 +95,15 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
         method = "";
     }
     else if (PyUnicode_Check(method_obj)) {
-        method = PyUnicode_AsUTF8(method_obj);
-        if (!method)
+        /* PyUnicode_AsUTF8 is not in the 3.9 Limited API surface */
+        method_bytes = PyUnicode_AsUTF8String(method_obj);
+        if (!method_bytes)
             return NULL;
+        method = PyBytes_AsString(method_bytes);
+        if (!method) {
+            Py_DECREF(method_bytes);
+            return NULL;
+        }
         if (strcmp(method, "auto") == 0)
             method = "";
     }
@@ -107,6 +118,7 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
     if (!x || !w) {
         PyMem_Free(x);
         PyMem_Free(w);
+        Py_XDECREF(method_bytes);
         return PyErr_NoMemory();
     }
 
@@ -118,7 +130,9 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
     if (status != GJP_OK) {
         PyMem_Free(x);
         PyMem_Free(w);
-        return gjp_set_error(module, status, method && method[0] ? method : "auto");
+        PyObject *err = gjp_set_error(module, status, method && method[0] ? method : "auto");
+        Py_XDECREF(method_bytes);
+        return err;
     }
 
     PyObject *x_list = PyList_New(npts);
@@ -128,6 +142,7 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
         Py_XDECREF(w_list);
         PyMem_Free(x);
         PyMem_Free(w);
+        Py_XDECREF(method_bytes);
         return NULL;
     }
 
@@ -141,14 +156,23 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
             Py_DECREF(w_list);
             PyMem_Free(x);
             PyMem_Free(w);
+            Py_XDECREF(method_bytes);
             return NULL;
         }
-        PyList_SET_ITEM(x_list, i, xv); /* steals */
-        PyList_SET_ITEM(w_list, i, wv);
+        /* PyList_SetItem steals refs; Limited API–safe (not SET_ITEM macro) */
+        if (PyList_SetItem(x_list, i, xv) < 0 || PyList_SetItem(w_list, i, wv) < 0) {
+            Py_DECREF(x_list);
+            Py_DECREF(w_list);
+            PyMem_Free(x);
+            PyMem_Free(w);
+            Py_XDECREF(method_bytes);
+            return NULL;
+        }
     }
 
     PyMem_Free(x);
     PyMem_Free(w);
+    Py_XDECREF(method_bytes);
 
     PyObject *pair = PyTuple_Pack(2, x_list, w_list);
     Py_DECREF(x_list);
@@ -197,7 +221,6 @@ gjp_mod_exec(PyObject *module)
         return -1;
     }
 
-    /* Status constants */
     if (PyModule_AddIntConstant(module, "GJP_OK", GJP_OK) < 0)
         return -1;
     if (PyModule_AddIntConstant(module, "GJP_ERR_NPTS", GJP_ERR_NPTS) < 0)
@@ -213,7 +236,7 @@ gjp_mod_exec(PyObject *module)
     if (PyModule_AddIntConstant(module, "GJP_ERR_BOGAERT_N", GJP_ERR_BOGAERT_N) < 0)
         return -1;
 
-    if (PyModule_AddStringConstant(module, "__version__", "0.2.1") < 0)
+    if (PyModule_AddStringConstant(module, "__version__", "0.2.2") < 0)
         return -1;
 
     return 0;
@@ -221,28 +244,19 @@ gjp_mod_exec(PyObject *module)
 
 static PyModuleDef_Slot gjp_slots[] = {
     {Py_mod_exec, (void *)gjp_mod_exec},
-#if defined(Py_mod_multiple_interpreters) && defined(Py_MOD_PER_INTERPRETER_GIL_SUPPORTED)
-    /* Isolated subinterpreters: all mutable state is in module state. */
-    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
-#endif
-#if defined(Py_mod_gil) && defined(Py_MOD_GIL_NOT_USED)
-    /* Free-threaded CPython: declare no GIL requirement. Fortran work runs under
-     * Py_BEGIN_ALLOW_THREADS; exception type lives in per-module state. */
-    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
-#endif
     {0, NULL}
 };
 
 static struct PyModuleDef gjp_module = {
-    .m_base = PyModuleDef_HEAD_INIT,
-    .m_name = "gauss_jacobi_quad._core",
-    .m_doc = "CPython extension: GaussJacobiQuad via ISO_C_BINDING C ABI",
-    .m_size = sizeof(gjp_module_state),
-    .m_methods = gjp_methods,
-    .m_slots = gjp_slots,
-    .m_traverse = gjp_traverse,
-    .m_clear = gjp_clear,
-    .m_free = gjp_free,
+    PyModuleDef_HEAD_INIT,
+    "gauss_jacobi_quad._core",
+    "CPython extension: GaussJacobiQuad via ISO_C_BINDING C ABI (Stable ABI)",
+    sizeof(gjp_module_state),
+    gjp_methods,
+    gjp_slots,
+    gjp_traverse,
+    gjp_clear,
+    gjp_free,
 };
 
 PyMODINIT_FUNC

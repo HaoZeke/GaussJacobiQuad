@@ -1,5 +1,5 @@
 project('gaussjacobiquad', ['c', 'fortran'],
-       version: '0.2.1',
+       version: '0.2.2',
   default_options : [
     'warning_level=everything',
     'buildtype=release',
@@ -189,6 +189,8 @@ if _py_pkg
     include_directories: include_directories('interfaces/CInterface'),
     dependencies: py_deps,
     fortran_args: _args,
+    # Stable ABI: one abi3 wheel for CPython >= 3.9 (see Py_LIMITED_API in _core.c)
+    limited_api: '3.9',
     install: true,
     subdir: 'gauss_jacobi_quad',
     # Fortran driver pulls in libgfortran correctly for mixed objects

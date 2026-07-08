@@ -1,8 +1,18 @@
+# 0.2.2 (2026-07-08)
+
+## Packaging
+
+- Build the CPython extension against the **Stable ABI** (`Py_LIMITED_API` 3.9 /
+  meson `limited_api: '3.9'`). cibuildwheel now ships **one** `cp39-abi3`
+  manylinux wheel for CPython 3.9+ instead of a per-version matrix. (stable_abi)
+- Free-threaded CPython remains a separate ABI (cannot load abi3); from-source
+  builds only. (stable_abi)
+
 # 0.2.1 (2026-07-08)
 
 ## Features
 
-- Ship a real CPython extension wheel (`gauss_jacobi_quad._core`) over the ISO_C_BINDING C ABI (`gauss_jacobi_rule_c`): multi-phase init (PEP 489), heap `GaussJacobiError` in module state, free-threading (`Py_MOD_GIL_NOT_USED` / `cp313t`). Root meson-python packaging; no `GJP_CINTERP` required for the installed wheel. (c_py_extension)
+- Ship a real CPython extension wheel (`gauss_jacobi_quad._core`) over the ISO_C_BINDING C ABI (`gauss_jacobi_rule_c`): multi-phase init (PEP 489), heap `GaussJacobiError` in module state. Root meson-python packaging; no `GJP_CINTERP` required for the installed wheel. (c_py_extension)
 - Add ASV benchmark campaign on PRs (`Benchmark PR` + `asv-perch` commenter), with wall-time and SciPy `max|Δx|` trackers. (asv_pr)
 
 ## Bug fixes

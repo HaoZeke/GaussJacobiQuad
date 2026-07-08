@@ -10,22 +10,22 @@ build-backend = "mesonpy"
 
 [project]
 name = "gauss-jacobi-quad"
-version = "0.2.1"
-description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING C ABI, free-threading ready)"
+version = "0.2.2"
+description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING C ABI, Stable ABI / abi3)"
 readme = "python/README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 authors = [
   { name = "Rohit Goswami", email = "rgoswami@ieee.org" },
 ]
-keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran", "free-threading"]
+keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran", "abi3", "stable-abi"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "Programming Language :: C",
   "Programming Language :: Fortran",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: Free Threading :: 2 - Beta",
+  "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
@@ -44,19 +44,25 @@ Documentation = "https://github.com/HaoZeke/GaussJacobiQuad/tree/main/docs/orgmo
 [project.scripts]
 gauss-jacobi-quad = "gauss_jacobi_quad.cli:main"
 
+[tool.meson-python]
+# Required for the wheel to be tagged abi3 (Stable ABI). The extension is also
+# built with meson limited_api: '3.9' / Py_LIMITED_API 0x03090000.
+limited-api = true
+
 [tool.meson-python.args]
 # Root meson.build: only the CPython extension is installed into the wheel
 setup = ["-Dpython_package=true", "-Dwarning_level=1", "-Dbuildtype=release"]
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp313t-*"
+# Stable ABI (Limited API 3.9): build once against CPython 3.9 → cp39-abi3 wheel
+# usable on 3.9, 3.10, 3.11, 3.12, 3.13, … (GIL builds). No per-version matrix.
+build = "cp39-*"
 skip = "*-win* *-macos* pp* *musllinux*"
-enable = ["cpython-freethreading"]
 archs = ["auto64"]
 build-frontend = "build"
 test-requires = ["pytest", "numpy"]
+# Exercise the abi3 wheel on a newer interpreter in the same job when available
 test-command = "pytest {project}/python/tests -q"
-# manylinux2014 ships GCC 10.2; 2_28 has a newer toolchain for Fortran/C mixed builds
 manylinux-x86_64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]

@@ -3,10 +3,13 @@
 CPython **extension** for [GaussJacobiQuad](https://github.com/HaoZeke/GaussJacobiQuad).
 
 - Calls **ISO_C_BINDING** entry `gauss_jacobi_rule_c` (same ABI as the C library)
+- **Stable ABI** (`Py_LIMITED_API` 3.9 → one `cp39-abi3` manylinux wheel for 3.9+)
 - **Multi-phase** module init (PEP 489)
-- **Free-threading** ready (`Py_MOD_GIL_NOT_USED` on CPython 3.13+)
 - Heap exception type via `PyErr_NewException` (dynamic type)
 - Wheel embeds the Fortran/C kernels (meson-python + gfortran)
+
+Free-threaded CPython (`3.13t`) is a **different** ABI and does not load `abi3` wheels;
+use a from-source build there if needed.
 
 ## Install
 

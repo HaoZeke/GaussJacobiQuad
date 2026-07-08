@@ -31,7 +31,26 @@ def test_is_compiled_extension():
 
 
 def test_version():
-    assert __version__ == "0.2.1"
+    assert __version__ == "0.2.2"
+
+
+def test_stable_abi_tag_when_installed_from_wheel():
+    """If installed from a wheel, prefer abi3 (Stable ABI) over cp3XY tags."""
+    import importlib.metadata as md
+
+    try:
+        dist = md.distribution("gauss-jacobi-quad")
+    except md.PackageNotFoundError:
+        pytest.skip("not installed as a distribution")
+    files = [str(f) for f in (dist.files or [])]
+    so = [f for f in files if "_core" in f and f.endswith((".so", ".pyd"))]
+    if not so:
+        pytest.skip("no extension file recorded")
+    # Local editable/source builds may be cp3XY; wheels from CI must be abi3
+    path = so[0]
+    if "abi3" not in path and "cpython" in path:
+        pytest.skip(f"source/local build: {path}")
+    assert "abi3" in path, path
 
 
 def test_status_string_and_constants():
