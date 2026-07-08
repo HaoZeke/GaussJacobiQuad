@@ -1,0 +1,27 @@
+#+TITLE: Accuracy checks (SymPy)
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Regime matrix
+
+High-precision checks use =sympy.integrals.quadrature.gauss_jacobi= via
+=scripts/sympy_accuracy.py=. The harness drives the *shipped* C/Python entry
+(=gauss_jacobi= → =libgjp_cinterp= → Fortran), not hand-written golden tables.
+
+Regimes covered: mild Jacobi, high α/β, Legendre =n≥21= (including =bogaert=), and =auto=.
+
+#+begin_src bash
+meson setup bbdir -Dfcoarray=single && meson compile -C bbdir
+export GJP_CINTERP=$(find bbdir -name 'libgjp_cinterp.so' | head -1)
+export PYTHONPATH=$PWD/interfaces/PyInterface:$PWD/scripts:$PYTHONPATH
+python scripts/sympy_accuracy.py --table sympy_accuracy_table.txt
+python scripts/sympy_accuracy.py --spot
+python scripts/sympy_accuracy.py --out-of-regime   # bogaert α≠0 → policy error
+pytest pytests/test_sympy_accuracy.py -v
+#+end_src
+
+* SymPy note
+
+Pass exact α,β into SymPy (=nsimplify=). Raw Python floats can make
+=gauss_jacobi= return the wrong root count; the harness does this for you.
+
+See also [[file:../explanation/methods.org][Explanation · Methods]] and =docs/METHODS.org= (legacy path).

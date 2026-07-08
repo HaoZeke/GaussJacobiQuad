@@ -1,0 +1,70 @@
+#+TITLE: Quickstart
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Goal
+
+Build GaussJacobiQuad and compute one Gauss–Jacobi rule with the *shipped* public entry.
+
+* Install toolchain
+
+** Conda / micromamba (recommended)
+
+#+begin_src bash
+git clone https://github.com/HaoZeke/GaussJacobiQuad.git
+cd GaussJacobiQuad
+micromamba create -f environment.yml
+micromamba activate gaussjacquad
+#+end_src
+
+** fpm + gfortran
+
+You need =gfortran= with Coarray support. Portable one-image mode uses =-fcoarray=single=.
+
+* Build and test (Fortran)
+
+#+begin_src bash
+fpm build --flag "-fcoarray=single"
+fpm test  --flag "-fcoarray=single"
+#+end_src
+
+* First rule: CLI
+
+Preferred Fortran driver dispatches via =gauss_jacobi_rule=:
+
+#+begin_src bash
+# npoints  alpha  beta  method
+fpm run --flag "-fcoarray=single" gjp_quad -- 32 0.0 0.0 auto
+fpm run --flag "-fcoarray=single" gjp_quad -- 40 0.5 0.5 glr
+fpm run --flag "-fcoarray=single" gjp_quad -- 32 0.0 0.0 bogaert
+#+end_src
+
+Notes:
+
+- =alpha= / =beta= on the Fortran CLI require a decimal point (e.g. =0.5=).
+- Method may be =auto=, =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=, or a =*_caf= name.
+- Legendre asymptotics (=bogaert=) require α=β=0 and =n≥21=.
+
+* First rule: library
+
+#+begin_src fortran
+use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
+use gjp_types, only: dp
+integer, parameter :: npts = 32
+real(dp) :: alpha, beta, x(npts), wts(npts)
+character(len=:), allocatable :: m
+
+alpha = 0.0_dp
+beta  = 0.0_dp
+! omit method → select_method_auto (Legendre large n → bogaert)
+call gauss_jacobi_rule(npts, alpha, beta, x, wts)
+
+m = select_method_auto(40, 0.5_dp, 0.5_dp)
+call gauss_jacobi_rule(40, 0.5_dp, 0.5_dp, x, wts, m)
+#+end_src
+
+* Next steps
+
+- Bindings: [[file:../howto/bindings.org][Howto · C and Python]]
+- Method choice: [[file:../explanation/methods.org][Explanation · Methods]]
+- CAF multi-image: [[file:../howto/caf.org][Howto · CAF]]
+- Method name list: [[file:../reference/method-names.org][Reference · method names]]

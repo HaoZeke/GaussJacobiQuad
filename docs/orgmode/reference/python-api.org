@@ -1,0 +1,23 @@
+#+TITLE: Python API
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Module =gauss_jacobi_quad=
+
+Path: =interfaces/PyInterface/gauss_jacobi_quad.py= (ctypes → =libgjp_cinterp=).
+
+Set =GJP_CINTERP= to the shared library if auto-discovery fails.
+
+#+begin_src python
+from gauss_jacobi_quad import gauss_jacobi, GaussJacobiError, GJP_OK, GJP_ERR_BOGAERT_AB
+
+x, w = gauss_jacobi(n, alpha, beta)                 # method=None → auto
+x, w = gauss_jacobi(n, alpha, beta, method="glr")
+x, w = gauss_jacobi(n, alpha, beta, method="bogaert")
+#+end_src
+
+- Returns: two =numpy.ndarray= of shape =(n,)= (nodes, weights).
+- Raises: =GaussJacobiError= with =.status= matching C =GJP_ERR_*=.
+
+CLI: =interfaces/PyInterface/gjquad_cli.py= (=--npts=, =--alpha=, =--beta=, =--meth=).
+
+Howto: [[file:../howto/bindings.org][Howto · Bindings]]. Tests: =pytests/test_c_py_bindings.py=, =pytests/test_sympy_accuracy.py=.

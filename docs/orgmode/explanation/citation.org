@@ -1,0 +1,27 @@
+#+TITLE: Citation
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Cite this software
+
+If you use GaussJacobiQuad (including C/Python interfaces), please cite:
+
+Rohit Goswami. (2023). HaoZeke/GaussJacobiQuad: GaussJacobiQuad I (v0.1.0).
+Zenodo. https://doi.org/10.5281/zenodo.8285112
+
+See also =CITATION.cff= in the repository root.
+
+* Method literature
+
+Primary papers for each algorithm live in the ookcite collection
+*=GaussJacobiQuad=* and are exported to [[file:../../refs.bib][docs/refs.bib]].
+
+| Method | BibTeX key (see =refs.bib=) |
+|--------|------------------------------|
+| =gw= | =golubCalculationGaussQuadrature1969= |
+| =algo665= / =imtqlx= | =elhayAlgorithm6551987=, =martinImplicitqlAlgorithm1968= |
+| =algo665_dc= | =cuppenDivideConquerMethod1980=, =guDivideandconquerAlgorithmSymmetric1995= |
+| =rec= | =haleFastAccurateComputation2013= |
+| =bogaert= | =bogaertIterationfreeComputationGausslegendre2014= |
+| =glr= | =glaserFastAlgorithmCalculation2007= |
+
+Full APA list: [[file:methods.org][Explanation · Methods]] § References.

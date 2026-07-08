@@ -1,44 +1,9 @@
-* C/C++ and Python interfaces
+* C/C++ and Python interfaces (moved)
 
-** Preferred C/C++ entry
+Narrative docs:
 
-Header: =interfaces/CInterface/GaussJacobiQuadCInterp.h=
+- [[file:../docs/orgmode/howto/bindings.org][Howto · Bindings]]
+- [[file:../docs/orgmode/reference/c-api.org][Reference · C API]]
+- [[file:../docs/orgmode/reference/python-api.org][Reference · Python API]]
 
-#+begin_src c
-#include "GaussJacobiQuadCInterp.h"
-double x[64], w[64];
-int st = gauss_jacobi_rule_c(64, 0.5, 0.5, x, w, "auto"); /* or NULL/"glr"/... */
-if (st != GJP_OK) { /* handle gjp_status_string(st) */ }
-#+end_src
-
-C++ can use =gauss_jacobi_rule(...)= with default =method=nullptr= (auto).
-
-Methods: =auto=, =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=
-(=bogaert= requires α=β=0 and =n≥21=; returns =GJP_ERR_BOGAERT_*= without aborting).
-
-** Build (meson)
-
-#+begin_src bash
-meson setup bbdir -Dfcoarray=single
-meson compile -C bbdir
-./bbdir/c_cli_gjpq 32 0 0 auto
-./bbdir/c_cli_gjpq 40 0.5 0.5 glr
-meson test -C bbdir c_rule
-#+end_src
-
-Library: =libgjp_cinterp=; CLI: =c_cli_gjpq=; unit consumer: =test_c_rule=.
-
-** Python (ctypes → C ABI)
-
-#+begin_src bash
-export GJP_CINTERP=$PWD/bbdir/libgjp_cinterp.so   # path may vary under bbdir/
-export PYTHONPATH=$PWD/interfaces/PyInterface:$PYTHONPATH
-python -c "from gauss_jacobi_quad import gauss_jacobi; print(gauss_jacobi(32,0,0)[0][:3])"
-python interfaces/PyInterface/gjquad_cli.py --npts 40 --alpha 0.5 --beta 0.5 --meth glr
-pytest pytests/test_c_py_bindings.py
-#+end_src
-
-=gauss_jacobi(n, alpha, beta, method=None)= returns =(nodes, weights)= numpy arrays.
-Policy errors raise =GaussJacobiError= (status code), not a process abort.
-
-The older f2py =gjquadpy.pyf= path is legacy (rec/gw/algo665 only); prefer the ctypes module.
+Hub: [[file:../docs/orgmode/index.org][docs/orgmode/index.org]]

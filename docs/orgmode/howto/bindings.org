@@ -1,0 +1,90 @@
+#+TITLE: C/C++ and Python bindings
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Overview
+
+Both surfaces call the same Fortran kernels through =libgjp_cinterp= and the
+preferred dispatch entry =gauss_jacobi_rule_c= (optional method, status codes).
+
+Multi-image CAF is *not* exposed on C/Python (single-image only).
+
+* Build the C library (meson)
+
+#+begin_src bash
+meson setup bbdir -Dfcoarray=single
+meson compile -C bbdir
+# products: bbdir/libgjp_cinterp.so  bbdir/c_cli_gjpq  bbdir/test_c_rule
+meson test -C bbdir c_rule
+#+end_src
+
+OpenBLAS/LAPACK must be visible to the linker (=LIBRARY_PATH= / pkg-config).
+
+* C CLI
+
+#+begin_src bash
+./bbdir/c_cli_gjpq 32 0 0 auto
+./bbdir/c_cli_gjpq 40 0.5 0.5 glr
+./bbdir/c_cli_gjpq 32 0 0 bogaert
+# omit method → auto
+./bbdir/c_cli_gjpq 16 0.5 12
+#+end_src
+
+Decimals are optional on the C CLI. Policy failures print =gjp_status_string= and exit nonzero (no process abort from Fortran =error stop= for bogaert policy).
+
+* C API (preferred)
+
+Header: =interfaces/CInterface/GaussJacobiQuadCInterp.h=
+
+#+begin_src c
+#include "GaussJacobiQuadCInterp.h"
+
+double x[64], w[64];
+int st = gauss_jacobi_rule_c(64, 0.5, 0.5, x, w, "auto"); /* NULL or "" also auto */
+if (st != GJP_OK) {
+    fprintf(stderr, "%s\n", gjp_status_string(st));
+}
+/* forced methods: "rec", "gw", "algo665", "algo665_dc", "sturm", "glr", "bogaert" */
+st = gauss_jacobi_rule_c(40, 0.5, 0.5, x, w, "glr");
+#+end_src
+
+C++ convenience (default method = auto):
+
+#+begin_src cpp
+#include "GaussJacobiQuadCInterp.h"
+double x[32], w[32];
+int st = gauss_jacobi_rule(32, 0.0, 0.0, x, w); // method defaults to nullptr → auto
+#+end_src
+
+Status codes: =GJP_OK=, =GJP_ERR_NPTS=, =GJP_ERR_ALPHA=, =GJP_ERR_BETA=,
+=GJP_ERR_METHOD=, =GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=.
+
+Legacy named wrappers (=gauss_jacobi_rec_c=, =gauss_jacobi_gw_c=, =gauss_jacobi_algo665_c=) remain for ABI stability.
+
+Full reference: [[file:../reference/c-api.org][Reference · C API]].
+
+* Python (ctypes → C ABI)
+
+#+begin_src bash
+export GJP_CINTERP=$(find bbdir -name 'libgjp_cinterp.so' | head -1)
+export PYTHONPATH=$PWD/interfaces/PyInterface:$PYTHONPATH
+export LD_LIBRARY_PATH=$(dirname "$GJP_CINTERP"):$LD_LIBRARY_PATH
+
+python -c "from gauss_jacobi_quad import gauss_jacobi; x,w=gauss_jacobi(32,0,0); print(x[:3], w[:3])"
+python interfaces/PyInterface/gjquad_cli.py --npts 40 --alpha 0.5 --beta 0.5 --meth glr
+pytest pytests/test_c_py_bindings.py
+#+end_src
+
+#+begin_src python
+from gauss_jacobi_quad import gauss_jacobi, GaussJacobiError
+
+x, w = gauss_jacobi(32, 0.0, 0.0)                 # auto
+x, w = gauss_jacobi(40, 0.5, 0.5, method="glr")
+try:
+    gauss_jacobi(32, 0.5, 0.0, method="bogaert")  # non-Legendre
+except GaussJacobiError as e:
+    print(e.status, e)  # status 5 = GJP_ERR_BOGAERT_AB
+#+end_src
+
+The older f2py =gjquadpy.pyf= path is legacy (rec/gw/algo665 only); prefer =gauss_jacobi_quad=.
+
+Full reference: [[file:../reference/python-api.org][Reference · Python API]].

@@ -1,0 +1,37 @@
+#+TITLE: C/C++ API
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Header
+
+=interfaces/CInterface/GaussJacobiQuadCInterp.h= (installed with meson when configured).
+
+* Preferred entry
+
+#+begin_src c
+int gauss_jacobi_rule_c(int npts, double alpha, double beta,
+                        double *x, double *wts, const char *method);
+const char *gjp_status_string(int status);
+#+end_src
+
+- =method=: =NULL=, =""=, or ="auto"= → policy; else a method string (see [[file:method-names.org][method names]]).
+- Returns =GJP_OK= (0) or =GJP_ERR_*= (does not abort on bogaert policy errors).
+
+* C++ helper
+
+#+begin_src cpp
+inline int gauss_jacobi_rule(int npts, double alpha, double beta,
+                             double *x, double *wts,
+                             const char *method = nullptr);
+#+end_src
+
+* Status enum
+
+=GJP_OK=, =GJP_ERR_NPTS=, =GJP_ERR_ALPHA=, =GJP_ERR_BETA=, =GJP_ERR_METHOD=,
+=GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=.
+
+* Legacy
+
+=gauss_jacobi_c= (pointer scalars; exits on error), =gauss_jacobi_rec_c=,
+=gauss_jacobi_gw_c=, =gauss_jacobi_algo665_c=.
+
+Howto recipes: [[file:../howto/bindings.org][Howto · Bindings]].

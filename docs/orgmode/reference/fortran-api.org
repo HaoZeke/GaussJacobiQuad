@@ -1,0 +1,38 @@
+#+TITLE: Fortran API
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Module =GaussJacobiQuad=
+
+Public symbols:
+
+- =gauss_jacobi_rule(npts, alpha, beta, x, wts [, method])= — *preferred*
+- =gauss_jacobi(...)= — legacy required method string; forwards to the rule entry
+- =gauss_jacobi_batch_caf= — multi-rule batch (CAF)
+- =select_method_auto(npts, alpha, beta)= — deferred-length method string
+
+#+begin_src fortran
+use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
+use gjp_types, only: dp
+real(dp) :: x(n), w(n)
+call gauss_jacobi_rule(n, alpha, beta, x, w)
+call gauss_jacobi_rule(n, alpha, beta, x, w, "sturm")
+call gauss_jacobi_rule(n, alpha, beta, x, w, "rec_caf")
+#+end_src
+
+* Related modules
+
+| Module | Role |
+|--------|------|
+| =gjp_auto= | Auto policy |
+| =gjp_rec= | =rec= / =rec_caf= |
+| =gjp_gw= | Golub–Welsch |
+| =gjp_algo665= | ACM 655 + =imtqlx= / D&C |
+| =gjp_sturm= | Sturm paths |
+| =gjp_glr= | GLR paths |
+| =gjp_bogaert= | Legendre asymptotics |
+| =gjp_caf= | Batch CAF |
+| =gjp_types= | =dp= kind |
+
+Doxygen HTML (when built): generated under =html/= from =apidocs/=.
+
+Method strings: [[file:method-names.org][method names]].

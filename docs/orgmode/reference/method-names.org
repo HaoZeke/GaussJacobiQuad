@@ -1,0 +1,26 @@
+#+TITLE: Method name strings
+#+OPTIONS: toc:2 num:nil author:nil
+
+* Dispatch names
+
+These strings are accepted by =gauss_jacobi_rule= (Fortran), =gauss_jacobi_rule_c=
+(C), and =gauss_jacobi(..., method=...)= (Python), except as noted.
+
+| String | Meaning | Notes |
+|--------|---------|-------|
+| =(omit)= / =""= / ="auto"= | =select_method_auto= | Single-image defaults |
+| =rec= | Hale–Townsend-style Newton | |
+| =rec_caf= | Same; CAF over root index | |
+| =gw= / =gw_caf= | Golub–Welsch + =dsteqr= | One rule is serial |
+| =algo665= / =algo665_caf= | GW + =imtqlx= | One rule is serial |
+| =algo665_dc= | Cuppen D&C + =imtqlx= leaves | |
+| =algo665_dc_caf= | D&C with CAF hooks | |
+| =sturm= / =sturm_caf= | Sturm bisection + inv. iter. | CAF over eigenvalue index |
+| =glr= / =glr_caf= | Prüfer phase-by-π + Newton | =glr_caf= = image-1 + broadcast |
+| =bogaert= | Legendre asymptotics | α=β=0, =n≥21= only |
+
+C/Python do not expose multi-image CAF method names as parallel runs; use
+Fortran + =cafrun= for =*_caf=.
+
+Source of truth: =src/GaussJacobiQuad.f90= =select case= and
+=interfaces/CInterface/GaussJacobiQuadCInterp.h=.

@@ -1,0 +1,50 @@
+#+TITLE: GaussJacobiQuad documentation
+#+AUTHOR: Rohit Goswami
+#+OPTIONS: toc:2 num:nil author:nil
+
+* GaussJacobiQuad
+
+Permissively licensed *modern Fortran* Gauss–Jacobi quadrature: nodes and
+weights on =[-1, 1]= for weight =(1-x)^α (1+x)^β= (α,β > −1). Multiple algorithms,
+optional auto selection, Coarray Fortran paths, and C/Python surfaces.
+
+*Navigation* follows the [[https://diataxis.fr/][Diátaxis]] map (same pattern as
+[[https://rsx.rgoswami.me/][rsx]] docs):
+
+| Need | Go to |
+|------|-------|
+| Install and compute one rule | [[file:tutorials/quickstart.org][Tutorials · Quickstart]] |
+| C / Python / CAF recipes | [[file:howto/bindings.org][Howto · Bindings]], [[file:howto/caf.org][Howto · CAF]], [[file:howto/accuracy.org][Howto · Accuracy]] |
+| Why these methods / auto policy | [[file:explanation/methods.org][Explanation · Methods]] |
+| API surfaces and method strings | [[file:reference/fortran-api.org][Reference · Fortran]], [[file:reference/c-api.org][C]], [[file:reference/python-api.org][Python]], [[file:reference/method-names.org][method names]] |
+| Cite software and literature | [[file:explanation/citation.org][Explanation · Citation]] · [[file:../refs.bib][refs.bib]] |
+
+* Features
+
+- Preferred entry: =gauss_jacobi_rule= (optional method; blank / ="auto"= → policy)
+- Methods: =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=, and =*_caf= variants where applicable
+- CAF: node or eigenvalue ownership; multi-rule batch API
+- C: =gauss_jacobi_rule_c= with status codes; Python: =gauss_jacobi= (ctypes)
+- SymPy accuracy harness for regime checks
+- Bibliography managed via ookcite collection =GaussJacobiQuad= → =docs/refs.bib=
+
+* Minimal example (Fortran)
+
+#+begin_src fortran
+use GaussJacobiQuad, only: gauss_jacobi_rule
+use gjp_types, only: dp
+integer, parameter :: n = 32
+real(dp) :: x(n), w(n)
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, x, w)          ! auto
+call gauss_jacobi_rule(n, 0.5_dp, 0.5_dp, x, w, "glr")  ! forced
+#+end_src
+
+* Build docs (this tree)
+
+#+begin_src bash
+# Narrative HTML (pandoc) + optional Doxygen API
+./docs/scripts/build_docs.sh
+# Output: docs/site/  (narrative) and html/ when doxygen runs
+#+end_src
+
+API HTML (Doxygen) is produced by CI and locally via =apidocs/Doxygen-GaussJacobiQuad.cfg=.
