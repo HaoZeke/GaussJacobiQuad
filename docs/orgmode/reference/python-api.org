@@ -1,11 +1,18 @@
 #+TITLE: Python API
 #+OPTIONS: toc:2 num:nil author:nil
 
-* Module =gauss_jacobi_quad=
+* Package =gauss-jacobi-quad= (CPython extension)
 
-Path: =interfaces/PyInterface/gauss_jacobi_quad.py= (ctypes → =libgjp_cinterp=).
+Primary distribution: meson-python wheel from the *repository root* (=pyproject.toml=).
+Extension module =gauss_jacobi_quad._core= links Fortran + C ABI into one =.so=.
 
-Set =GJP_CINTERP= to the shared library if auto-discovery fails.
+Features:
+
+- Calls =gauss_jacobi_rule_c= (ISO_C_BINDING / same as =libgjp_cinterp=)
+- Multi-phase init (PEP 489): =PyModuleDef_Init= + =Py_mod_exec=
+- Heap exception type =GaussJacobiError= (module state; free-threading safe)
+- Free-threaded CPython 3.13+: =Py_MOD_GIL_NOT_USED=
+- No =GJP_CINTERP= required for the installed wheel
 
 #+begin_src python
 from gauss_jacobi_quad import gauss_jacobi, GaussJacobiError, GJP_OK, GJP_ERR_BOGAERT_AB
@@ -16,8 +23,15 @@ x, w = gauss_jacobi(n, alpha, beta, method="bogaert")
 #+end_src
 
 - Returns: two =numpy.ndarray= of shape =(n,)= (nodes, weights).
-- Raises: =GaussJacobiError= with =.status= matching C =GJP_ERR_*=.
+- Raises: =GaussJacobiError= (message includes =status=N= matching C =GJP_ERR_*=).
 
-CLI: =interfaces/PyInterface/gjquad_cli.py= (=--npts=, =--alpha=, =--beta=, =--meth=).
+CLI entry point: =gauss-jacobi-quad= (or =python -m= package CLI).
 
-Howto: [[file:../howto/bindings.org][Howto · Bindings]]. Tests: =pytests/test_c_py_bindings.py=, =pytests/test_sympy_accuracy.py=.
+Sources: =python/src/gauss_jacobi_quad/=. Tests: =python/tests/=.
+
+* Development ctypes loader
+
+Path: =interfaces/PyInterface/gauss_jacobi_quad.py= (ctypes → =libgjp_cinterp=).
+Set =GJP_CINTERP= if auto-discovery fails. Tests: =pytests/test_c_py_bindings.py=.
+
+Howto: [[file:../howto/bindings.org][Howto · Bindings]].

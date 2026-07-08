@@ -76,13 +76,16 @@ let (x, w) = gauss_jacobi(32, 0.0, 0.0, Method::Auto)?;
 
 *** Python (PyPI)
 
+CPython *extension* wheel (ISO_C_BINDING =gauss_jacobi_rule_c=, multi-phase init,
+free-threading ready). No =GJP_CINTERP= needed after install.
+
 #+begin_src bash
 pip install gauss-jacobi-quad
-export GJP_CINTERP=/path/to/libgjp_cinterp.so
 python -c "from gauss_jacobi_quad import gauss_jacobi; print(gauss_jacobi(32,0,0)[0][:3])"
 #+end_src
 
-Package sources: =python/=. Trusted publishing: =.github/workflows/publish-pypi.yml= (OIDC).
+Build from repo root (requires gfortran + OpenBLAS): =pip install .= or =python -m build=.
+Trusted publishing: =.github/workflows/publish-pypi.yml= (OIDC + cibuildwheel, incl. =cp313t=).
 
 ** Cite
 

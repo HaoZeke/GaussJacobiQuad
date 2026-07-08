@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
-"""CLI for GaussJacobiQuad Python bindings (ctypes C ABI)."""
+"""CLI for GaussJacobiQuad (extension package)."""
 from __future__ import annotations
 
 import argparse
 import sys
+
 from gauss_jacobi_quad import GaussJacobiError, gauss_jacobi
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Gauss–Jacobi nodes/weights via C ABI")
+    p = argparse.ArgumentParser(description="Gauss–Jacobi nodes/weights via C extension")
     p.add_argument("--npts", type=int, default=5)
     p.add_argument("--alpha", type=float, default=0.0)
     p.add_argument("--beta", type=float, default=0.0)

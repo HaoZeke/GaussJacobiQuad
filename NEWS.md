@@ -3,7 +3,7 @@
 ## Features
 
 - Add Bogaert Legendre asymptotics (`bogaert`), Glaser–Liu–Rokhlin-style Prüfer+Newton (`glr`/`glr_caf`), and a single public entry `gauss_jacobi_rule` with optional method / `auto` selection via `select_method_auto`. (bogaert_glr_auto)
-- Improve C/C++ ergonomics (`gauss_jacobi_rule_c` with status codes and auto method) and Python ctypes bindings (`gauss_jacobi` returning numpy arrays). (c_py_bindings)
+- Improve C/C++ ergonomics (`gauss_jacobi_rule_c` with status codes and auto method) and ship a CPython extension wheel (`gauss_jacobi_quad._core`) over ISO_C_BINDING with multi-phase init and free-threading slots (ctypes remains a development path). (c_py_bindings)
 - Add Coarray batch API `gauss_jacobi_batch_caf` so independent rules for rec, gw, and algo665 are partitioned across images (multi-image speedup for eigensolve methods). (caf_batch)
 - Add Coarray Fortran path `rec_caf`: partition independent recurrence Newton nodes across images and gather with coarrays (`this_image` / `num_images` / `sync all`). Build with `-fcoarray=single` (or multi-image CAF when available). (caf_rec)
 - Add crates.io Rust crate `gauss-jacobi-quad` and PyPI package `gauss-jacobi-quad` over the C ABI, with OIDC publish workflow. (rust_pypi_packages)

@@ -62,16 +62,18 @@ Legacy named wrappers (=gauss_jacobi_rec_c=, =gauss_jacobi_gw_c=, =gauss_jacobi_
 
 Full reference: [[file:../reference/c-api.org][Reference · C API]].
 
-* Python (ctypes → C ABI)
+* Python (CPython extension — preferred)
+
+The PyPI package =gauss-jacobi-quad= is a real CPython extension (not pure ctypes).
+It multi-phase-inits (=PEP 489=), uses a heap =GaussJacobiError=, declares
+=Py_MOD_GIL_NOT_USED= for free-threaded CPython 3.13+, and links the same
+ISO_C_BINDING entry =gauss_jacobi_rule_c= into =_core.so= (no =GJP_CINTERP=).
+
+Build from the *repository root* (meson-python + gfortran + OpenBLAS):
 
 #+begin_src bash
-export GJP_CINTERP=$(find bbdir -name 'libgjp_cinterp.so' | head -1)
-export PYTHONPATH=$PWD/interfaces/PyInterface:$PYTHONPATH
-export LD_LIBRARY_PATH=$(dirname "$GJP_CINTERP"):$LD_LIBRARY_PATH
-
-python -c "from gauss_jacobi_quad import gauss_jacobi; x,w=gauss_jacobi(32,0,0); print(x[:3], w[:3])"
-python interfaces/PyInterface/gjquad_cli.py --npts 40 --alpha 0.5 --beta 0.5 --meth glr
-pytest pytests/test_c_py_bindings.py
+pip install .          # or: python -m build
+pytest python/tests -q
 #+end_src
 
 #+begin_src python
@@ -82,9 +84,18 @@ x, w = gauss_jacobi(40, 0.5, 0.5, method="glr")
 try:
     gauss_jacobi(32, 0.5, 0.0, method="bogaert")  # non-Legendre
 except GaussJacobiError as e:
-    print(e.status, e)  # status 5 = GJP_ERR_BOGAERT_AB
+    print(e)  # message includes status=5 = GJP_ERR_BOGAERT_AB
 #+end_src
 
-The older f2py =gjquadpy.pyf= path is legacy (rec/gw/algo665 only); prefer =gauss_jacobi_quad=.
+* Python (ctypes development path)
+
+In-tree ctypes loader still works for local =libgjp_cinterp= development:
+
+#+begin_src bash
+export GJP_CINTERP=$(find bbdir -name 'libgjp_cinterp.so' | head -1)
+export PYTHONPATH=$PWD/interfaces/PyInterface:$PYTHONPATH
+export LD_LIBRARY_PATH=$(dirname "$GJP_CINTERP"):$LD_LIBRARY_PATH
+pytest pytests/test_c_py_bindings.py
+#+end_src
 
 Full reference: [[file:../reference/python-api.org][Reference · Python API]].
