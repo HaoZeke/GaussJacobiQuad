@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
 # Build narrative docs (orgmode → HTML) and optionally Doxygen API HTML.
+#
+# Site-root-relative navigation is rewritten per page depth so nested HTML
+# (howto/, tutorials/, …) resolves hub/API links correctly.
+#
+# GJP_DOCS_API_HREF — path from *site root* to Doxygen index.html
+#   Local default (site under docs/site/, Doxygen under repo html/):
+#     ../../html/index.html
+#   CI GitHub Pages (site under html/narrative/, Doxygen under html/):
+#     ../index.html
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ORG="$ROOT/docs/orgmode"
 SITE="$ROOT/docs/site"
+API_HREF="${GJP_DOCS_API_HREF:-../../html/index.html}"
 mkdir -p "$SITE"
 
 if ! command -v pandoc >/dev/null 2>&1; then
@@ -11,8 +21,8 @@ if ! command -v pandoc >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Exporting orgmode → HTML under docs/site/"
-# CSS
+echo "==> Exporting orgmode → HTML under docs/site/ (API href from site root: $API_HREF)"
+
 cat > "$SITE/style.css" << 'CSS'
 :root { --fg: #1a1a1a; --muted: #555; --link: #0b5fff; --bg: #fafafa; --code-bg: #f0f0f0; }
 @media (prefers-color-scheme: dark) {
@@ -30,40 +40,51 @@ h1, h2, h3 { line-height: 1.25; }
 .muted { color: var(--muted); font-size: 0.9rem; }
 CSS
 
-nav='<nav class="site"><a href="index.html">Hub</a>
-<a href="tutorials/quickstart.html">Quickstart</a>
-<a href="howto/bindings.html">Bindings</a>
-<a href="howto/caf.html">CAF</a>
-<a href="explanation/methods.html">Methods</a>
-<a href="reference/fortran-api.html">Fortran API</a>
-<a href="reference/method-names.html">Methods list</a>
-<span class="muted">·</span>
-<a href="../html/index.html">Doxygen API</a></nav>'
-
 export_one() {
   local src="$1"
   local rel="${src#$ORG/}"
   local dest="$SITE/${rel%.org}.html"
   mkdir -p "$(dirname "$dest")"
-  # rewrite file: links to .html for same-tree org links
   local tmp
   tmp="$(mktemp)"
-  # pandoc with standalone; inject nav via header-include is awkward — postprocess
-  pandoc "$src" -f org -t html5 -s --css=style.css --metadata title="$(basename "${rel%.org}")" -o "$tmp"
-  # Fix relative css for nested pages
-  local depth="${rel//[^\/]/}"
-  local css="style.css"
-  if [[ -n "$depth" ]]; then
-    css="$(printf '../%.0s' $(seq 1 ${#depth}))style.css"
-  fi
-  sed -i "s|href=\"style.css\"|href=\"$css\"|g" "$tmp"
-  # prepend nav after <body>
-  python3 - "$tmp" "$dest" "$nav" <<'PY'
-import sys
-src, dest, nav = sys.argv[1], sys.argv[2], sys.argv[3]
-html = open(src, encoding="utf-8").read()
-# rewrite .org file links to .html
+  pandoc "$src" -f org -t html5 -s --css=style.css \
+    --metadata title="$(basename "${rel%.org}")" -o "$tmp"
+
+  python3 - "$tmp" "$dest" "$rel" "$API_HREF" <<'PY'
 import re
+import sys
+from pathlib import PurePosixPath
+
+src, dest, rel, api_href = sys.argv[1:5]
+# depth = number of directory components in rel (e.g. howto/bindings.org → 1)
+parts = PurePosixPath(rel).parts
+depth = max(0, len(parts) - 1)
+prefix = "../" * depth
+
+# Site-root-relative destinations → page-relative
+nav_targets = [
+    ("Hub", "index.html"),
+    ("Quickstart", "tutorials/quickstart.html"),
+    ("Bindings", "howto/bindings.html"),
+    ("CAF", "howto/caf.html"),
+    ("Methods", "explanation/methods.html"),
+    ("Fortran API", "reference/fortran-api.html"),
+    ("Methods list", "reference/method-names.html"),
+]
+links = []
+for label, target in nav_targets:
+    links.append(f'<a href="{prefix}{target}">{label}</a>')
+api_link = f'{prefix}{api_href}'
+nav = (
+    '<nav class="site">'
+    + "\n".join(links)
+    + f'\n<span class="muted">·</span>\n'
+    + f'<a href="{api_link}">Doxygen API</a></nav>'
+)
+
+css = f"{prefix}style.css"
+html = open(src, encoding="utf-8").read()
+html = re.sub(r'href="style\.css"', f'href="{css}"', html)
 html = re.sub(r'href="([^"]+)\.org"', r'href="\1.html"', html)
 html = re.sub(r"href='([^']+)\.org'", r"href='\1.html'", html)
 if "<body>" in html:
@@ -71,6 +92,7 @@ if "<body>" in html:
 else:
     html = nav + html
 open(dest, "w", encoding="utf-8").write(html)
+print(f"  depth={depth} api={api_link} -> {dest}")
 PY
   rm -f "$tmp"
   echo "  $rel -> ${dest#$ROOT/}"
@@ -79,9 +101,6 @@ PY
 while IFS= read -r -d '' f; do
   export_one "$f"
 done < <(find "$ORG" -name '*.org' -print0 | sort -z)
-
-# copy css already written
-# fix nested css paths: copy style to root only; sed already adjusted
 
 echo "==> Narrative site: $SITE"
 if command -v doxygen >/dev/null 2>&1; then

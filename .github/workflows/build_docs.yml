@@ -33,13 +33,10 @@ jobs:
         shell: bash -el {0}
         run: |
           pandoc readme.org -t gfm+smart -o README.md
-          # Narrative Diátaxis tree (orgmode → HTML)
-          ./docs/scripts/build_docs.sh
-          # Doxygen API (if not already run by build_docs.sh)
-          if [ ! -d html ]; then
-            doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
-          fi
-          # Bundle narrative site next to API for Pages
+          # Doxygen API first (repo-root html/)
+          doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
+          # Narrative tree for Pages layout: html/narrative/ → API at ../index.html
+          GJP_DOCS_API_HREF=../index.html ./docs/scripts/build_docs.sh
           mkdir -p html/narrative
           cp -a docs/site/. html/narrative/
       - name: Archive artifact
