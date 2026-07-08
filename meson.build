@@ -1,5 +1,5 @@
 project('gaussjacobiquad', ['c', 'fortran'],
-       version: '0.1.0',
+       version: '0.2.0',
   default_options : [
     'warning_level=everything',
     'buildtype=release',
@@ -114,6 +114,17 @@ gjp_cinterp = library('gjp_cinterp',
                       link_with: [gjplib],
                       dependencies: _deps,
                       install: true,
+)
+
+# pkg-config for Rust/Python consumers
+pkg = import('pkgconfig')
+pkg.generate(
+  gjp_cinterp,
+  name: 'gjp_cinterp',
+  description: 'GaussJacobiQuad C ABI (gauss_jacobi_rule_c)',
+  version: meson.project_version(),
+  filebase: 'gjp_cinterp',
+  subdirs: '.',
 )
 
 c_cli_gjpq = executable('c_cli_gjpq',

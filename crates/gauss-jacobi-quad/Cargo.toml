@@ -1,0 +1,27 @@
+[package]
+name = "gauss-jacobi-quad"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.70"
+license = "MIT"
+description = "Rust bindings for GaussJacobiQuad (Fortran Gauss–Jacobi quadrature via C ABI)"
+repository = "https://github.com/HaoZeke/GaussJacobiQuad"
+homepage = "https://github.com/HaoZeke/GaussJacobiQuad"
+documentation = "https://docs.rs/gauss-jacobi-quad"
+readme = "README.md"
+keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran", "ffi"]
+categories = ["science", "api-bindings", "mathematics"]
+exclude = ["/target"]
+
+[dependencies]
+thiserror = "1"
+
+[dev-dependencies]
+approx = "0.5"
+
+[build-dependencies]
+# none — pure link search
+
+[package.metadata.docs.rs]
+# Docs build without the native library; link fails only when building binaries/tests.
+targets = ["x86_64-unknown-linux-gnu"]

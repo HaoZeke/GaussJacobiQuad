@@ -48,3 +48,11 @@ call gauss_jacobi_rule(n, 0.5_dp, 0.5_dp, x, w, "glr")  ! forced
 #+end_src
 
 API HTML (Doxygen) is produced by CI and locally via =apidocs/Doxygen-GaussJacobiQuad.cfg=.
+
+* Released packages
+
+- *Rust*: crates.io crate =gauss-jacobi-quad= (C-FFI to =libgjp_cinterp=)
+- *Python*: PyPI package =gauss-jacobi-quad= (ctypes; needs =GJP_CINTERP=)
+- *GitHub*: tags =vX.Y.Z=; Fortran via fpm/meson as usual
+
+See repository =readme.org= and =crates/gauss-jacobi-quad/README.md= / =python/README.md=.

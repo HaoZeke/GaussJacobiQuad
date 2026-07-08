@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/gauss-jacobi-quad"]
+resolver = "2"

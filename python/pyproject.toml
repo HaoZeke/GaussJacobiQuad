@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gauss-jacobi-quad"
+version = "0.2.0"
+description = "Python bindings for GaussJacobiQuad (Gauss–Jacobi quadrature via C ABI)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+  { name = "Rohit Goswami", email = "rgoswami@ieee.org" },
+]
+keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Fortran",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+  "numpy>=1.20",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/HaoZeke/GaussJacobiQuad"
+Repository = "https://github.com/HaoZeke/GaussJacobiQuad"
+Documentation = "https://github.com/HaoZeke/GaussJacobiQuad/tree/main/docs/orgmode"
+"Bug Tracker" = "https://github.com/HaoZeke/GaussJacobiQuad/issues"
+
+[project.scripts]
+gauss-jacobi-quad = "gauss_jacobi_quad.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

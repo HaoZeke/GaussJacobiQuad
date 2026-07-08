@@ -55,6 +55,35 @@ meson compile -C bbdir
 ./bbdir/c_cli_gjpq 40 0.5 0.5 glr
 #+end_src
 
+
+** Install from released packages
+
+*** Rust (crates.io)
+
+#+begin_src toml
+# Cargo.toml
+[dependencies]
+gauss-jacobi-quad = "0.2"
+#+end_src
+
+Build =libgjp_cinterp= (meson) and set =GJP_CINTERP= to the =.so= path. See
+=crates/gauss-jacobi-quad/README.md=.
+
+#+begin_src rust
+use gauss_jacobi_quad::{gauss_jacobi, Method};
+let (x, w) = gauss_jacobi(32, 0.0, 0.0, Method::Auto)?;
+#+end_src
+
+*** Python (PyPI)
+
+#+begin_src bash
+pip install gauss-jacobi-quad
+export GJP_CINTERP=/path/to/libgjp_cinterp.so
+python -c "from gauss_jacobi_quad import gauss_jacobi; print(gauss_jacobi(32,0,0)[0][:3])"
+#+end_src
+
+Package sources: =python/=. Trusted publishing: =.github/workflows/publish-pypi.yml= (OIDC).
+
 ** Cite
 
 If you use this library (including the interfaces), please cite:
