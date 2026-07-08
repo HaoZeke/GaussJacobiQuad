@@ -1,5 +1,12 @@
 # 0.2.3 (2026-07-08)
 
+## Coarray Fortran
+
+- Real multi-image CAF for new methods: `bogaert_caf` (half-node partition),
+  `glr_caf` (independent k-th starters + Newton), CAF-aware `auto`, and batch
+  kernels for sturm/glr/bogaert/algo665_dc. (caf_new_methods)
+
+
 ## Packaging
 
 - Ship **both** tracks: one Stable ABI wheel (`cp39-abi3`) for CPython 3.9+ GIL

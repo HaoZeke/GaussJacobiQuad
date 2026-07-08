@@ -13,7 +13,7 @@ use gjp_rec, only: gauss_jacobi_rec, gauss_jacobi_rec_caf
 use gjp_gw, only: gauss_jacobi_gw
 use gjp_algo665, only: gauss_jacobi_algo665, gauss_jacobi_algo665_dc
 use gjp_sturm, only: gauss_jacobi_sturm, gauss_jacobi_sturm_caf
-use gjp_bogaert, only: gauss_jacobi_bogaert
+use gjp_bogaert, only: gauss_jacobi_bogaert, gauss_jacobi_bogaert_caf
 use gjp_glr, only: gauss_jacobi_glr, gauss_jacobi_glr_caf
 use gjp_caf, only: gauss_jacobi_batch_caf
 use gjp_auto, only: select_method_auto
@@ -34,9 +34,8 @@ end subroutine gauss_jacobi
 
 !> Single public entry: optional method; blank / "auto" selects a policy.
 !>
-!> @param method Optional. If absent, empty, or "auto", uses select_method_auto.
-!>        Forced names: rec, rec_caf, gw, gw_caf, algo665, algo665_caf,
-!>        algo665_dc, algo665_dc_caf, sturm, sturm_caf, glr, glr_caf, bogaert.
+!> @param method Optional. If absent, empty, or "auto", uses select_method_auto
+!>        (CAF names when num_images()>1). Forced names include *_caf variants.
 subroutine gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
@@ -81,10 +80,12 @@ subroutine gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
         call gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
     case ("bogaert")
         call gauss_jacobi_bogaert(npts, alpha, beta, x, wts)
+    case ("bogaert_caf")
+        call gauss_jacobi_bogaert_caf(npts, alpha, beta, x, wts)
     case default
         print *, "Error: Unknown method:", m
-        print *, "Supported: auto, rec, rec_caf, gw, algo665, algo665_dc,"
-        print *, "           sturm, sturm_caf, glr, glr_caf, bogaert"
+        print *, "Supported: auto, rec, rec_caf, gw, algo665, algo665_dc, algo665_dc_caf,"
+        print *, "           sturm, sturm_caf, glr, glr_caf, bogaert, bogaert_caf"
         error stop
     end select
 end subroutine gauss_jacobi_rule

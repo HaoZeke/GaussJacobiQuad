@@ -10,12 +10,17 @@
 !>
 !> Scope: full Jacobi (α, β > −1). Local wave number ρ from the bulk Liouville–
 !> Green / SL form of the Jacobi equation; Newton uses the three-term recurrence
-!> for P and P′. Single-rule phase march is sequential; glr_caf runs that march
-!> on image 1 and broadcasts (honest CAF: no fake node partition of a chain).
+!> for P and P′.
+!>
+!> Serial =glr=: true sequential Prüfer phase-by-π march (GLR).
+!> Multi-image =glr_caf=: independent k-th root asymptotics + Newton (HT-style
+!> partition of root indices). Phase marching is inherently serial; CAF uses the
+!> same Newton polish / weight formula with parallel starters.
 !> DOI: 10.1137/06067016x (Glaser–Liu–Rokhlin 2007); see docs/refs.bib key glaserFastAlgorithmCalculation2007
 module gjp_glr
 use gjp_types, only: dp
 use gjp_constants, only: pi
+use gjp_rec, only: caf_root_owner, caf_owns_index
 implicit none
 
 private
@@ -45,33 +50,67 @@ subroutine gauss_jacobi_glr(npts, alpha, beta, x, wts)
     wts = wts * C
 end subroutine gauss_jacobi_glr
 
-!> Multi-image launch: true GLR phase march is a sequential chain. Image 1
-!> computes the full rule; all images receive the same nodes/weights.
+!> CAF: partition root indices; each image uses independent k-th asymptotic
+!> starter + Newton polish (parallel). Under -fcoarray=single, every index is
+!> owned by image 1 (same coverage as serial independent path).
 subroutine gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
-    real(dp), allocatable :: x_c(:)[:], w_c(:)[:]
-    integer :: me, nimg
+    real(dp), allocatable :: x_c(:)[:], d_c(:)[:]
+    real(dp) :: xk, dk, C
+    integer :: me, nimg, k, img
+
+    if (npts <= 0) error stop "glr_caf: npts must be positive"
+    if (alpha <= -1.0_dp .or. beta <= -1.0_dp) error stop "glr_caf: alpha,beta > -1"
 
     me = this_image()
     nimg = num_images()
-    if (nimg == 1) then
-        call gauss_jacobi_glr(npts, alpha, beta, x, wts)
-        return
-    end if
+    allocate (x_c(npts)[*], d_c(npts)[*])
+    x_c = 0.0_dp
+    d_c = 0.0_dp
 
-    allocate (x_c(npts)[*], w_c(npts)[*])
+    do k = 1, npts
+        if (.not. caf_owns_index(k, me, nimg)) cycle
+        call kth_root_starter(npts, alpha, beta, k, xk)
+        call newton_polish(npts, alpha, beta, xk, dk)
+        if (k == 1) call ensure_leftmost_root(npts, alpha, beta, xk, dk)
+        x_c(k) = xk
+        d_c(k) = dk
+    end do
+    sync all
+
     if (me == 1) then
-        call gauss_jacobi_glr(npts, alpha, beta, x, wts)
+        do k = 1, npts
+            img = caf_root_owner(k, nimg)
+            if (img == 1) then
+                x(k) = x_c(k)
+                xk = d_c(k)
+            else
+                x(k) = x_c(k)[img]
+                xk = d_c(k)[img]
+            end if
+            ! store ders temporarily in wts, then convert
+            wts(k) = xk
+        end do
         x_c = x
-        w_c = wts
+        d_c = wts
     end if
     sync all
     x = x_c(:)[1]
-    wts = w_c(:)[1]
+    wts = d_c(:)[1]  ! ders
     sync all
-    deallocate (x_c, w_c)
+
+    ! Weights from ders (same formula as serial glr)
+    do k = 1, npts
+        dk = wts(k)
+        wts(k) = 1.0_dp / ((1.0_dp - x(k) * x(k)) * dk * dk)
+    end do
+    C = 2**(alpha + beta + 1) * exp(log_gamma(npts + alpha + 1) - &
+                                    log_gamma(npts + alpha + beta + 1) + &
+                                    log_gamma(npts + beta + 1) - log_gamma(npts + 1._dp))
+    wts = wts * C
+    deallocate (x_c, d_c)
 end subroutine gauss_jacobi_glr_caf
 
 !> Sequential Prüfer phase-by-π march: first root from endpoint asymptotic +
@@ -134,28 +173,46 @@ pure real(dp) function bessel_j_first_zero(nu) result(j)
 end function bessel_j_first_zero
 
 !> Asymptotic starter for the *leftmost* Jacobi zero (near x = −1).
-!> Uses x ≈ −1 + j_{β,1}² / (2 N²), N = n + (α+β+1)/2 (endpoint Bessel scale).
 subroutine first_root_starter(npts, alpha, beta, x0)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x0
-    real(dp) :: nn, Nscale, jbeta, theta, ab
+    call kth_root_starter(npts, alpha, beta, 1, x0)
+end subroutine first_root_starter
+
+!> Independent starter for the k-th root (k=1 leftmost … k=n rightmost).
+!> Interior: cosθ bulk; near left use Bessel-β, near right Bessel-α.
+subroutine kth_root_starter(npts, alpha, beta, k, x0)
+    integer, intent(in) :: npts, k
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x0
+    real(dp) :: nn, ab, Nscale, theta, jnu, frac
 
     nn = real(npts, dp)
-    Nscale = nn + 0.5_dp * (alpha + beta + 1.0_dp)
-    jbeta = bessel_j_first_zero(max(0.0_dp, beta))
-    x0 = -1.0_dp + (jbeta * jbeta) / (2.0_dp * Nscale * Nscale)
+    ab = alpha + beta
+    Nscale = nn + 0.5_dp * (ab + 1.0_dp)
+    frac = real(k, dp) / max(1.0_dp, nn)
 
-    ! Mild α,β: cosθ bulk formula is fine and slightly better at tiny n
-    if (max(abs(alpha), abs(beta)) <= 1.0_dp .and. npts >= 8) then
-        ab = alpha + beta
-        theta = pi * (nn - 0.25_dp + 0.5_dp * beta) / (nn + 0.5_dp * (ab + 1.0_dp))
+    if (frac < 0.15_dp .or. (k == 1 .and. max(abs(alpha), abs(beta)) > 1.0_dp)) then
+        ! Near x=-1: j_{β,s} scale for the s-th root from the left (s≈k)
+        jnu = bessel_j_first_zero(max(0.0_dp, beta))
+        ! crude multi-root: use McMahon shift (k-1)*pi for higher left roots
+        if (k > 1) jnu = jnu + real(k - 1, dp) * pi
+        x0 = -1.0_dp + (jnu * jnu) / (2.0_dp * Nscale * Nscale)
+    else if (frac > 0.85_dp) then
+        jnu = bessel_j_first_zero(max(0.0_dp, alpha))
+        if (k < npts) jnu = jnu + real(npts - k, dp) * pi
+        x0 = 1.0_dp - (jnu * jnu) / (2.0_dp * Nscale * Nscale)
+    else
+        ! k from left: largest θ at k=1
+        theta = pi * (nn - real(k, dp) + 1.0_dp - 0.25_dp + 0.5_dp * beta) / &
+                (nn + 0.5_dp * (ab + 1.0_dp))
         x0 = cos(theta)
     end if
 
     if (x0 <= -1.0_dp) x0 = -1.0_dp + 100.0_dp * x_eps
     if (x0 >= 1.0_dp) x0 = 1.0_dp - 100.0_dp * x_eps
-end subroutine first_root_starter
+end subroutine kth_root_starter
 
 !> If the polished root is not the leftmost (P changes sign further left, or |P|
 !> large while a left interval still has a zero), pull left with bisection.

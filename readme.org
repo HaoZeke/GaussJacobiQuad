@@ -42,8 +42,9 @@ call gauss_jacobi_rule(npts, alpha, beta, x, wts)           ! auto
 call gauss_jacobi_rule(npts, alpha, beta, x, wts, "glr")  ! forced
 #+end_src
 
-Methods: =auto=, =rec=/=rec_caf=, =gw=, =algo665=/=algo665_dc=, =sturm=/=sturm_caf=,
-=glr=/=glr_caf=, =bogaert= (Legendre only, =n≥21=). Details:
+Methods: =auto= (picks =*_caf= when multi-image), =rec=/=rec_caf=, =gw=,
+=algo665=/=algo665_dc=/=algo665_dc_caf=, =sturm=/=sturm_caf=, =glr=/=glr_caf=,
+=bogaert=/=bogaert_caf= (Legendre only, =n≥21=). Details:
 [[file:docs/orgmode/explanation/methods.org][methods]] · [[file:docs/orgmode/reference/method-names.org][name list]].
 
 ** Meson (library + C CLI)

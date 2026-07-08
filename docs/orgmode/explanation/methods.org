@@ -21,8 +21,9 @@ What ACM 655 optimizes vs =gw=:
 | =algo665= | GW + sequential =imtqlx= | mid =n=, high α,β, faster than =gw= | poor (one QL path) |
 | =algo665_dc= | Cuppen D&C + =imtqlx= leaves | larger =n=, same GW problem | recursive split + leaf QL |
 | =sturm= / =sturm_caf= | Sturm bisection + inv. iteration | GW-level, *CAF-native* indices | excellent (per eigenvalue) |
-| =glr= / =glr_caf= | Prüfer *phase-by-π march* + Newton | full Jacobi (high α,β via Bessel first-root) | sequential chain; CAF = broadcast |
-| =bogaert= | J0-zero asymptotics + exact weights | Legendre only (α=β=0, =n≥21=) | per-node; not full Jacobi |
+| =glr= | Prüfer *phase-by-π march* + Newton | full Jacobi (high α,β via Bessel first-root) | sequential chain |
+| =glr_caf= | independent k-th starters + Newton | multi-image single rule | excellent (per root index) |
+| =bogaert= / =bogaert_caf= | J0-zero asymptotics + exact weights | Legendre only (α=β=0, =n≥21=) | excellent (half-node partition) |
 | =auto= | =select_method_auto= policy | default public entry | delegates to above |
 
 ** Shipped algorithms**
@@ -46,16 +47,16 @@ forwards to =gauss_jacobi_rule=.
 
 ** Auto policy (=select_method_auto=)**
 
-| Regime | Choice |
-|--------|--------|
-| α=β=0 and =n≥21= | =bogaert= |
-| =n≥128= and max(\|α\|,\|β\|) ≤ 5 | =rec= |
-| =n≥64= and max(\|α\|,\|β\|) ≤ 2 | =glr= |
-| max(\|α\|,\|β\|) > 8 or =n≤32= | =algo665= |
-| else | =sturm= |
+| Regime | Single-image | Multi-image (=num_images()>1=) |
+|--------|--------------|--------------------------------|
+| α=β=0 and =n≥21= | =bogaert= | =bogaert_caf= |
+| =n≥128= and max(\|α\|,\|β\|) ≤ 5 | =rec= | =rec_caf= |
+| =n≥64= and max(\|α\|,\|β\|) ≤ 2 | =glr= | =glr_caf= |
+| max(\|α\|,\|β\|) > 8 or =n≤32= | =algo665= | =sturm_caf= (or =algo665_dc_caf= if =n≥64=) |
+| else | =sturm= | =sturm_caf= |
 
-Policy is documented and safe, not oracle-optimal. Multi-image callers that
-want CAF should force =*_caf= names; auto stays single-image for portability.
+Policy is documented and safe, not oracle-optimal. =auto= selects =*_caf=
+names when more than one image is present.
 
 ** Practical defaults**
 

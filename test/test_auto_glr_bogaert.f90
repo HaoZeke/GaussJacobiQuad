@@ -102,6 +102,33 @@ if (me == 1) print '(A,A,A,ES12.5)', "auto high-beta method=", m, " vs forced ma
 if (max_dx > 0.0_dp) ok = .false.
 deallocate (x, w, xref, wref)
 
+! --- Bogaert CAF vs serial (CAF path exercised under -fcoarray=single) ---
+n = 32
+allocate (x(n), w(n), xref(n), wref(n))
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, xref, wref, "bogaert")
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, x, w, "bogaert_caf")
+max_dx = maxval(abs(x - xref))
+max_dw = maxval(abs(w - wref))
+if (me == 1) print '(A,ES12.5,A,ES12.5)', "bogaert_caf vs bogaert max|dx|=", max_dx, " max|dw|=", max_dw
+if (max_dx > 1.0e-14_dp .or. max_dw > 1.0e-13_dp) ok = .false.
+deallocate (x, w, xref, wref)
+
+! --- GLR CAF vs serial phase-march (independent starters should match Newton roots) ---
+n = 40
+alpha = 0.5_dp
+beta = 0.5_dp
+allocate (x(n), w(n), xref(n), wref(n))
+call gauss_jacobi_rule(n, alpha, beta, xref, wref, "glr")
+call gauss_jacobi_rule(n, alpha, beta, x, w, "glr_caf")
+! sort both before compare (caf independent path may not be strictly ordered if Newton jumps)
+call sort_pair(n, xref, wref)
+call sort_pair(n, x, w)
+max_dx = maxval(abs(x - xref))
+max_dw = maxval(abs(w - wref))
+if (me == 1) print '(A,ES12.5,A,ES12.5)', "glr_caf vs glr max|dx|=", max_dx, " max|dw|=", max_dw
+if (max_dx > 1.0e-8_dp .or. max_dw > 1.0e-6_dp) ok = .false.
+deallocate (x, w, xref, wref)
+
 ! --- Bogaert non-Legendre policy: must error ---
 ! exercised via a separate subprocess in CI; here we only document structure
 if (me == 1) print *, "bogaert non-Legendre: error-stop policy (see bogaert_policy test harness)"
@@ -115,4 +142,19 @@ logical function finite_dp(z)
     real(dp), intent(in) :: z
     finite_dp = (z == z) .and. (abs(z) < huge(z))
 end function finite_dp
+
+subroutine sort_pair(n, xx, ww)
+    integer, intent(in) :: n
+    real(dp), intent(inout) :: xx(n), ww(n)
+    integer :: i, j
+    real(dp) :: tx, tw
+    do i = 1, n - 1
+        do j = i + 1, n
+            if (xx(j) < xx(i)) then
+                tx = xx(i); xx(i) = xx(j); xx(j) = tx
+                tw = ww(i); ww(i) = ww(j); ww(j) = tw
+            end if
+        end do
+    end do
+end subroutine sort_pair
 end program test_auto_glr_bogaert
