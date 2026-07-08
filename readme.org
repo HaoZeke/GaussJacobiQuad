@@ -24,10 +24,10 @@ fpm run --flag "-fcoarray=single" gjp_quad_rec -- <npoints> <alpha> <beta>
 fpm run --flag "-fcoarray=single" gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
-Supported methods: ~rec~ / ~rec_caf~ (recurrence; ~rec_caf~ partitions Newton nodes across images),
-~gw~ / ~algo665~ (Golub–Welsch / Algorithm 655 eigensolve). Multi-image speedup for
-~gw~ and ~algo665~ uses independent *rules* via ~gauss_jacobi_batch_caf~ (serial
-tridiagonal eigensolve per rule does not split across images).
+Supported methods (see [[file:docs/METHODS.org][docs/METHODS.org]]):
+~rec~/~rec_caf~, ~gw~, ~algo665~/~algo665_dc~, ~sturm~/~sturm_caf~.
+~imtqlx~ is *not* the absolute best for large ~n~; ~sturm_caf~ parallelizes the
+same Golub-Welsch eigenproblem by eigenvalue index, ~rec_caf~ by Newton node.
 
 *** Coarray Fortran (~rec_caf~)
 Full library CAF API notes: [[file:docs/CAF.org][docs/CAF.org]].

@@ -1,0 +1,1 @@
+Add `sturm` / `sturm_caf` Golub–Welsch paths: Sturm bisection of the Jacobi tridiagonal plus inverse iteration, with Coarray ownership over eigenvalue indices (CAF-friendly alternative to sequential `imtqlx`).

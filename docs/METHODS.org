@@ -1,0 +1,58 @@
+* Method ranking (Gauss-Jacobi nodes and weights)
+
+** Is =imtqlx= the absolute best?
+
+No. It is a *good mid-scale* solver for the Golub-Welsch eigenproblem with the
+ACM 655 trick (only track first eigenvector components / weight vector). It is
+*not* state of the art for large =n=, and its Givens chase is inherently serial.
+
+What ACM 655 optimizes vs =gw=:
+- same math (eigenvalues of Jacobi =T=, weights = mu0 * v_1^2)
+- much less work/storage than full =DSTEQR= with =Z=I=
+
+** Landscape**
+
+| Method | Idea | Best for | Parallelism |
+|--------+------+----------+-------------|
+| =rec= / =rec_caf= | Hale-Townsend style Newton on =P_n= | large =n=, moderate α,β | excellent (per node) |
+| =gw= | GW + LAPACKE =dsteqr= | robust mid =n=, high α,β | single rule: poor; multi-rule batch: good |
+| =algo665= | GW + sequential =imtqlx= | mid =n=, high α,β, faster than =gw= | poor (one QL path) |
+| =algo665_dc= | Cuppen D&C + =imtqlx= leaves | larger =n=, same GW problem | recursive split + leaf QL |
+| =sturm= / =sturm_caf= | Sturm bisection + inv. iteration | GW-level, *CAF-native* indices | excellent (per eigenvalue) |
+| Glaser-Lui-Rokhlin | Prüfer / ODE phase | very large =n= | phase march often sequential |
+| Bogaert asymptotics | refined bulk + ends | Legendre / special cases | good (per node); not full Jacobi |
+
+** Why not all wired yet**
+
+| Algorithm | Status in this repo | Why |
+|-----------|---------------------|-----|
+| Cuppen D&C | *shipped* as =algo665_dc= / =algo665_dc_caf= | natural "parallel imtqlx wrapper" |
+| Sturm + inv. iter. | *shipped* as =sturm= / =sturm_caf= | best CAF fit for GW problem |
+| GLR | *not shipped* | substantial ODE/phase code; different analysis; large engineering port |
+| Bogaert | *not shipped* | specializes Gauss-Legendre more than general α,β Jacobi |
+
+GLR/Bogaert are worth future ports for *large-n asymptotics*, not as drop-in
+replacements for ACM 655's eigenproblem formulation.
+
+** Practical defaults**
+
+| Regime | Prefer |
+|--------|--------|
+| large =n=, mild α,β | =rec_caf= |
+| high α or β, mid =n= | =algo665= or =sturm= |
+| multi-image, high α/β | =sturm_caf= (per-eig) or =gauss_jacobi_batch_caf= (per-rule) |
+| multi-image, mild α/β | =rec_caf= |
+
+** Math note (Sturm)**
+
+For tridiagonal =T= with diagonal =a_i=, off-diagonal =b_i=, the Sturm count
+(number of eigenvalues =< λ) is obtained from the LDL-style recurrence
+
+=d_1 = a_1 - λ=,  =d_i = (a_i - λ) - b_{i-1}^2 / d_{i-1}=,
+
+counting negative pivots. The =k=-th eigenvalue is found by bisection on that
+count. Weights use a few steps of inverse iteration on =(T - λI)= and
+=w = mu0 * u_1^2=.
+
+See also =scripts/imtqlx_parallel_math.py= for why a *single* QL sweep cannot
+be reordered, and how Cuppen creates independent leaves.
