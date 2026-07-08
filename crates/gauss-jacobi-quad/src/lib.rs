@@ -245,8 +245,8 @@ mod tests {
     fn glr_matches_algo665() {
         let (xg, wg) = gauss_jacobi(40, 0.5, 0.5, Method::Glr).unwrap();
         let (xa, wa) = gauss_jacobi(40, 0.5, 0.5, Method::Algo665).unwrap();
-        let mut xg = xg;
-        let mut xa = xa;
+        let xg = xg;
+        let xa = xa;
         // sort for comparison
         let mut ig: Vec<_> = (0..xg.len()).collect();
         ig.sort_by(|&i, &j| xg[i].partial_cmp(&xg[j]).unwrap());

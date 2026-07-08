@@ -10,10 +10,10 @@ Example::
     x, w = gauss_jacobi(40, 0.5, 0.5, method="glr")
 """
 
+from __future__ import annotations
+
 __version__ = "0.2.0"
 
-
-from __future__ import annotations
 
 import ctypes
 import os

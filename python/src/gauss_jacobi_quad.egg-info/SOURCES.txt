@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/gauss_jacobi_quad/__init__.py
+src/gauss_jacobi_quad/cli.py
+src/gauss_jacobi_quad.egg-info/PKG-INFO
+src/gauss_jacobi_quad.egg-info/SOURCES.txt
+src/gauss_jacobi_quad.egg-info/dependency_links.txt
+src/gauss_jacobi_quad.egg-info/entry_points.txt
+src/gauss_jacobi_quad.egg-info/requires.txt
+src/gauss_jacobi_quad.egg-info/top_level.txt
+tests/test_package.py
