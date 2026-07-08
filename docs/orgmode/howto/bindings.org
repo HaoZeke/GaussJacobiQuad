@@ -65,9 +65,15 @@ Full reference: [[file:../reference/c-api.org][Reference · C API]].
 * Python (CPython extension — preferred)
 
 The PyPI package =gauss-jacobi-quad= is a real CPython extension (not pure ctypes).
-It multi-phase-inits (=PEP 489=), uses a heap =GaussJacobiError=, declares
-=Py_MOD_GIL_NOT_USED= for free-threaded CPython 3.13+, and links the same
-ISO_C_BINDING entry =gauss_jacobi_rule_c= into =_core.so= (no =GJP_CINTERP=).
+It multi-phase-inits (=PEP 489=), uses a heap =GaussJacobiError=, and links the
+ISO_C_BINDING entry =gauss_jacobi_rule_c= into the extension (no =GJP_CINTERP=).
+
+Wheels (v0.2.3+):
+
+- *Stable ABI* (=cp39-abi3=): one manylinux wheel for CPython 3.9+ *GIL* builds
+- *Free-threaded* (=cp313t=): full C API + =Py_MOD_GIL_NOT_USED= (separate ABI; not abi3)
+
+C/Python surfaces are *single-image* only; multi-image CAF is Fortran + =cafrun=.
 
 Build from the *repository root* (meson-python + gfortran + OpenBLAS):
 

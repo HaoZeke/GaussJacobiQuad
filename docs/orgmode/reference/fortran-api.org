@@ -9,30 +9,33 @@ Public symbols:
 - =gauss_jacobi(...)= — legacy required method string; forwards to the rule entry
 - =gauss_jacobi_batch_caf= — multi-rule batch (CAF)
 - =select_method_auto(npts, alpha, beta)= — deferred-length method string
+  (CAF names when =num_images()>1=)
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
 use gjp_types, only: dp
 real(dp) :: x(n), w(n)
-call gauss_jacobi_rule(n, alpha, beta, x, w)
+call gauss_jacobi_rule(n, alpha, beta, x, w)              ! auto
 call gauss_jacobi_rule(n, alpha, beta, x, w, "sturm")
 call gauss_jacobi_rule(n, alpha, beta, x, w, "rec_caf")
+call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, x, w, "bogaert_caf")
+call gauss_jacobi_rule(n, alpha, beta, x, w, "glr_caf")
 #+end_src
 
 * Related modules
 
 | Module | Role |
 |--------|------|
-| =gjp_auto= | Auto policy |
-| =gjp_rec= | =rec= / =rec_caf= |
+| =gjp_auto= | Auto policy (CAF-aware) |
+| =gjp_rec= | =rec= / =rec_caf=, ownership helpers |
 | =gjp_gw= | Golub–Welsch |
 | =gjp_algo665= | ACM 655 + =imtqlx= / D&C |
-| =gjp_sturm= | Sturm paths |
-| =gjp_glr= | GLR paths |
-| =gjp_bogaert= | Legendre asymptotics |
-| =gjp_caf= | Batch CAF |
+| =gjp_sturm= | =sturm= / =sturm_caf= |
+| =gjp_glr= | =glr= (phase march) / =glr_caf= (index partition) |
+| =gjp_bogaert= | =bogaert= / =bogaert_caf= |
+| =gjp_caf= | =gauss_jacobi_batch_caf= |
 | =gjp_types= | =dp= kind |
 
 Doxygen HTML (when built): generated under =html/= from =apidocs/=.
 
-Method strings: [[file:method-names.org][method names]].
+Method strings: [[file:method-names.org][method names]]. CAF howto: [[file:../howto/caf.org][Howto · CAF]].

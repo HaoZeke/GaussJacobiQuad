@@ -77,8 +77,9 @@ let (x, w) = gauss_jacobi(32, 0.0, 0.0, Method::Auto)?;
 
 *** Python (PyPI)
 
-CPython *extension* wheel (ISO_C_BINDING =gauss_jacobi_rule_c=, multi-phase init,
-free-threading ready). No =GJP_CINTERP= needed after install.
+CPython *extension* (ISO_C_BINDING =gauss_jacobi_rule_c=, multi-phase init).
+Wheels: Stable ABI =cp39-abi3= (3.9+ GIL) and free-threaded =cp313t=.
+No =GJP_CINTERP= needed after install.
 
 #+begin_src bash
 pip install gauss-jacobi-quad

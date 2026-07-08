@@ -21,10 +21,13 @@ optional auto selection, Coarray Fortran paths, and C/Python surfaces.
 
 * Features
 
-- Preferred entry: =gauss_jacobi_rule= (optional method; blank / ="auto"= → policy)
-- Methods: =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=, and =*_caf= variants where applicable
-- CAF: node or eigenvalue ownership; multi-rule batch API
-- C: =gauss_jacobi_rule_c= with status codes; Python: =gauss_jacobi= (CPython extension)
+- Preferred entry: =gauss_jacobi_rule= (optional method; blank / ="auto"= → policy;
+  multi-image auto selects =*_caf=)
+- Methods: =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=, and
+  =*_caf= variants (=rec_caf=, =sturm_caf=, =glr_caf=, =bogaert_caf=, =algo665_dc_caf=, …)
+- CAF: root / eigenvalue / half-node ownership; multi-rule batch API
+- C: =gauss_jacobi_rule_c= (single-image); Python: PyPI =gauss-jacobi-quad=
+  (Stable ABI =cp39-abi3= + free-threaded =cp313t= wheels)
 - SymPy accuracy harness for regime checks
 - Bibliography managed via ookcite collection =GaussJacobiQuad= → =docs/refs.bib=
 
@@ -52,7 +55,8 @@ API HTML (Doxygen) is produced by CI and locally via =apidocs/Doxygen-GaussJacob
 * Released packages
 
 - *Rust*: crates.io crate =gauss-jacobi-quad= (C-FFI to =libgjp_cinterp=)
-- *Python*: PyPI package =gauss-jacobi-quad= (CPython extension over ISO_C_BINDING; free-threading ready)
+- *Python*: PyPI package =gauss-jacobi-quad= — CPython extension over ISO_C_BINDING;
+  wheels: one Stable ABI (=cp39-abi3=) for 3.9+ GIL, plus free-threaded (=cp313t=)
 - *GitHub*: tags =vX.Y.Z=; Fortran via fpm/meson as usual
 
 See repository =readme.org= and =crates/gauss-jacobi-quad/README.md= / =python/README.md=.

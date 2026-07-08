@@ -10,9 +10,11 @@ Features:
 
 - Calls =gauss_jacobi_rule_c= (ISO_C_BINDING / same as =libgjp_cinterp=)
 - Multi-phase init (PEP 489): =PyModuleDef_Init= + =Py_mod_exec=
-- Heap exception type =GaussJacobiError= (module state; free-threading safe)
-- Free-threaded CPython 3.13+: =Py_MOD_GIL_NOT_USED=
+- Heap exception type =GaussJacobiError= (module state)
+- Packaging: Stable ABI (=cp39-abi3=) for GIL 3.9+; free-threaded wheel (=cp313t=)
+  with =Py_MOD_GIL_NOT_USED= (cannot share abi3)
 - No =GJP_CINTERP= required for the installed wheel
+- Single-image methods only (no multi-image CAF from Python)
 
 #+begin_src python
 from gauss_jacobi_quad import gauss_jacobi, GaussJacobiError, GJP_OK, GJP_ERR_BOGAERT_AB

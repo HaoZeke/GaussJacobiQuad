@@ -41,7 +41,9 @@ fpm run --flag "-fcoarray=single" gjp_quad -- 32 0.0 0.0 bogaert
 Notes:
 
 - =alpha= / =beta= on the Fortran CLI require a decimal point (e.g. =0.5=).
-- Method may be =auto=, =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=, =bogaert=, or a =*_caf= name.
+- Method may be =auto=, =rec=, =gw=, =algo665=, =algo665_dc=, =sturm=, =glr=,
+  =bogaert=, or a =*_caf= name (=rec_caf=, =sturm_caf=, =glr_caf=, =bogaert_caf=,
+  =algo665_dc_caf=, …). =auto= selects =*_caf= when multi-image.
 - Legendre asymptotics (=bogaert=) require α=β=0 and =n≥21=.
 
 * First rule: library

@@ -6,44 +6,55 @@
 ** Scope
 GaussJacobiQuad supports Coarray Fortran (CAF) for multi-image runs.
 
-- *1-image* (portable): gfortran =-fcoarray=single=
-- *Multi-image*: OpenCoarrays =libcaf_mpi= + *MPICH* (not OpenMPI with gfortran >=14)
+- *1-image* (portable): gfortran =-fcoarray=single= (CAF paths still run; one image owns every index)
+- *Multi-image*: OpenCoarrays =libcaf_mpi= + *MPICH* (not OpenMPI with gfortran ≥14)
 
 ** Methods
 
-| Method string | Meaning |
-|---------------|---------|
-| =auto= (omit) | =select_method_auto= (single-image defaults) |
-| =rec= | Serial recurrence Newton roots |
-| =rec_caf= | Same math; roots owned across images |
-| =gw= / =gw_caf= | Golub-Welsch + LAPACKE =dsteqr= (one rule is serial) |
-| =algo665= / =algo665_caf= | Golub-Welsch + =imtqlx= QL (one rule is serial) |
-| =algo665_dc= | Cuppen D&C + =imtqlx= leaves (same GW problem) |
-| =algo665_dc_caf= | same; CAF hooks on merge (leaf-level structure) |
-| =sturm= / =sturm_caf= | Sturm bisection + inv. iteration; CAF over eigenvalue index |
-| =glr= / =glr_caf= | Prüfer phase-by-π *chain* + Newton; =glr_caf= = image-1 march + broadcast |
-| =bogaert= | Legendre asymptotics (α=β=0, =n≥21=); single-image |
+| Method string | Meaning | Multi-image work |
+|---------------|---------|------------------|
+| =auto= (omit) | =select_method_auto= | Picks =*_caf= when =num_images()>1= |
+| =rec= | Serial recurrence Newton roots | — |
+| =rec_caf= | Same math | *Root indices* partitioned |
+| =gw= / =gw_caf= | Golub–Welsch + =dsteqr= | One rule is serial (use batch) |
+| =algo665= / =algo665_caf= | GW + =imtqlx= | One rule is serial (use batch) |
+| =algo665_dc= | Cuppen D&C + =imtqlx= leaves | serial D&C |
+| =algo665_dc_caf= | D&C with CAF hooks | leaf / merge structure |
+| =sturm= / =sturm_caf= | Sturm bisection + inv. iter. | *Eigenvalue index* partitioned |
+| =glr= | Prüfer phase-by-π *chain* + Newton | sequential (true GLR) |
+| =glr_caf= | Independent k-th starters + Newton | *Root indices* partitioned |
+| =bogaert= | Legendre asymptotics | serial |
+| =bogaert_caf= | Same math | *Half-node indices* partitioned |
+
+=glr= keeps the sequential Prüfer march. =glr_caf= is the parallel path
+(asymptotic starter per index + Newton); it is not a split of the phase chain.
 
 Aliases =gw_caf= / =algo665_caf= accept multi-image launch but do *not* split a
-single eigensolve. Use the batch API for multi-image speedup on those methods.
+single eigensolve. Use the *batch API* for multi-image speedup on those methods.
 
 ** Single-rule API
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
-! Preferred: optional method; omit or "auto" uses select_method_auto
+! omit / "auto": select_method_auto (CAF names if multi-image)
 call gauss_jacobi_rule(npts, alpha, beta, x, wts)
 call gauss_jacobi_rule(npts, alpha, beta, x, wts, "glr_caf")
+call gauss_jacobi_rule(npts, 0.0_dp, 0.0_dp, x, wts, "bogaert_caf")
 #+end_src
 
-** Multi-rule batch API (all methods)
+** Multi-rule batch API
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_batch_caf
 ! alphas(nbatch), betas(nbatch), xs(npts,nbatch), wts(npts,nbatch)
 call gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, "gw")
-! method: "rec", "gw", or "algo665"
+call gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, "sturm")
+call gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, "glr")
+call gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, "bogaert")
 #+end_src
+
+Batch kernels (serial math per owned rule): =rec=, =gw=, =algo665=, =algo665_dc=,
+=sturm=, =glr=, =bogaert= (and =*_caf= aliases map to the serial kernel inside a batch).
 
 Ownership: round-robin batch index =i= on image =mod(i-1, num_images())+1=.
 
@@ -58,9 +69,10 @@ fpm test  --flag "-fcoarray=single"
 fpm build --flag "-fcoarray=lib" \
   --link-flag "-L$OC/lib -lcaf_mpi -L$MPICH/lib -lmpifort -lmpi"
 cafrun -n 4 ./build/*/app/gjp_quad -- 64 0.5 0.5 rec_caf
+cafrun -n 4 ./build/*/app/gjp_quad -- 64 0.0 0.0 bogaert_caf
 #+end_src
 
-Reproducible toolchain: see [[file:../../../docker/caf/README.md][docker/caf]].
+Reproducible toolchain: [[file:../../../docker/caf/README.md][docker/caf]].
 
 ** Timed driver
 
@@ -68,25 +80,26 @@ Reproducible toolchain: see [[file:../../../docker/caf/README.md][docker/caf]].
 # single-rule node partition (rec)
 cafrun -n 4 ./build/*/app/gjp_bench_caf single rec_caf 6144 0.5 0.5 5 2
 
-# multi-rule batch (rec|gw|algo665)
+# multi-rule batch (rec|gw|algo665|…)
 cafrun -n 4 ./build/*/app/gjp_bench_caf batch gw 192 48 0.5 0.0 5 2
 #+end_src
 
 ** Correctness
 
-=rec_caf= and batch paths match serial results within ~1e-12 (often exact 0 for
-fixed cases). See =test/test_caf_rec.f90= and =test/test_caf_batch.f90=.
+=*_caf= single-rule paths match serial within tight tolerances under
+=-fcoarray=single=. See =test/test_auto_glr_bogaert.f90= (=bogaert_caf=,
+=glr_caf=), =test/test_caf_rec.f90=, =test/test_caf_batch.f90=.
 
 ** Modules
 
 | Module | Role |
 |--------|------|
 | =GaussJacobiQuad= | =gauss_jacobi_rule= / =gauss_jacobi=; re-exports batch |
-| =gjp_auto= | =select_method_auto= policy |
+| =gjp_auto= | =select_method_auto= (CAF-aware) |
 | =gjp_rec= | =rec= / =rec_caf=, ownership helpers |
-| =gjp_glr= | =glr= / =glr_caf= Prüfer + Newton |
-| =gjp_bogaert= | Legendre asymptotics |
+| =gjp_glr= | =glr= (phase march) / =glr_caf= (index partition) |
+| =gjp_bogaert= | =bogaert= / =bogaert_caf= |
+| =gjp_sturm= | =sturm= / =sturm_caf= |
 | =gjp_caf= | =gauss_jacobi_batch_caf= |
-| =gjp_gw= | Golub-Welsch |
-| =gjp_algo665= | Algorithm 655 + =imtqlx= |
-| =gjp_lapack= | LAPACKE =dsteqr= wrapper |
+| =gjp_gw= | Golub–Welsch |
+| =gjp_algo665= | Algorithm 655 + =imtqlx= / D&C |
