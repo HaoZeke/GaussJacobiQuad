@@ -19,29 +19,51 @@ What ACM 655 optimizes vs =gw=:
 | =algo665= | GW + sequential =imtqlx= | mid =n=, high α,β, faster than =gw= | poor (one QL path) |
 | =algo665_dc= | Cuppen D&C + =imtqlx= leaves | larger =n=, same GW problem | recursive split + leaf QL |
 | =sturm= / =sturm_caf= | Sturm bisection + inv. iteration | GW-level, *CAF-native* indices | excellent (per eigenvalue) |
-| Glaser-Lui-Rokhlin | Prüfer / ODE phase | very large =n= | phase march often sequential |
-| Bogaert asymptotics | refined bulk + ends | Legendre / special cases | good (per node); not full Jacobi |
+| =glr= / =glr_caf= | Prüfer phase starter + Newton | large =n=, mild α,β | per-node Newton (CAF partition) |
+| =bogaert= | J0-zero asymptotics + exact weights | Legendre only (α=β=0, =n≥21=) | per-node; not full Jacobi |
+| =auto= | =select_method_auto= policy | default public entry | delegates to above |
 
-** Why not all wired yet**
+** Shipped algorithms**
 
-| Algorithm | Status in this repo | Why |
-|-----------|---------------------|-----|
-| Cuppen D&C | *shipped* as =algo665_dc= / =algo665_dc_caf= | natural "parallel imtqlx wrapper" |
-| Sturm + inv. iter. | *shipped* as =sturm= / =sturm_caf= | best CAF fit for GW problem |
-| GLR | *not shipped* | substantial ODE/phase code; different analysis; large engineering port |
-| Bogaert | *not shipped* | specializes Gauss-Legendre more than general α,β Jacobi |
+| Algorithm | Status | Notes |
+|-----------|--------|-------|
+| Cuppen D&C | =algo665_dc= / =algo665_dc_caf= | parallel structure around =imtqlx= leaves |
+| Sturm + inv. iter. | =sturm= / =sturm_caf= | best CAF fit for the GW eigenproblem |
+| GLR | =glr= / =glr_caf= | Prüfer phase + Newton polish; full Jacobi |
+| Bogaert | =bogaert= | Gauss-Legendre only; =error stop= otherwise |
 
-GLR/Bogaert are worth future ports for *large-n asymptotics*, not as drop-in
-replacements for ACM 655's eigenproblem formulation.
+** Public entry (preferred)**
+
+Call =gauss_jacobi_rule(npts, alpha, beta, x, wts [, method])=:
+- omit =method=, pass ="auto"=, or pass blank → =select_method_auto=
+- force a name: =rec=, =rec_caf=, =gw=, =algo665=, =algo665_dc=,
+  =algo665_dc_caf=, =sturm=, =sturm_caf=, =glr=, =glr_caf=, =bogaert=
+
+Legacy =gauss_jacobi(..., method)= still works (required method string) and
+forwards to =gauss_jacobi_rule=.
+
+** Auto policy (=select_method_auto=)**
+
+| Regime | Choice |
+|--------|--------|
+| α=β=0 and =n≥21= | =bogaert= |
+| =n≥128= and max(\|α\|,\|β\|) ≤ 5 | =rec= |
+| =n≥64= and max(\|α\|,\|β\|) ≤ 2 | =glr= |
+| max(\|α\|,\|β\|) > 8 or =n≤32= | =algo665= |
+| else | =sturm= |
+
+Policy is documented and safe, not oracle-optimal. Multi-image callers that
+want CAF should force =*_caf= names; auto stays single-image for portability.
 
 ** Practical defaults**
 
 | Regime | Prefer |
 |--------|--------|
-| large =n=, mild α,β | =rec_caf= |
+| Legendre, =n≥21= | =bogaert= (or omit method) |
+| large =n=, mild α,β | =rec= / =rec_caf= |
 | high α or β, mid =n= | =algo665= or =sturm= |
 | multi-image, high α/β | =sturm_caf= (per-eig) or =gauss_jacobi_batch_caf= (per-rule) |
-| multi-image, mild α/β | =rec_caf= |
+| multi-image, mild α/β | =rec_caf= or =glr_caf= |
 
 ** Math note (Sturm)**
 

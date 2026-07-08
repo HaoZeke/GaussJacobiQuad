@@ -5,100 +5,88 @@
 ! Source: GaussJacobiQuad Library
 ! License: MIT
 ! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
-! Date: 2023-08-28
-! Commit: c442f77
 ! -----------------------------------------------------------------------------
-! This code is part of the GaussJacobiQuad library, providing an efficient
-! implementation for Gauss-Jacobi quadrature nodes and weights computation.
-! -----------------------------------------------------------------------------
-! To cite this software:
-! Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
-! Zenodo: https://doi.org/10.5281/ZENODO.8285112
-! ---------------------------------------------------------------------
 ! END_HEADER
-!> @brief Overall driver for Gauss-Jacobi quadrature.
-!
-!! @details This module implements the Gauss-Jacobi quadrature method for numerical integration.
-!! It provides a subroutine for obtaining the weights and nodes, which dispatches to multiple implementations
-!! based on the method provided.
+!> @brief Overall driver for Gauss-Jacobi quadrature with multi-algorithm dispatch.
 module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec, gauss_jacobi_rec_caf
 use gjp_gw, only: gauss_jacobi_gw
 use gjp_algo665, only: gauss_jacobi_algo665, gauss_jacobi_algo665_dc
 use gjp_sturm, only: gauss_jacobi_sturm, gauss_jacobi_sturm_caf
+use gjp_bogaert, only: gauss_jacobi_bogaert
+use gjp_glr, only: gauss_jacobi_glr, gauss_jacobi_glr_caf
 use gjp_caf, only: gauss_jacobi_batch_caf
+use gjp_auto, only: select_method_auto
 use gjp_types, only: dp
 implicit none
-public :: gauss_jacobi, gauss_jacobi_batch_caf
+public :: gauss_jacobi, gauss_jacobi_rule, gauss_jacobi_batch_caf
+public :: select_method_auto
 contains
 
-!> @brief Compute the Gauss-Jacobi quadrature nodes and weights.
-!>
-!> This subroutine calculates the Gauss-Jacobi quadrature nodes and weights for the given parameters @f$\alpha@f$ and @f$\beta@f$,
-!> using the specified method. Gauss-Jacobi quadrature is used to approximate integrals of the form:
-!> \[
-!>   \int_{-1}^{1} (1 - x)^\alpha (1 + x)^\beta f(x) \,dx \approx \sum_{i=1}^{npts} wts_i f(x_i)
-!> \]
-!> where the weights and nodes are calculated with the Jacobi polynomial, which is defined as:
-!> \[
-!>   P_n^{(\alpha, \beta)}(x) = \frac{(\alpha + 1)_n}{n!} \sum_{k=0}^n \binom{n}{k} \frac{(\beta + 1)_{n-k}}{(n-k)!} \left( \frac{x-1}{2} \right)^k \left( \frac{x+1}{2} \right)^{n-k}
-!> \]
-!>
-!> @param[in] npts Number of quadrature points.
-!> @param[in] alpha Parameter alpha in the Jacobi polynomial. Must be greater than -1.
-!> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
-!> @param[out] x Quadrature nodes.
-!> @param[out] wts Quadrature weights.
-!> @param[in] method Method used for calculation. Supported methods:
-!> "rec", "rec_caf" (node-partitioned recurrence), "gw", "gw_caf" (alias of gw
-!> for a single rule; use gauss_jacobi_batch_caf for multi-rule speedup),
-!> "algo665", "algo665_caf" (same note as gw_caf).
+!> Legacy/string dispatch. Prefer =gauss_jacobi_rule= for optional method/auto.
 subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
     character(len=:), allocatable, intent(in) :: method
+    call gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
+end subroutine gauss_jacobi
 
-    if (npts <= 0) then
-        error stop "Number of points must be positive"
+!> Single public entry: optional method; blank / "auto" selects a policy.
+!>
+!> @param method Optional. If absent, empty, or "auto", uses select_method_auto.
+!>        Forced names: rec, rec_caf, gw, gw_caf, algo665, algo665_caf,
+!>        algo665_dc, algo665_dc_caf, sturm, sturm_caf, glr, glr_caf, bogaert.
+subroutine gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta
+    real(dp), intent(out) :: x(npts), wts(npts)
+    character(len=*), intent(in), optional :: method
+    character(len=:), allocatable :: m
+
+    if (npts <= 0) error stop "Number of points must be positive"
+    if (alpha <= -1.0_dp) error stop "alpha must be greater than -1"
+    if (beta <= -1.0_dp) error stop "beta must be greater than -1"
+
+    if (present(method)) then
+        if (len_trim(method) == 0 .or. trim(method) == "auto") then
+            m = select_method_auto(npts, alpha, beta)
+        else
+            m = trim(method)
+        end if
+    else
+        m = select_method_auto(npts, alpha, beta)
     end if
 
-    if (alpha <= -1.0_dp) then
-        error stop "alpha must be greater than -1"
-    end if
-
-    if (beta <= -1.0_dp) then
-
-        error stop "beta must be greater than -1"
-    end if
-
-    select case (trim(method))
-    case ("rec") ! Fails at high beta
+    select case (m)
+    case ("rec")
         call gauss_jacobi_rec(npts, alpha, beta, x, wts)
-    case ("rec_caf") ! Same math as rec; Newton nodes partitioned across CAF images
+    case ("rec_caf")
         call gauss_jacobi_rec_caf(npts, alpha, beta, x, wts)
-    case ("gw", "gw_caf") ! Accurate for high beta (single rule is serial eigensolve)
+    case ("gw", "gw_caf")
         call gauss_jacobi_gw(npts, alpha, beta, x, wts)
     case ("algo665", "algo665_caf")
         call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     case ("algo665_dc")
-        ! Cuppen + imtqlx leaves (same GW problem, recursive split)
         call gauss_jacobi_algo665_dc(npts, alpha, beta, x, wts, use_caf=.false.)
     case ("algo665_dc_caf")
         call gauss_jacobi_algo665_dc(npts, alpha, beta, x, wts, use_caf=.true.)
     case ("sturm")
-        ! GW via Sturm bisection + inverse iteration (CAF-friendly indices)
         call gauss_jacobi_sturm(npts, alpha, beta, x, wts)
     case ("sturm_caf")
         call gauss_jacobi_sturm_caf(npts, alpha, beta, x, wts)
+    case ("glr")
+        call gauss_jacobi_glr(npts, alpha, beta, x, wts)
+    case ("glr_caf")
+        call gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
+    case ("bogaert")
+        call gauss_jacobi_bogaert(npts, alpha, beta, x, wts)
     case default
-        print*,"Error: Unknown method specified:", method
-        print*,"Supported: rec, rec_caf, gw, gw_caf, algo665, algo665_caf,"
-        print*,"           algo665_dc, algo665_dc_caf, sturm, sturm_caf"
-        print*,"For multi-rule batch CAF: gauss_jacobi_batch_caf."
-        print*,"See docs/METHODS.org for algorithm ranking."
+        print *, "Error: Unknown method:", m
+        print *, "Supported: auto, rec, rec_caf, gw, algo665, algo665_dc,"
+        print *, "           sturm, sturm_caf, glr, glr_caf, bogaert"
         error stop
     end select
-end subroutine gauss_jacobi
+end subroutine gauss_jacobi_rule
 
 end module GaussJacobiQuad

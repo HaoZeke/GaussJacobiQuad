@@ -10,6 +10,7 @@ GaussJacobiQuad supports Coarray Fortran (CAF) for multi-image runs.
 
 | Method string | Meaning |
 |---------------|---------|
+| =auto= (omit) | =select_method_auto= (single-image defaults) |
 | =rec= | Serial recurrence Newton roots |
 | =rec_caf= | Same math; roots owned across images |
 | =gw= / =gw_caf= | Golub-Welsch + LAPACKE =dsteqr= (one rule is serial) |
@@ -17,6 +18,8 @@ GaussJacobiQuad supports Coarray Fortran (CAF) for multi-image runs.
 | =algo665_dc= | Cuppen D&C + =imtqlx= leaves (same GW problem) |
 | =algo665_dc_caf= | same; CAF hooks on merge (leaf-level structure) |
 | =sturm= / =sturm_caf= | Sturm bisection + inv. iteration; CAF over eigenvalue index |
+| =glr= / =glr_caf= | Prüfer phase + Newton; CAF over root index |
+| =bogaert= | Legendre asymptotics (α=β=0, =n≥21=); single-image |
 
 Aliases =gw_caf= / =algo665_caf= accept multi-image launch but do *not* split a
 single eigensolve. Use the batch API for multi-image speedup on those methods.
@@ -24,10 +27,10 @@ single eigensolve. Use the batch API for multi-image speedup on those methods.
 ** Single-rule API
 
 #+begin_src fortran
-use GaussJacobiQuad, only: gauss_jacobi
-character(len=:), allocatable :: method
-method = "rec_caf"
-call gauss_jacobi(npts, alpha, beta, x, wts, method)
+use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
+! Preferred: optional method; omit or "auto" uses select_method_auto
+call gauss_jacobi_rule(npts, alpha, beta, x, wts)
+call gauss_jacobi_rule(npts, alpha, beta, x, wts, "glr_caf")
 #+end_src
 
 ** Multi-rule batch API (all methods)
@@ -75,8 +78,11 @@ fixed cases). See =test/test_caf_rec.f90= and =test/test_caf_batch.f90=.
 
 | Module | Role |
 |--------|------|
-| =GaussJacobiQuad= | Dispatch =gauss_jacobi=; re-exports batch |
+| =GaussJacobiQuad= | =gauss_jacobi_rule= / =gauss_jacobi=; re-exports batch |
+| =gjp_auto= | =select_method_auto= policy |
 | =gjp_rec= | =rec= / =rec_caf=, ownership helpers |
+| =gjp_glr= | =glr= / =glr_caf= Prüfer + Newton |
+| =gjp_bogaert= | Legendre asymptotics |
 | =gjp_caf= | =gauss_jacobi_batch_caf= |
 | =gjp_gw= | Golub-Welsch |
 | =gjp_algo665= | Algorithm 655 + =imtqlx= |
