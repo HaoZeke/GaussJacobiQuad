@@ -24,7 +24,10 @@ fpm run --flag "-fcoarray=single" gjp_quad_rec -- <npoints> <alpha> <beta>
 fpm run --flag "-fcoarray=single" gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
-Supported methods: ~rec~ (serial recurrence), ~rec_caf~ (Coarray-partitioned recurrence Newton nodes), ~gw~ (Golub–Welsch), ~algo665~.
+Supported methods: ~rec~ / ~rec_caf~ (recurrence; ~rec_caf~ partitions Newton nodes across images),
+~gw~ / ~algo665~ (Golub–Welsch / Algorithm 655 eigensolve). Multi-image speedup for
+~gw~ and ~algo665~ uses independent *rules* via ~gauss_jacobi_batch_caf~ (serial
+tridiagonal eigensolve per rule does not split across images).
 
 *** Coarray Fortran (~rec_caf~)
 Independent half-interval Newton roots are owned round-robin across images
@@ -38,14 +41,13 @@ fpm run --flag "-fcoarray=single" gjp_quad -- 64 0.5 0.5 rec_caf
 # Multi-image (OpenCoarrays + MPICH recommended for gfortran ≥14):
 #   fpm build --flag "-fcoarray=lib" \
 #     --link-flag "-L$OC/lib -lcaf_mpi -L$MPICH/lib -lmpifort -lmpi"
-#   cafrun -n 4 ./build/*/app/gjp_bench_caf 6144 0.5 0.5 7 3
-# Timed driver ~gjp_bench_caf~ measures only the shipped ~rec_caf~ call.
-# Example confirmed speedup (rg.terra, npts=6144, α=β=0.5, 7 trials):
-#   1 image mean ≈ 2.01 s → 4 images mean ≈ 1.03 s (≈1.94×).
+# Single-rule node partition (rec only):
+#   cafrun -n 4 ./build/*/app/gjp_bench_caf single rec_caf 6144 0.5 0.5 7 3
+# Multi-rule batch (all methods: rec, gw, algo665):
+#   cafrun -n 4 ./build/*/app/gjp_bench_caf batch gw 256 64 0.5 0.0 5 2
 #
 # Reproducible toolchain / CI image (Nix dockerTools): see ~docker/caf/~.
-#   cd docker/caf && nix develop          # gfortran+MPICH+OpenCoarrays shell
-#   nix build .#oci && docker load < result
+#   cd docker/caf && nix develop
 # Workflow: ~.github/workflows/caf_multiimage.yml~
 #+end_src
 *** Meson Support

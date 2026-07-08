@@ -25,8 +25,10 @@ module GaussJacobiQuad
 use gjp_rec, only: gauss_jacobi_rec, gauss_jacobi_rec_caf
 use gjp_gw, only: gauss_jacobi_gw
 use gjp_algo665, only: gauss_jacobi_algo665
+use gjp_caf, only: gauss_jacobi_batch_caf
 use gjp_types, only: dp
 implicit none
+public :: gauss_jacobi, gauss_jacobi_batch_caf
 contains
 
 !> @brief Compute the Gauss-Jacobi quadrature nodes and weights.
@@ -46,8 +48,10 @@ contains
 !> @param[in] beta Parameter beta in the Jacobi polynomial. Must be greater than -1.
 !> @param[out] x Quadrature nodes.
 !> @param[out] wts Quadrature weights.
-!> @param[in] method Method used for calculation. Supported methods are
-!> "rec", "rec_caf" (Coarray-partitioned recurrence), "gw", and "algo665".
+!> @param[in] method Method used for calculation. Supported methods:
+!> "rec", "rec_caf" (node-partitioned recurrence), "gw", "gw_caf" (alias of gw
+!> for a single rule; use gauss_jacobi_batch_caf for multi-rule speedup),
+!> "algo665", "algo665_caf" (same note as gw_caf).
 subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
@@ -72,13 +76,14 @@ subroutine gauss_jacobi(npts, alpha, beta, x, wts, method)
         call gauss_jacobi_rec(npts, alpha, beta, x, wts)
     case ("rec_caf") ! Same math as rec; Newton nodes partitioned across CAF images
         call gauss_jacobi_rec_caf(npts, alpha, beta, x, wts)
-    case ("gw") ! Accurate for high beta
+    case ("gw", "gw_caf") ! Accurate for high beta (single rule is serial eigensolve)
         call gauss_jacobi_gw(npts, alpha, beta, x, wts)
-    case ("algo665")
+    case ("algo665", "algo665_caf")
         call gauss_jacobi_algo665(npts, alpha, beta, x, wts)
     case default
         print*,"Error: Unknown method specified:", method
-        print*,"Supported methods: 'rec', 'rec_caf', 'gw', 'algo665'"
+        print*,"Supported methods: 'rec', 'rec_caf', 'gw', 'gw_caf', 'algo665', 'algo665_caf'"
+        print*,"For multi-image speedup on gw/algo665, use gauss_jacobi_batch_caf."
         error stop
     end select
 end subroutine gauss_jacobi

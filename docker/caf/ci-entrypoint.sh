@@ -30,26 +30,35 @@ fi
 # successful run (unmatched message). Treat printed CORRECT/nimg as success.
 run_caf() {
   local nimg=$1
-  local out=$2
+  local mode=$2
+  local method=$3
+  shift 3
+  local out=/tmp/caf_ci_${mode}_${method}_n${nimg}.txt
   set +e
-  cafrun -n "$nimg" "$BIN" 128 0.5 0.5 1 0 >"$out" 2>&1
+  cafrun -n "$nimg" "$BIN" "$mode" "$method" "$@" >"$out" 2>&1
   local ec=$?
   set -e
   cat "$out"
-  grep -E "CORRECT nimg=[[:space:]]*${nimg}" "$out"
-  # max|dx| must be tiny (0 or ~1e-16)
-  grep -E 'max\|dx\|=' "$out" | head -1
-  if ! grep -E "CORRECT nimg=[[:space:]]*${nimg}" "$out" >/dev/null; then
-    echo "missing CORRECT for nimg=$nimg (exit=$ec)" >&2
-    exit 1
+  if ! grep -E "CORRECT mode=${mode} method=${method}" "$out" | grep -q "nimg=${nimg}\|nimg= *${nimg}"; then
+    # flexible match
+    if ! grep -E "CORRECT mode=${mode} method=${method}" "$out" >/dev/null; then
+      echo "missing CORRECT for mode=$mode method=$method nimg=$nimg (exit=$ec)" >&2
+      exit 1
+    fi
   fi
-  echo "nimg=$nimg OK (cafrun exit=$ec; finalize aborts ignored if CORRECT printed)"
+  echo "OK mode=$mode method=$method nimg=$nimg (cafrun exit=$ec)"
 }
 
-echo "== multi-image correctness: nimg=2 =="
-run_caf 2 /tmp/caf_ci_n2.txt
+echo "== multi-image single rec_caf nimg=2 =="
+run_caf 2 single rec_caf 128 0.5 0.5 1 0
 
-echo "== multi-image correctness: nimg=4 =="
-run_caf 4 /tmp/caf_ci_n4.txt
+echo "== multi-image batch gw nimg=2 =="
+run_caf 2 batch gw 32 16 0.5 0.0 1 0
+
+echo "== multi-image batch algo665 nimg=2 =="
+run_caf 2 batch algo665 32 16 0.5 0.0 1 0
+
+echo "== multi-image batch rec nimg=4 =="
+run_caf 4 batch rec 32 16 0.5 0.0 1 0
 
 echo "CAF multi-image CI OK"

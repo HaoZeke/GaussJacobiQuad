@@ -194,12 +194,24 @@ subroutine recurrence_caf(npts, n2, alpha, beta, x, PP)
 
     sync all
 
-    ! Gather each root from its owning image onto every image
-    do i = 1, n2
-        img = caf_root_owner(i, nimg)
-        x(i) = x_caf(i)[img]
-        PP(i) = PP_caf(i)[img]
-    end do
+    ! Image 1 gathers; full vectors redistributed from image 1
+    if (me == 1) then
+        do i = 1, n2
+            img = caf_root_owner(i, nimg)
+            if (img == 1) then
+                x(i) = x_caf(i)
+                PP(i) = PP_caf(i)
+            else
+                x(i) = x_caf(i)[img]
+                PP(i) = PP_caf(i)[img]
+            end if
+        end do
+        x_caf = x
+        PP_caf = PP
+    end if
+    sync all
+    x = x_caf(:)[1]
+    PP = PP_caf(:)[1]
 
     sync all
     deallocate (x_caf, PP_caf)
