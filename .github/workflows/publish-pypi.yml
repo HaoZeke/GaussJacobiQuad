@@ -99,7 +99,10 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: upload/
       - name: Publish to PyPI
-        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && !inputs.test_pypi) }}
+        if: >-
+          github.event_name == 'release' ||
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && !inputs.test_pypi)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: upload/
