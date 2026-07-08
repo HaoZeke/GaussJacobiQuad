@@ -10,15 +10,15 @@ build-backend = "mesonpy"
 
 [project]
 name = "gauss-jacobi-quad"
-version = "0.2.2"
-description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING C ABI, Stable ABI / abi3)"
+version = "0.2.3"
+description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING; Stable ABI + free-threaded wheels)"
 readme = "python/README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 authors = [
   { name = "Rohit Goswami", email = "rgoswami@ieee.org" },
 ]
-keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran", "abi3", "stable-abi"]
+keywords = ["quadrature", "gauss-jacobi", "numerical", "fortran", "abi3", "stable-abi", "free-threading"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -26,6 +26,7 @@ classifiers = [
   "Programming Language :: Fortran",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Free Threading :: 2 - Beta",
   "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
@@ -45,8 +46,8 @@ Documentation = "https://github.com/HaoZeke/GaussJacobiQuad/tree/main/docs/orgmo
 gauss-jacobi-quad = "gauss_jacobi_quad.cli:main"
 
 [tool.meson-python]
-# Required for the wheel to be tagged abi3 (Stable ABI). The extension is also
-# built with meson limited_api: '3.9' / Py_LIMITED_API 0x03090000.
+# Default packaging is Stable ABI (abi3). Free-threaded cibuildwheel overrides
+# force -Dpython.allow_limited_api=false so this does not apply there.
 limited-api = true
 
 [tool.meson-python.args]
@@ -54,20 +55,27 @@ limited-api = true
 setup = ["-Dpython_package=true", "-Dwarning_level=1", "-Dbuildtype=release"]
 
 [tool.cibuildwheel]
-# Stable ABI (Limited API 3.9): build once against CPython 3.9 → cp39-abi3 wheel
-# usable on 3.9, 3.10, 3.11, 3.12, 3.13, … (GIL builds). No per-version matrix.
-build = "cp39-*"
+# Both tracks (not a full per-version GIL matrix):
+#   cp39-*     → one Stable ABI wheel (cp39-abi3) for CPython 3.9+ GIL
+#   cp313t-*   → free-threaded full-API wheel (cannot use abi3)
+build = "cp39-* cp313t-*"
 skip = "*-win* *-macos* pp* *musllinux*"
+enable = ["cpython-freethreading"]
 archs = ["auto64"]
 build-frontend = "build"
 test-requires = ["pytest", "numpy"]
-# Exercise the abi3 wheel on a newer interpreter in the same job when available
 test-command = "pytest {project}/python/tests -q"
 manylinux-x86_64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.linux]
 before-all = "yum install -y gcc-gfortran openblas-devel || dnf install -y gcc-gfortran openblas-devel || (apt-get update && apt-get install -y gfortran libopenblas-dev)"
 environment = { PKG_CONFIG_PATH = "/usr/lib64/pkgconfig:/usr/lib/pkgconfig" }
+
+# Free-threaded: full C API (meson skips limited_api; meson-python must not
+# insist on abi3). See meson.build _py_is_ft branch + GJP_FULL_API.
+[[tool.cibuildwheel.overrides]]
+select = "cp*t-*"
+config-settings = "setup-args=-Dpython.allow_limited_api=false"
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]

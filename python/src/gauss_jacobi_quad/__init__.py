@@ -12,7 +12,7 @@ import numpy as np
 
 from gauss_jacobi_quad import _core
 
-__version__ = getattr(_core, "__version__", "0.2.2")
+__version__ = getattr(_core, "__version__", "0.2.3")
 
 GJP_OK = _core.GJP_OK
 GJP_ERR_NPTS = _core.GJP_ERR_NPTS

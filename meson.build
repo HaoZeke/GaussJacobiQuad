@@ -1,5 +1,5 @@
 project('gaussjacobiquad', ['c', 'fortran'],
-       version: '0.2.2',
+       version: '0.2.3',
   default_options : [
     'warning_level=everything',
     'buildtype=release',
@@ -183,19 +183,40 @@ if _py_pkg
     'src/GaussJacobiQuadCCompat.f90',
   ) + _gjp_f_sources
 
-  py.extension_module(
-    '_core',
-    sources: _ext_sources,
-    include_directories: include_directories('interfaces/CInterface'),
-    dependencies: py_deps,
-    fortran_args: _args,
-    # Stable ABI: one abi3 wheel for CPython >= 3.9 (see Py_LIMITED_API in _core.c)
-    limited_api: '3.9',
-    install: true,
-    subdir: 'gauss_jacobi_quad',
-    # Fortran driver pulls in libgfortran correctly for mixed objects
-    link_language: 'fortran',
-  )
+  # Free-threaded CPython is a different ABI: full C API + Py_mod_gil, not abi3.
+  _py_is_ft = run_command(
+    py, '-c',
+    'import sysconfig; print(1 if sysconfig.get_config_var("Py_GIL_DISABLED") else 0)',
+    check: true,
+  ).stdout().strip() == '1'
+
+  if _py_is_ft
+    py.extension_module(
+      '_core',
+      sources: _ext_sources,
+      include_directories: include_directories('interfaces/CInterface'),
+      dependencies: py_deps,
+      fortran_args: _args,
+      c_args: ['-DGJP_FULL_API=1'],
+      install: true,
+      subdir: 'gauss_jacobi_quad',
+      link_language: 'fortran',
+    )
+  else
+    py.extension_module(
+      '_core',
+      sources: _ext_sources,
+      include_directories: include_directories('interfaces/CInterface'),
+      dependencies: py_deps,
+      fortran_args: _args,
+      # Stable ABI: one abi3 wheel for CPython >= 3.9 (see Py_LIMITED_API in _core.c)
+      limited_api: '3.9',
+      install: true,
+      subdir: 'gauss_jacobi_quad',
+      link_language: 'fortran',
+    )
+  endif
+
 
   py.install_sources(
     [

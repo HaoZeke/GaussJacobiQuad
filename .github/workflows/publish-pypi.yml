@@ -52,9 +52,10 @@ jobs:
       - uses: pypa/cibuildwheel@v2.22.0
         # Primary settings in pyproject.toml [tool.cibuildwheel]; env overrides keep CI explicit
         env:
-          # One Stable ABI wheel (cp39-abi3); see pyproject.toml [tool.cibuildwheel]
-          CIBW_BUILD: "cp39-*"
+          # cp39-abi3 (Stable ABI) + cp313t free-threaded; see pyproject.toml
+          CIBW_BUILD: "cp39-* cp313t-*"
           CIBW_SKIP: "*-win* *-macos* pp* *musllinux*"
+          CIBW_ENABLE: "cpython-freethreading"
           CIBW_ARCHS: "auto64"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_BEFORE_ALL_LINUX: >
@@ -65,6 +66,7 @@ jobs:
           CIBW_BUILD_FRONTEND: "build"
           CIBW_TEST_REQUIRES: "pytest numpy"
           CIBW_TEST_COMMAND: "pytest {project}/python/tests -q"
+
         with:
           output-dir: wheelhouse
           package-dir: .

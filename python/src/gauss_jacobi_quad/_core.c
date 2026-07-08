@@ -1,20 +1,22 @@
 /*
- * CPython extension for GaussJacobiQuad (Stable ABI / Limited API).
+ * CPython extension for GaussJacobiQuad.
  *
  * Calls ISO_C_BINDING C ABI: gauss_jacobi_rule_c / gjp_status_string
  * (same objects as libgjp_cinterp, linked into this module).
  *
- * - Built with Py_LIMITED_API 0x03090000 → one abi3 wheel for CPython 3.9+
- * - Multi-phase module init (PEP 489): PyModuleDef_Init + Py_mod_exec
- * - Module state (exception type is not a process-global static)
- * - Heap / dynamic exception type via PyErr_NewException
+ * Dual packaging (both are intentional):
  *
- * Free-threaded CPython is a different ABI and cannot load abi3 wheels;
- * freethreading slots are omitted under the Limited API build.
+ * 1. Stable ABI (default): Py_LIMITED_API 0x03090000 → one cp39-abi3 wheel
+ *    for CPython 3.9+ GIL builds.
+ * 2. Free-threaded (GJP_FULL_API / freethreaded interpreter): full C API +
+ *    Py_mod_gil = Py_MOD_GIL_NOT_USED → cp313t (and later) wheels. Free-threaded
+ *    CPython is a different ABI and cannot load abi3.
+ *
+ * Common: multi-phase PEP 489 init, module state, heap GaussJacobiError.
  */
 #define PY_SSIZE_T_CLEAN
-/* One wheel for 3.9+: must be defined before Python.h */
-#ifndef Py_LIMITED_API
+/* Limited API only for non–free-threaded / non–full-API builds (before Python.h). */
+#if !defined(GJP_FULL_API) && !defined(Py_LIMITED_API)
 #  define Py_LIMITED_API 0x03090000
 #endif
 #include <Python.h>
@@ -95,6 +97,7 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
         method = "";
     }
     else if (PyUnicode_Check(method_obj)) {
+#if defined(Py_LIMITED_API) && Py_LIMITED_API < 0x030A0000
         /* PyUnicode_AsUTF8 is not in the 3.9 Limited API surface */
         method_bytes = PyUnicode_AsUTF8String(method_obj);
         if (!method_bytes)
@@ -104,6 +107,11 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
             Py_DECREF(method_bytes);
             return NULL;
         }
+#else
+        method = PyUnicode_AsUTF8(method_obj);
+        if (!method)
+            return NULL;
+#endif
         if (strcmp(method, "auto") == 0)
             method = "";
     }
@@ -159,7 +167,6 @@ gjp_rule(PyObject *module, PyObject *args, PyObject *kwargs)
             Py_XDECREF(method_bytes);
             return NULL;
         }
-        /* PyList_SetItem steals refs; Limited API–safe (not SET_ITEM macro) */
         if (PyList_SetItem(x_list, i, xv) < 0 || PyList_SetItem(w_list, i, wv) < 0) {
             Py_DECREF(x_list);
             Py_DECREF(w_list);
@@ -210,7 +217,6 @@ gjp_mod_exec(PyObject *module)
     if (!st)
         return -1;
 
-    /* Heap exception type (dynamic), not a static PyTypeObject */
     st->error = PyErr_NewException("gauss_jacobi_quad.GaussJacobiError", PyExc_RuntimeError, NULL);
     if (!st->error)
         return -1;
@@ -236,7 +242,7 @@ gjp_mod_exec(PyObject *module)
     if (PyModule_AddIntConstant(module, "GJP_ERR_BOGAERT_N", GJP_ERR_BOGAERT_N) < 0)
         return -1;
 
-    if (PyModule_AddStringConstant(module, "__version__", "0.2.2") < 0)
+    if (PyModule_AddStringConstant(module, "__version__", "0.2.3") < 0)
         return -1;
 
     return 0;
@@ -244,13 +250,20 @@ gjp_mod_exec(PyObject *module)
 
 static PyModuleDef_Slot gjp_slots[] = {
     {Py_mod_exec, (void *)gjp_mod_exec},
+#if defined(Py_mod_multiple_interpreters) && defined(Py_MOD_PER_INTERPRETER_GIL_SUPPORTED)
+    {Py_mod_multiple_interpreters, Py_MOD_PER_INTERPRETER_GIL_SUPPORTED},
+#endif
+#if defined(Py_mod_gil) && defined(Py_MOD_GIL_NOT_USED)
+    /* Free-threaded full-API builds only (not available under Limited API). */
+    {Py_mod_gil, Py_MOD_GIL_NOT_USED},
+#endif
     {0, NULL}
 };
 
 static struct PyModuleDef gjp_module = {
     PyModuleDef_HEAD_INIT,
     "gauss_jacobi_quad._core",
-    "CPython extension: GaussJacobiQuad via ISO_C_BINDING C ABI (Stable ABI)",
+    "CPython extension: GaussJacobiQuad via ISO_C_BINDING (Stable ABI + free-threaded builds)",
     sizeof(gjp_module_state),
     gjp_methods,
     gjp_slots,

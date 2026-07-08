@@ -31,26 +31,31 @@ def test_is_compiled_extension():
 
 
 def test_version():
-    assert __version__ == "0.2.2"
+    assert __version__ == "0.2.3"
 
 
-def test_stable_abi_tag_when_installed_from_wheel():
-    """If installed from a wheel, prefer abi3 (Stable ABI) over cp3XY tags."""
+def test_extension_so_naming():
+    """Wheel path is either Stable ABI (abi3) or free-threaded (cpXXXt)."""
     import importlib.metadata as md
+    import sysconfig
 
     try:
         dist = md.distribution("gauss-jacobi-quad")
     except md.PackageNotFoundError:
         pytest.skip("not installed as a distribution")
     files = [str(f) for f in (dist.files or [])]
-    so = [f for f in files if "_core" in f and f.endswith((".so", ".pyd"))]
+    so = [f for f in files if "_core" in f and (f.endswith(".so") or f.endswith(".pyd"))]
     if not so:
         pytest.skip("no extension file recorded")
-    # Local editable/source builds may be cp3XY; wheels from CI must be abi3
     path = so[0]
-    if "abi3" not in path and "cpython" in path:
-        pytest.skip(f"source/local build: {path}")
-    assert "abi3" in path, path
+    ft = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+    if ft:
+        # Free-threaded wheels use the full ABI tag, not abi3
+        assert "abi3" not in path or "t" in path, path
+    else:
+        if "abi3" not in path and "cpython" in path:
+            pytest.skip(f"source/local GIL build: {path}")
+        assert "abi3" in path, path
 
 
 def test_status_string_and_constants():
