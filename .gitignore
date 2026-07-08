@@ -101,3 +101,10 @@ ipython_config.py
 # narrative docs HTML
 docs/site/
 
+
+# packaging
+target/
+python/dist/
+python/**/*.egg-info/
+python/build/
+**/__pycache__/
