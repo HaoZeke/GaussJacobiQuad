@@ -21,7 +21,7 @@ What ACM 655 optimizes vs =gw=:
 | =algo665= | GW + sequential =imtqlx= | mid =n=, high α,β, faster than =gw= | poor (one QL path) |
 | =algo665_dc= | Cuppen D&C + =imtqlx= leaves | larger =n=, same GW problem | recursive split + leaf QL |
 | =sturm= / =sturm_caf= | Sturm bisection + inv. iteration | GW-level, *CAF-native* indices | excellent (per eigenvalue) |
-| =glr= / =glr_caf= | Prüfer *phase-by-π march* + Newton | full Jacobi | sequential chain; CAF = broadcast |
+| =glr= / =glr_caf= | Prüfer *phase-by-π march* + Newton | full Jacobi (high α,β via Bessel first-root) | sequential chain; CAF = broadcast |
 | =bogaert= | J0-zero asymptotics + exact weights | Legendre only (α=β=0, =n≥21=) | per-node; not full Jacobi |
 | =auto= | =select_method_auto= policy | default public entry | delegates to above |
 
