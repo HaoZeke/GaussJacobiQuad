@@ -31,7 +31,7 @@ def test_is_compiled_extension():
 
 
 def test_version():
-    assert __version__ == "0.2.0"
+    assert __version__ == "0.2.1"
 
 
 def test_status_string_and_constants():
