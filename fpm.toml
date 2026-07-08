@@ -4,6 +4,14 @@ license = "MIT"
 author = "Rohit Goswami"
 maintainer = "rog32@hi.is"
 copyright = "Copyright 2023--present, featom developers"
+# Coarray Fortran: recurrence method "rec_caf" uses this_image/num_images/coarrays.
+# Build with gfortran CAF support, e.g.:
+#   fpm build --flag "-fcoarray=single"
+#   fpm test  --flag "-fcoarray=single"
+# Multi-image (OpenCoarrays / libcaf_mpi), when available:
+#   fpm build --flag "-fcoarray=lib" --link-flag "-lcaf_mpi"
+#   cafrun -n 4 fpm run gjp_quad -- 64 0.5 0.5 rec_caf
+#   # or: mpiexec -n 4 ./build/.../gjp_quad 64 0.5 0.5 rec_caf
 [build]
 auto-executables = true
 auto-tests = true

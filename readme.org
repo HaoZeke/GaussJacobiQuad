@@ -8,22 +8,38 @@ The most automated approach is to use the ~conda~ environment and ~fpm~ build:
 #+begin_src bash
 micromamba create -f environment.yml
 micromamba activate gaussjacquad
-fpm build
+# Coarray Fortran is required (-fcoarray=single is the portable 1-image mode)
+fpm build --flag "-fcoarray=single"
 #+end_src
 
 An analytic result can be obtained from the ~scripts~ folder.
 #+begin_src bash
 python scripts/sympy_gauss_jac.py --npts <npoints> --alpha <alpha> --beta <beta> --n_dig <precision>
-fpm test
+fpm test --flag "-fcoarray=single"
 #+end_src
 
 Running the implemented recursion based Gauss-Jacobi can be done via:
 #+begin_src bash
-fpm run gjp_quad_rec -- <npoints> <alpha> <beta>
-fpm run gjp_quad -- <npoints> <alpha> <beta> <method>
+fpm run --flag "-fcoarray=single" gjp_quad_rec -- <npoints> <alpha> <beta>
+fpm run --flag "-fcoarray=single" gjp_quad -- <npoints> <alpha> <beta> <method>
 #+end_src
 
-Currently the only supported methods are "rec" and "gw" (Golub Welsch).
+Supported methods: ~rec~ (serial recurrence), ~rec_caf~ (Coarray-partitioned recurrence Newton nodes), ~gw~ (Golub–Welsch), ~algo665~.
+
+*** Coarray Fortran (~rec_caf~)
+Independent half-interval Newton roots are owned round-robin across images
+(~this_image~ / ~num_images~), then gathered with coarrays and ~sync all~.
+With one image every index is owned by image 1 (same nodes/weights as ~rec~).
+
+#+begin_src bash
+# 1-image (always available with gfortran)
+fpm run --flag "-fcoarray=single" gjp_quad -- 64 0.5 0.5 rec_caf
+
+# Multi-image when OpenCoarrays (or equivalent) is installed:
+#   fpm build --flag "-fcoarray=lib" --link-flag "-lcaf_mpi"
+#   cafrun -n 4 ./build/*/gjp_quad 64 0.5 0.5 rec_caf
+#   # or: mpiexec -n 4 ...
+#+end_src
 *** Meson Support
 A ~meson~ build backend is also present, which makes it easier to incorporate as subprojects of projects other than those supported by ~fpm~.
 

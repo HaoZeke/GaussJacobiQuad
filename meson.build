@@ -10,6 +10,14 @@ project('gaussjacobiquad', ['c', 'fortran'],
 _args = [] # Extra arguments
 _deps = [] # Dependencies
 
+# Coarray Fortran for rec_caf (this_image / num_images / coarrays).
+# Override with -Dfcoarray=lib when linking OpenCoarrays multi-image.
+_fc = meson.get_compiler('fortran')
+_caf_mode = get_option('fcoarray')
+if _fc.get_id() == 'gcc'
+  _args += '-fcoarray=' + _caf_mode
+endif
+
 # ---------------------- Dependencies
 _deps += dependency('lapack')
 
@@ -30,6 +38,7 @@ gjplib = library('GaussJacobiQaud',
                 'src/gjp_algo665.f90',
                 'src/GaussJacobiQuad.f90',
               ],
+              fortran_args: _args,
               dependencies: _deps,
               install: true,
 )
@@ -40,6 +49,7 @@ gjp_quad = executable('gjp_quad',
                       sources: [
                         'app/gjp_quad.f90',
                       ],
+                      fortran_args: _args,
                       link_with: [gjplib],
                       install: true,
 )
@@ -48,6 +58,7 @@ gjp_quad_rec = executable('gjp_quad_rec',
                       sources: [
                         'app/gjp_quad_rec.f90',
                       ],
+                      fortran_args: _args,
                       link_with: [gjplib],
                       install: true,
 )
@@ -56,6 +67,7 @@ gjp_quad_gw = executable('gjp_quad_gw',
                       sources: [
                         'app/gjp_quad_gw.f90',
                       ],
+                      fortran_args: _args,
                       link_with: [gjplib],
                       install: true,
 )
@@ -64,6 +76,7 @@ gjp_quad_algo665 = executable('gjp_quad_algo665',
                       sources: [
                         'app/gjp_quad_algo665.f90',
                       ],
+                      fortran_args: _args,
                       link_with: [gjplib],
                       install: true,
 )

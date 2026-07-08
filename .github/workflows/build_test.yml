@@ -34,5 +34,7 @@ jobs:
       - name: Build and Test
         shell: bash -l {0}
         run: |
-          fpm build
+          # Coarray Fortran for rec_caf (this_image / coarrays)
+          fpm build --flag "-fcoarray=single"
+          fpm test  --flag "-fcoarray=single"
           pytest -vvv

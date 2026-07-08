@@ -1,0 +1,2 @@
+option('fcoarray', type: 'combo', choices: ['single', 'lib'], value: 'single',
+       description: 'gfortran -fcoarray= mode for Coarray Fortran (rec_caf)')

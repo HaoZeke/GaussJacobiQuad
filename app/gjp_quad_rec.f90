@@ -40,9 +40,11 @@ read (arg, *) beta
 method = "rec"
 call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
-do idx = 1, n_points
-    print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
-end do
+if (this_image() == 1) then
+    do idx = 1, n_points
+        print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
+    end do
+end if
 
 deallocate (x, w)
 

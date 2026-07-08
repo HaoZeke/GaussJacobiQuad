@@ -16,9 +16,11 @@ if (command_argument_count() /= 4) then
     print*,"  n_points: Number of quadrature points (integer)"
     print*,"  alpha: Parameter alpha for Gauss-Jacobi quadrature (must be > -1)"
     print*,"  beta: Parameter beta for Gauss-Jacobi quadrature (must be > -1)"
-    print*,"  method: Method to use for computation (supported: 'rec', 'gw', 'algo665')"
+    print*,"  method: Method to use ('rec', 'rec_caf', 'gw', 'algo665')"
     print*," "
     print*,"For Gauss-Jacobi quadrature, the weight function is (b-x)^alpha*(x-a)^beta."
+    print*,"rec_caf uses Coarray Fortran to partition recurrence Newton nodes;"
+    print*,"build with -fcoarray=single (or multi-image CAF runtime)."
     error stop "Must supply 4 arguments"
 end if
 call get_command_argument(1, arg)
@@ -44,9 +46,12 @@ method = trim(arg)
 
 call gauss_jacobi(n_points, alpha, beta, x, w, method)
 
-do idx = 1, n_points
-    print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
-end do
+! Multi-image: only image 1 prints to avoid duplicated lines
+if (this_image() == 1) then
+    do idx = 1, n_points
+        print '(1X, A, 1P, E24.17, 2X, A, 1P, E23.17)', 'Root: ', x(idx), 'Weight: ', w(idx)
+    end do
+end if
 
 deallocate (x, w)
 
