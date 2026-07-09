@@ -67,3 +67,6 @@ Optional GHCR publish (on `main` when `docker/caf/**` changes) uses
   commit `74a5d0a` (post-2.10.2) which provides `caf_get_from_remote` / accessor registration.
 - nixpkgs package name `fpm` is the **Ruby** packaging tool — this flake ships
   **fortran-lang fpm** as `fortran-fpm` / `fpm` on `PATH` via `fortran-fpm.nix`.
+- OCI `buildEnv` must not list packages that re-export the same files: do **not**
+  add `gcc` or `binutils` next to `gfortran` (shared `ld.bfd`), and do **not**
+  add a separate `lapack` next to `openblas` (shared `liblapack.so.3`).
