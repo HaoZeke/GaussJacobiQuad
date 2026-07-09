@@ -1,5 +1,5 @@
 project('gaussjacobiquad', ['c', 'fortran'],
-       version: '0.2.4',
+       version: '0.2.5',
   default_options : [
     'warning_level=everything',
     'buildtype=release',
@@ -24,6 +24,7 @@ endif
 
 # ---------------------- Dependencies
 # Prefer OpenBLAS (BLAS+LAPACK). Fall back to lapack pkg-config / -l flags.
+# LAPACKE C API (dsteqr/dsyev wrappers) is a separate library on many distros.
 _ob = dependency('openblas', required: false)
 if _ob.found()
   _deps += _ob
@@ -40,6 +41,15 @@ else
       _deps += cc.find_library('lapack', required: true)
       _deps += cc.find_library('blas', required: false)
     endif
+  endif
+endif
+_lapacke = dependency('lapacke', required: false)
+if _lapacke.found()
+  _deps += _lapacke
+else
+  _lapacke_lib = cc.find_library('lapacke', required: false)
+  if _lapacke_lib.found()
+    _deps += _lapacke_lib
   endif
 endif
 

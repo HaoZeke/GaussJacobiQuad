@@ -1,3 +1,12 @@
+# 0.2.5 (2026-07-09)
+
+## Packaging
+
+- Free-threaded wheels for **3.14t** as well as 3.13t; GIL path remains one
+  `cp39-abi3` wheel (covers 3.9–3.14). (ft_314)
+- CI: install extension for package tests; link LAPACKE; fix docs artifact
+  action; CAF Nix env gcc/gfortran conflict. (ci_green)
+
 # 0.2.4 (2026-07-09)
 
 ## Features

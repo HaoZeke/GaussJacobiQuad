@@ -37,8 +37,8 @@
             gnumake
             which
             git
+            # gfortran wrapper already provides gcc; listing both breaks buildEnv
             gfortran
-            gcc
             binutils
             pkg-config
             mpich

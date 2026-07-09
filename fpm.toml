@@ -1,5 +1,5 @@
 name = "GaussJacobiQuad"
-version = "0.2.4"
+version = "0.2.5"
 license = "MIT"
 author = "Rohit Goswami"
 maintainer = "rog32@hi.is"

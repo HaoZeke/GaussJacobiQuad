@@ -14,11 +14,11 @@ jobs:
       - name: System deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran libopenblas-dev meson ninja-build pkg-config
+          sudo apt-get install -y gfortran libopenblas-dev liblapacke-dev meson ninja-build pkg-config
       - uses: dtolnay/rust-toolchain@stable
       - name: Build C library
         run: |
-          meson setup bbdir -Dfcoarray=single
+          meson setup bbdir -Dfcoarray=single -Dwarning_level=1
           meson compile -C bbdir
           echo "GJP_CINTERP=$PWD/bbdir/libgjp_cinterp.so" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$PWD/bbdir" >> $GITHUB_ENV

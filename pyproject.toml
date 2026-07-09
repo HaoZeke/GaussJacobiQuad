@@ -10,7 +10,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "gauss-jacobi-quad"
-version = "0.2.4"
+version = "0.2.5"
 description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING; Stable ABI + free-threaded wheels)"
 readme = "python/README.md"
 license = { text = "MIT" }
@@ -55,10 +55,9 @@ limited-api = true
 setup = ["-Dpython_package=true", "-Dwarning_level=1", "-Dbuildtype=release"]
 
 [tool.cibuildwheel]
-# Both tracks (not a full per-version GIL matrix):
-#   cp39-*     → one Stable ABI wheel (cp39-abi3) for CPython 3.9+ GIL
-#   cp313t-*   → free-threaded full-API wheel (cannot use abi3)
-build = "cp39-* cp313t-*"
+# GIL: one Stable ABI wheel (cp39-abi3) covers 3.9+ including 3.14.
+# Free-threaded: per-version wheels (cannot use abi3) — 3.13t and 3.14t.
+build = "cp39-* cp313t-* cp314t-*"
 skip = "*-win* *-macos* pp* *musllinux*"
 enable = ["cpython-freethreading"]
 archs = ["auto64"]

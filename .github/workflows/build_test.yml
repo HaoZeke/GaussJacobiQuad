@@ -22,19 +22,33 @@ jobs:
           - {os: macOS-latest}
           - {os: ubuntu-latest}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
           fetch-depth: 0
       - name: Install Conda environment
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: environment.yml
           cache-environment: true
       - name: Build and Test
         shell: bash -l {0}
         run: |
+          set -euo pipefail
           # Coarray Fortran for rec_caf (this_image / coarrays)
           fpm build --flag "-fcoarray=single"
           fpm test  --flag "-fcoarray=single"
-          pytest -vvv
+
+          # C library for ctypes pytests
+          meson setup bbdir -Dfcoarray=single -Dwarning_level=1
+          meson compile -C bbdir
+          export GJP_CINTERP="$PWD/bbdir/libgjp_cinterp.so"
+          export LD_LIBRARY_PATH="$PWD/bbdir:${LD_LIBRARY_PATH:-}"
+          export DYLD_LIBRARY_PATH="$PWD/bbdir:${DYLD_LIBRARY_PATH:-}"
+          export PYTHONPATH="$PWD/interfaces/PyInterface:${PYTHONPATH:-}"
+          pytest pytests/ -vvv
+
+          # CPython extension package (meson-python)
+          python -m pip install -U pip
+          python -m pip install -v .
+          pytest python/tests -vvv

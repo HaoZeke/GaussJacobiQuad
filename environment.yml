@@ -9,9 +9,12 @@ channels:
 dependencies:
   - compilers
   - meson
+  - meson-python
+  - ninja
   - gfortran
   - pkg-config
   - openblas
+  - lapacke  # LAPACKE C API for dsteqr/dsyev wrappers
   - fpm
   - fprettify
   # Python, Sympy
@@ -21,6 +24,7 @@ dependencies:
   - jupytext
   - papermill
   - ipykernel
+  - pip
   # More testing
   - pytest
   # Headers
