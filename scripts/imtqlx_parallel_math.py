@@ -28,8 +28,8 @@ def fact1_givens_chain_is_sequential() -> None:
     #   g_{k-1} determined by c_k, s_k and diagonal entries
     # So g depends on the *next* rotation: a linear chain of length m.
     m = 5
-    g = sp.symbols(f"g0:{m}")
-    f = sp.symbols(f"f0:{m}")
+    sp.symbols(f"g0:{m}")
+    sp.symbols(f"f0:{m}")
     # At step k (from the end), cos/sin from g[k], f[k]; update produces g[k-1]
     # Dependency: g[k-1] := F(g[k], f[k], diags...)
     # Abstract functional dependence graph edges g[k] -> g[k-1]
@@ -51,7 +51,7 @@ def fact2_block_diagonal_independence() -> None:
     B = sp.Matrix([[c0, d0], [d0, c1]])
     T = sp.BlockDiagMatrix(A, B).as_explicit()
     # Characteristic polynomials multiply
-    char_T = sp.factor(T.charpoly().as_expr())
+    sp.factor(T.charpoly().as_expr())
     char_A = A.charpoly().as_expr()
     char_B = B.charpoly().as_expr()
     # Same roots: char_T proportional to char_A * char_B
@@ -59,23 +59,31 @@ def fact2_block_diagonal_independence() -> None:
     pT = sp.Poly(T.charpoly(lam).as_expr(), lam)
     pAB = sp.Poly(sp.expand(char_A * char_B), lam)
     # monic comparison
-    assert sp.simplify(pT.as_expr() - pAB.as_expr()) == 0 or sp.expand(
-        pT.as_expr() - pAB.as_expr()
-    ) == 0
+    assert (
+        sp.simplify(pT.as_expr() - pAB.as_expr()) == 0
+        or sp.expand(pT.as_expr() - pAB.as_expr()) == 0
+    )
     # Use equality of monic forms
-    pT_m = sp.Poly(sp.matrix2numpy(T).astype(object) if False else T.charpoly().as_expr())
+    sp.Poly(sp.matrix2numpy(T).astype(object) if False else T.charpoly().as_expr())
     # Simpler numeric check + symbolic product of dets
-    det_rel = sp.simplify(T.charpoly().as_expr() - (A.charpoly().as_expr() * B.charpoly().as_expr()))
+    det_rel = sp.simplify(
+        T.charpoly().as_expr() - (A.charpoly().as_expr() * B.charpoly().as_expr())
+    )
     # charpoly monic of degree 4; product of monic deg-2 is monic deg-4
     assert det_rel == 0
     print("FACT 2: charpoly(blkdiag(A,B)) = charpoly(A)*charpoly(B) (exact)")
-    print("  => independent eigenproblems for block-diagonal T (run imtqlx on each block).")
+    print(
+        "  => independent eigenproblems for block-diagonal T "
+        "(run imtqlx on each block)."
+    )
 
 
 def cuppen_split_tridiagonal(diag: np.ndarray, off: np.ndarray, k: int):
-    """Return T1_mod, T2_mod, rho, and prove T = blkdiag(T1,T2)+rho*u*u^T numerically."""
+    """Return T1_mod, T2_mod, rho; prove T = blkdiag(T1,T2)+rho*u*u^T."""
     n = len(diag)
-    beta = off[k - 1]  # 1-based k is split after index k (Fortran-ish): python k is size of T1
+    beta = off[
+        k - 1
+    ]  # 1-based k is split after index k (Fortran-ish): python k is size of T1
     # T1 is size k, T2 size n-k; connecting off-diagonal is off[k-1]
     d1 = diag[:k].copy()
     o1 = off[: k - 1].copy() if k > 1 else np.array([])
@@ -85,6 +93,7 @@ def cuppen_split_tridiagonal(diag: np.ndarray, off: np.ndarray, k: int):
     d1[-1] = d1[-1] - beta
     d2[0] = d2[0] - beta
     rho = beta
+
     # Build full matrices
     def tridiag(d, o):
         m = len(d)
@@ -136,6 +145,7 @@ def fact3_cuppen_and_secular() -> None:
     Q[:k1, :k1] = V1
     Q[k1:, k1:] = V2
     z = Q.T @ u  # z = Q^T u
+
     # Secular function f(lam) = 1 + rho * sum z_i^2/(d_i - lam)
     def secular(lam):
         return 1.0 + rho * np.sum(z**2 / (d - lam))
@@ -143,13 +153,18 @@ def fact3_cuppen_and_secular() -> None:
     # Full eigenvalues for reference
     T = np.diag(diag) + np.diag(off, 1) + np.diag(off, -1)
     lam_ref = np.sort(np.linalg.eigvalsh(T))
-    d_sorted = np.sort(d)
+    np.sort(d)
     # For rho>0, interlacing d_(i) < lam_i < d_(i+1) with d extended
     # Find roots by bisection between poles
     poles = np.sort(d)
-    lams = []
     # intervals (-inf, p0), (p0,p1), ..., (p_{n-1}, +inf) — exactly n eigenvalues
-    extended = np.concatenate([[poles[0] - 10 - 10 * abs(poles[0])], poles, [poles[-1] + 10 + 10 * abs(poles[-1])]])
+    np.concatenate(
+        [
+            [poles[0] - 10 - 10 * abs(poles[0])],
+            poles,
+            [poles[-1] + 10 + 10 * abs(poles[-1])],
+        ]
+    )
     # Better: use known interlacing for rank-1: eigenvalues separate poles
     # Search in (poles[i], poles[i+1]) and outside
     intervals = []
@@ -187,7 +202,10 @@ def fact3_cuppen_and_secular() -> None:
         Dmat = np.diag(d) + rho * np.outer(z, z)
         lam_s = np.sort(np.linalg.eigvalsh(Dmat))
         err_e = np.linalg.norm(lam_s - lam_ref)
-        print(f"FACT 3b: eig(D+rho zz^T) vs eig(T): ||err||={err_e:.3e} (found {len(found)} secular brackets)")
+        print(
+            f"FACT 3b: eig(D+rho zz^T) vs eig(T): "
+            f"||err||={err_e:.3e} (found {len(found)} secular brackets)"
+        )
         assert err_e < 1e-10
 
     # Symbolic secular for n=2
@@ -198,7 +216,9 @@ def fact3_cuppen_and_secular() -> None:
     # Quadratic in lam: coefficients
     poly = sp.Poly(sp.expand(f_clear), lam)
     print("FACT 3c: n=2 secular numerator (poly in lambda):", poly.as_expr())
-    print("  degree =", poly.degree(), "(expect 2 roots between poles for generic data)")
+    print(
+        "  degree =", poly.degree(), "(expect 2 roots between poles for generic data)"
+    )
 
 
 def fact4_parallel_work_units() -> None:

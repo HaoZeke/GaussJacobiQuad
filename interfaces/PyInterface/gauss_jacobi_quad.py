@@ -17,9 +17,8 @@ __version__ = "0.2.5"
 
 import ctypes
 import os
-import sys
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 

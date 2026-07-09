@@ -6,10 +6,9 @@ free-threading aware) linked to ``gauss_jacobi_rule_c``.
 
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
-
 from gauss_jacobi_quad import _core
 
 __version__ = getattr(_core, "__version__", "0.2.5")

@@ -28,7 +28,7 @@ if (me == 1) then
     print '(A,ES12.5,A,ES12.5)', "algo665 vs algo665_dc: max|dx|=", max_dx, " max|dw|=", max_dw
 end if
 if (max_dx > tol .or. max_dw > tol) then
-    if (me == 1) print *, "FAIL dc vs algo665"
+    if (me == 1) print*,"FAIL dc vs algo665"
     error stop "imtqlx_dc disagree"
 end if
 

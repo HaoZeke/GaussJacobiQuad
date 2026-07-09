@@ -26,7 +26,7 @@ subroutine imtqlx_dc(n, diag, off_diag, evals, q1)
     integer, intent(in) :: n
     real(dp), intent(in) :: diag(n), off_diag(n)
     real(dp), intent(out) :: evals(n)
-    real(dp), intent(out) :: q1(n)  ! first row of eigenvector matrix Q
+    real(dp), intent(out) :: q1(n) ! first row of eigenvector matrix Q
     real(dp) :: dwork(n), owork(n), qmat(n, n)
     integer :: i
 

@@ -19,11 +19,11 @@ if "GJP_CINTERP" not in os.environ:
         break
 
 pytest.importorskip("gauss_jacobi_quad")
-from gauss_jacobi_quad import (  # noqa: E402
-    GJP_ERR_BOGAERT_AB,
-    GaussJacobiError,
-    gauss_jacobi,
-)
+import gauss_jacobi_quad as _gjq  # noqa: E402
+
+GJP_ERR_BOGAERT_AB = _gjq.GJP_ERR_BOGAERT_AB
+GaussJacobiError = _gjq.GaussJacobiError
+gauss_jacobi = _gjq.gauss_jacobi
 
 
 def test_auto_legendre_matches_bogaert():

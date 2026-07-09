@@ -14,7 +14,7 @@ dependencies:
   - gfortran
   - pkg-config
   - openblas
-  - lapacke  # LAPACKE C API for dsteqr/dsyev wrappers
+  # LAPACKE: OpenBLAS on conda-forge exports LAPACKE symbols; on Debian use liblapacke-dev (rust.yml)
   - fpm
   - fprettify
   # Python, Sympy

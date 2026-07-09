@@ -26,7 +26,7 @@ do ib = 1, nbatch
 end do
 
 do imethod = 1, 3
-    method = trim(methods(imethod))  ! deferred length
+    method = trim(methods(imethod)) ! deferred length
     do ib = 1, nbatch
         call gauss_jacobi(npts, alphas(ib), betas(ib), xs_ref(:, ib), ws_ref(:, ib), method)
     end do
@@ -43,5 +43,5 @@ end do
 
 sync all
 if (.not. ok) error stop "test_caf_batch failed"
-if (me == 1) print *, "test_caf_batch PASSED (rec/gw/algo665 batch CAF)"
+if (me == 1) print*,"test_caf_batch PASSED (rec/gw/algo665 batch CAF)"
 end program test_caf_batch

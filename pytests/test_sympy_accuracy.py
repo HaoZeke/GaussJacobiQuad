@@ -16,7 +16,11 @@ if "GJP_CINTERP" not in os.environ:
     for cand in (ROOT / "bbdir").rglob("libgjp_cinterp.so"):
         os.environ["GJP_CINTERP"] = str(cand)
         break
-    for cand in Path.cwd().joinpath("bbdir").rglob("libgjp_cinterp.so") if Path.cwd().joinpath("bbdir").exists() else []:
+    for cand in (
+        Path.cwd().joinpath("bbdir").rglob("libgjp_cinterp.so")
+        if Path.cwd().joinpath("bbdir").exists()
+        else []
+    ):
         os.environ["GJP_CINTERP"] = str(cand)
         break
 

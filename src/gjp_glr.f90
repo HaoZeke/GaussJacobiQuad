@@ -57,7 +57,7 @@ subroutine gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
-    real(dp), allocatable :: x_c(:)[:], d_c(:)[:]
+    real(dp), allocatable :: x_c(:) [:], d_c(:) [:]
     real(dp) :: xk, dk, C
     integer :: me, nimg, k, img
 
@@ -66,7 +66,7 @@ subroutine gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
 
     me = this_image()
     nimg = num_images()
-    allocate (x_c(npts)[*], d_c(npts)[*])
+    allocate (x_c(npts) [*], d_c(npts) [*])
     x_c = 0.0_dp
     d_c = 0.0_dp
 
@@ -87,8 +87,8 @@ subroutine gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
                 x(k) = x_c(k)
                 xk = d_c(k)
             else
-                x(k) = x_c(k)[img]
-                xk = d_c(k)[img]
+                x(k) = x_c(k) [img]
+                xk = d_c(k) [img]
             end if
             ! store ders temporarily in wts, then convert
             wts(k) = xk
@@ -97,8 +97,8 @@ subroutine gauss_jacobi_glr_caf(npts, alpha, beta, x, wts)
         d_c = wts
     end if
     sync all
-    x = x_c(:)[1]
-    wts = d_c(:)[1]  ! ders
+    x = x_c(:) [1]
+    wts = d_c(:) [1] ! ders
     sync all
 
     ! Weights from ders (same formula as serial glr)
@@ -148,7 +148,7 @@ subroutine glr_phase_march_nodes(npts, alpha, beta, x, ders)
         ! Guard against latching onto the previous root (same basin)
         if (abs(xk - xprev) < 1.0e-12_dp * (1.0_dp + abs(xprev))) then
             xk = min(1.0_dp - 10.0_dp * x_eps, xprev + max(1.0e-6_dp, pi / &
-                 (rho_jacobi(npts, alpha, beta, xprev) * real(npts, dp))))
+                                                           (rho_jacobi(npts, alpha, beta, xprev) * real(npts, dp))))
             call newton_polish(npts, alpha, beta, xk, dk)
         end if
         x(k) = xk

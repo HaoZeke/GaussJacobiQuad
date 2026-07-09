@@ -150,7 +150,7 @@ subroutine recurrence_caf(npts, n2, alpha, beta, x, PP)
     integer, intent(in) :: npts, n2
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(n2), PP(n2)
-    real(dp), allocatable :: x_caf(:)[:], PP_caf(:)[:]
+    real(dp), allocatable :: x_caf(:) [:], PP_caf(:) [:]
     integer :: me, nimg, i, img, r_i, l
     real(dp) :: C, T, dx, x_i, P_val, PP_val
     real(dp) :: xv(1), Pv(1), PPv(1)
@@ -163,7 +163,7 @@ subroutine recurrence_caf(npts, n2, alpha, beta, x, PP)
     ! Always use coarrays + image ownership so the CAF path is exercised even
     ! under -fcoarray=single (nimg==1 owns every index). Multi-image partitions
     ! indices round-robin; gather after sync all.
-    allocate (x_caf(n2)[*], PP_caf(n2)[*])
+    allocate (x_caf(n2) [*], PP_caf(n2) [*])
     x_caf = 0.0_dp
     PP_caf = 0.0_dp
 
@@ -203,16 +203,16 @@ subroutine recurrence_caf(npts, n2, alpha, beta, x, PP)
                 x(i) = x_caf(i)
                 PP(i) = PP_caf(i)
             else
-                x(i) = x_caf(i)[img]
-                PP(i) = PP_caf(i)[img]
+                x(i) = x_caf(i) [img]
+                PP(i) = PP_caf(i) [img]
             end if
         end do
         x_caf = x
         PP_caf = PP
     end if
     sync all
-    x = x_caf(:)[1]
-    PP = PP_caf(:)[1]
+    x = x_caf(:) [1]
+    PP = PP_caf(:) [1]
 
     sync all
     deallocate (x_caf, PP_caf)

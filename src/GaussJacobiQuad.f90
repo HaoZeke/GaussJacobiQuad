@@ -83,9 +83,9 @@ subroutine gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
     case ("bogaert_caf")
         call gauss_jacobi_bogaert_caf(npts, alpha, beta, x, wts)
     case default
-        print *, "Error: Unknown method:", m
-        print *, "Supported: auto, rec, rec_caf, gw, algo665, algo665_dc, algo665_dc_caf,"
-        print *, "           sturm, sturm_caf, glr, glr_caf, bogaert, bogaert_caf"
+        print*,"Error: Unknown method:", m
+        print*,"Supported: auto, rec, rec_caf, gw, algo665, algo665_dc, algo665_dc_caf,"
+        print*,"           sturm, sturm_caf, glr, glr_caf, bogaert, bogaert_caf"
         error stop
     end select
 end subroutine gauss_jacobi_rule

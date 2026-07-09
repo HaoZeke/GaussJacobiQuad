@@ -54,7 +54,7 @@ subroutine gauss_jacobi_bogaert_caf(npts, alpha, beta, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
-    real(dp), allocatable :: x_c(:)[:], w_c(:)[:]
+    real(dp), allocatable :: x_c(:) [:], w_c(:) [:]
     integer :: me, nimg, m, i, img
     real(dp) :: xi, wi, p, pp
 
@@ -63,7 +63,7 @@ subroutine gauss_jacobi_bogaert_caf(npts, alpha, beta, x, wts)
     nimg = num_images()
     m = (npts + 1) / 2
 
-    allocate (x_c(npts)[*], w_c(npts)[*])
+    allocate (x_c(npts) [*], w_c(npts) [*])
     x_c = 0.0_dp
     w_c = 0.0_dp
 
@@ -94,16 +94,16 @@ subroutine gauss_jacobi_bogaert_caf(npts, alpha, beta, x, wts)
                 x(i) = x_c(i)
                 wts(i) = w_c(i)
             else
-                x(i) = x_c(i)[img]
-                wts(i) = w_c(i)[img]
+                x(i) = x_c(i) [img]
+                wts(i) = w_c(i) [img]
             end if
         end do
         x_c = x
         w_c = wts
     end if
     sync all
-    x = x_c(:)[1]
-    wts = w_c(:)[1]
+    x = x_c(:) [1]
+    wts = w_c(:) [1]
     sync all
     deallocate (x_c, w_c)
 end subroutine gauss_jacobi_bogaert_caf

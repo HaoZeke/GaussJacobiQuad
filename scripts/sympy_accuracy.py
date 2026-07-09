@@ -153,6 +153,7 @@ MATRIX: Tuple[Case, ...] = (
 # Drivers
 # ---------------------------------------------------------------------------
 
+
 def sympy_reference(n: int, alpha: float, beta: float, n_digits: int = N_DIGITS):
     """High-precision SymPy reference nodes/weights.
 
@@ -176,7 +177,9 @@ def sympy_reference(n: int, alpha: float, beta: float, n_digits: int = N_DIGITS)
             "check that alpha/beta were exact rationals, not raw floats"
         )
     if np.any(x <= -1.0) or np.any(x >= 1.0):
-        raise RuntimeError(f"SymPy reference has nodes outside (-1,1): min={x.min()} max={x.max()}")
+        raise RuntimeError(
+            f"SymPy reference has nodes outside (-1,1): min={x.min()} max={x.max()}"
+        )
     order = np.argsort(x)
     return x[order], w[order]
 
@@ -206,7 +209,7 @@ def library_rule(
     """Call shipped library; returns sorted (x, w)."""
     kind, a, b = _ensure_ctypes()
     if kind == "ctypes":
-        gauss_jacobi, GaussJacobiError = a, b
+        gauss_jacobi, _err = a, b
         meth = None if method in (None, "auto", "") else method
         x, w = gauss_jacobi(n, alpha, beta, method=meth)
         order = np.argsort(x)
@@ -215,7 +218,9 @@ def library_rule(
     return _fpm_rule(n, alpha, beta, method if method not in (None, "") else "auto")
 
 
-def _fpm_rule(n: int, alpha: float, beta: float, method: str) -> Tuple[np.ndarray, np.ndarray]:
+def _fpm_rule(
+    n: int, alpha: float, beta: float, method: str
+) -> Tuple[np.ndarray, np.ndarray]:
     cmd = [
         "fpm",
         "run",
@@ -312,6 +317,7 @@ def mu0_jacobi(alpha: float, beta: float) -> float:
 # Run matrix
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Row:
     case: str
@@ -339,7 +345,11 @@ def run_matrix(
         key = (case.n, case.alpha, case.beta)
         if key not in ref_cache:
             if verbose:
-                print(f"# SymPy ref n={case.n} a={case.alpha} b={case.beta} digits={N_DIGITS}", flush=True)
+                print(
+                    f"# SymPy ref n={case.n} a={case.alpha} "
+                    f"b={case.beta} digits={N_DIGITS}",
+                    flush=True,
+                )
             ref_cache[key] = sympy_reference(case.n, case.alpha, case.beta)
         x_ref, w_ref = ref_cache[key]
         mu0 = mu0_jacobi(case.alpha, case.beta)
@@ -365,7 +375,7 @@ def run_matrix(
                 sumw_err = float(abs(np.sum(w) - mu0))
                 if sumw_err > max(1e-10, 1e-9 * abs(mu0)):
                     ok = False
-                    note = (note + ";sum(w)" if note != "ok" else "sum(w) vs mu0")
+                    note = note + ";sum(w)" if note != "ok" else "sum(w) vs mu0"
             except Exception as e:
                 max_dx = max_dw = sumw_err = float("nan")
                 ok = False
@@ -387,9 +397,10 @@ def run_matrix(
             status = "PASS" if ok else "FAIL"
             if verbose:
                 print(
-                    f"{status} case={case.name} regime={case.regime} method={meth_label} "
-                    f"n={case.n} a={case.alpha} b={case.beta} "
-                    f"max|dx|={max_dx:.3e} max|dw|={max_dw:.3e} sumw_err={sumw_err:.3e} ({note})",
+                    f"{status} case={case.name} regime={case.regime} "
+                    f"method={meth_label} n={case.n} a={case.alpha} "
+                    f"b={case.beta} max|dx|={max_dx:.3e} "
+                    f"max|dw|={max_dw:.3e} sumw_err={sumw_err:.3e} ({note})",
                     flush=True,
                 )
     return rows
@@ -401,7 +412,7 @@ def run_out_of_regime(verbose: bool = True) -> Tuple[bool, str]:
     lines = []
     ok = True
     if kind == "ctypes":
-        gauss_jacobi, GaussJacobiError = a, b
+        gauss_jacobi, _err = a, b
         try:
             gauss_jacobi(32, 0.5, 0.0, method="bogaert")
             ok = False
@@ -409,7 +420,9 @@ def run_out_of_regime(verbose: bool = True) -> Tuple[bool, str]:
         except Exception as e:
             # expect GaussJacobiError with status 5
             st = getattr(e, "status", None)
-            lines.append(f"bogaert non-Legendre raised {type(e).__name__} status={st}: {e}")
+            lines.append(
+                f"bogaert non-Legendre raised {type(e).__name__} status={st}: {e}"
+            )
             if st is not None and st != 5:
                 ok = False
                 lines.append("FAIL expected status 5 (GJP_ERR_BOGAERT_AB)")
@@ -449,8 +462,14 @@ def run_out_of_regime(verbose: bool = True) -> Tuple[bool, str]:
 
 def format_table(rows: Sequence[Row]) -> str:
     lines = [
-        "method | case | regime | n | alpha | beta | max|dx| | max|dw| | sumw_err | pass | note",
-        "-------|------|--------|---|-------|------|---------|---------|----------|------|------",
+        (
+            "method | case | regime | n | alpha | beta | "
+            "max|dx| | max|dw| | sumw_err | pass | note"
+        ),
+        (
+            "-------|------|--------|---|-------|------|"
+            "---------|---------|----------|------|------"
+        ),
     ]
     for r in rows:
         lines.append(
@@ -464,8 +483,12 @@ def format_table(rows: Sequence[Row]) -> str:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--table", type=Path, help="Write markdown-ish table to path")
-    p.add_argument("--spot", action="store_true", help="Only glr Legendre + bogaert + auto")
-    p.add_argument("--out-of-regime", action="store_true", help="Only bogaert policy check")
+    p.add_argument(
+        "--spot", action="store_true", help="Only glr Legendre + bogaert + auto"
+    )
+    p.add_argument(
+        "--out-of-regime", action="store_true", help="Only bogaert policy check"
+    )
     args = p.parse_args(argv)
 
     if args.out_of_regime:
@@ -502,7 +525,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     kind, a, b = _ensure_ctypes()
     if kind != "ctypes":
-        print(f"WARNING: ctypes unavailable ({a}); trying fpm fallback", file=sys.stderr)
+        print(
+            f"WARNING: ctypes unavailable ({a}); trying fpm fallback", file=sys.stderr
+        )
 
     rows = run_matrix(cases)
     oor_ok, oor_text = run_out_of_regime()
@@ -514,7 +539,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     failed = [r for r in rows if not r.passed]
     if failed or not oor_ok:
-        print(f"FAILED {len(failed)} accuracy cells; out_of_regime_ok={oor_ok}", file=sys.stderr)
+        print(
+            f"FAILED {len(failed)} accuracy cells; out_of_regime_ok={oor_ok}",
+            file=sys.stderr,
+        )
         return 1
     print(f"ALL PASSED ({len(rows)} cells + out-of-regime)")
     return 0

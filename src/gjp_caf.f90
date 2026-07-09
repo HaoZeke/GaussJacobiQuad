@@ -64,7 +64,7 @@ subroutine gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, method)
     real(dp), intent(out) :: xs(npts, nbatch), wts(npts, nbatch)
     character(len=*), intent(in) :: method
 
-    real(dp), allocatable :: x_caf(:, :)[:], w_caf(:, :)[:]
+    real(dp), allocatable :: x_caf(:, :) [:], w_caf(:, :) [:]
     real(dp) :: x_local(npts), w_local(npts)
     integer :: me, nimg, i, img
     character(len=:), allocatable :: kernel
@@ -94,7 +94,7 @@ subroutine gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, method)
         error stop "gauss_jacobi_batch_caf: unknown method"
     end select
 
-    allocate (x_caf(npts, nbatch)[*], w_caf(npts, nbatch)[*])
+    allocate (x_caf(npts, nbatch) [*], w_caf(npts, nbatch) [*])
     x_caf = 0.0_dp
     w_caf = 0.0_dp
 
@@ -114,16 +114,16 @@ subroutine gauss_jacobi_batch_caf(npts, nbatch, alphas, betas, xs, wts, method)
                 xs(:, i) = x_caf(:, i)
                 wts(:, i) = w_caf(:, i)
             else
-                xs(:, i) = x_caf(:, i)[img]
-                wts(:, i) = w_caf(:, i)[img]
+                xs(:, i) = x_caf(:, i) [img]
+                wts(:, i) = w_caf(:, i) [img]
             end if
         end do
         x_caf = xs
         w_caf = wts
     end if
     sync all
-    xs = x_caf(:, :)[1]
-    wts = w_caf(:, :)[1]
+    xs = x_caf(:, :) [1]
+    wts = w_caf(:, :) [1]
 
     sync all
     deallocate (x_caf, w_caf)

@@ -92,11 +92,11 @@ end select
 contains
 
 subroutine print_usage()
-    print *, "Usage:"
-    print *, "  gjp_bench_caf single <method> <npts> <alpha> <beta> [ntrials] [nwarm]"
-    print *, "  gjp_bench_caf batch  <method> <npts> <nbatch> <alpha> <beta0> [ntrials] [nwarm]"
-    print *, "method: rec_caf|rec|gw|algo665"
-    print *, "single: rec_caf node-partition; batch: multi-rule CAF for all methods"
+    print*,"Usage:"
+    print*,"  gjp_bench_caf single <method> <npts> <alpha> <beta> [ntrials] [nwarm]"
+    print*,"  gjp_bench_caf batch  <method> <npts> <nbatch> <alpha> <beta0> [ntrials] [nwarm]"
+    print*,"method: rec_caf|rec|gw|algo665"
+    print*,"single: rec_caf node-partition; batch: multi-rule CAF for all methods"
 end subroutine print_usage
 
 subroutine run_single()
@@ -127,7 +127,7 @@ subroutine run_single()
             " npts=", npts, " max|dx|=", max_dx, " max|dw|=", max_dw
     end if
     if (max_dx > 1.0e-12_dp .or. max_dw > 1.0e-12_dp) then
-        if (me == 1) print *, "FAIL single correctness"
+        if (me == 1) print*,"FAIL single correctness"
         error stop "single correctness failed"
     end if
 
@@ -187,7 +187,7 @@ subroutine run_batch()
             " max|dx|=", max_dx, " max|dw|=", max_dw
     end if
     if (max_dx > 1.0e-12_dp .or. max_dw > 1.0e-12_dp) then
-        if (me == 1) print *, "FAIL batch correctness"
+        if (me == 1) print*,"FAIL batch correctness"
         error stop "batch correctness failed"
     end if
 

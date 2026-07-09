@@ -26,14 +26,14 @@ n_owned = 0
 do i = 1, n
     owner = caf_root_owner(i, nimg)
     if (owner < 1 .or. owner > nimg) then
-        if (me == 1) print *, "FAIL: caf_root_owner out of range for i=", i
+        if (me == 1) print*,"FAIL: caf_root_owner out of range for i=", i
         ok = .false.
     end if
     if (caf_owns_index(i, me, nimg)) n_owned = n_owned + 1
 end do
 ! every index assigned; this image owns floor/ceil share
 if (n_owned < n / nimg .or. n_owned > (n + nimg - 1) / nimg) then
-    if (me == 1) print *, "FAIL: ownership count", n_owned, "for nimg=", nimg
+    if (me == 1) print*,"FAIL: ownership count", n_owned, "for nimg=", nimg
     ok = .false.
 end if
 
@@ -60,7 +60,7 @@ do ic = 1, ncase
     end if
 
     if (max_dx > tol .or. max_dw > tol) then
-        if (me == 1) print *, "FAIL: rec vs rec_caf disagree beyond tol=", tol
+        if (me == 1) print*,"FAIL: rec vs rec_caf disagree beyond tol=", tol
         ok = .false.
     end if
     deallocate (x_ser, w_ser, x_caf, w_caf)
@@ -71,5 +71,5 @@ sync all
 if (.not. ok) then
     error stop "test_caf_rec failed"
 end if
-if (me == 1) print *, "test_caf_rec PASSED (rec vs rec_caf, nimg=", nimg, ")"
+if (me == 1) print*,"test_caf_rec PASSED (rec vs rec_caf, nimg=", nimg, ")"
 end program test_caf_rec

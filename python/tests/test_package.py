@@ -5,7 +5,6 @@ import importlib.util
 
 import numpy as np
 import pytest
-
 from gauss_jacobi_quad import (
     GJP_ERR_BOGAERT_AB,
     GJP_OK,
@@ -44,7 +43,9 @@ def test_extension_so_naming():
     except md.PackageNotFoundError:
         pytest.skip("not installed as a distribution")
     files = [str(f) for f in (dist.files or [])]
-    so = [f for f in files if "_core" in f and (f.endswith(".so") or f.endswith(".pyd"))]
+    so = [
+        f for f in files if "_core" in f and (f.endswith(".so") or f.endswith(".pyd"))
+    ]
     if not so:
         pytest.skip("no extension file recorded")
     path = so[0]

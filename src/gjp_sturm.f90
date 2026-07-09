@@ -45,7 +45,7 @@ subroutine gauss_jacobi_sturm_caf(npts, alpha, beta, x, wts)
     real(dp), intent(in) :: alpha, beta
     real(dp), intent(out) :: x(npts), wts(npts)
     real(dp) :: a(npts), b(npts - 1), mu0, lo, hi, q1
-    real(dp), allocatable :: x_c(:)[:], w_c(:)[:]
+    real(dp), allocatable :: x_c(:) [:], w_c(:) [:]
     type(gjp_sparse_matrix) :: jm
     integer :: k, me, nimg, img
 
@@ -57,7 +57,7 @@ subroutine gauss_jacobi_sturm_caf(npts, alpha, beta, x, wts)
     if (npts > 1) b = jm%off_diagonal(1:npts - 1)
     call gershgorin_bounds(npts, a, b, lo, hi)
 
-    allocate (x_c(npts)[*], w_c(npts)[*])
+    allocate (x_c(npts) [*], w_c(npts) [*])
     x_c = 0.0_dp
     w_c = 0.0_dp
 
@@ -76,16 +76,16 @@ subroutine gauss_jacobi_sturm_caf(npts, alpha, beta, x, wts)
                 x(k) = x_c(k)
                 wts(k) = w_c(k)
             else
-                x(k) = x_c(k)[img]
-                wts(k) = w_c(k)[img]
+                x(k) = x_c(k) [img]
+                wts(k) = w_c(k) [img]
             end if
         end do
         x_c = x
         w_c = wts
     end if
     sync all
-    x = x_c(:)[1]
-    wts = w_c(:)[1]
+    x = x_c(:) [1]
+    wts = w_c(:) [1]
     sync all
     deallocate (x_c, w_c)
 end subroutine gauss_jacobi_sturm_caf

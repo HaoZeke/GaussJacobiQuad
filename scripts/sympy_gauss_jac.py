@@ -36,8 +36,10 @@ from sympy.integrals.quadrature import gauss_jacobi
 def main(n, alpha, beta, n_dig):
     # exact α,β — raw floats make sympy.gauss_jacobi unstable
     roots, weights = gauss_jacobi(
-        n=n, alpha=nsimplify(alpha, rational=True),
-        beta=nsimplify(beta, rational=True), n_digits=n_dig
+        n=n,
+        alpha=nsimplify(alpha, rational=True),
+        beta=nsimplify(beta, rational=True),
+        n_digits=n_dig,
     )
     for idx, root in enumerate(roots):
         sign = " " if root >= 0 else ""
