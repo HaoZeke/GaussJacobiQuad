@@ -17,6 +17,8 @@ dependencies:
   # LAPACKE: OpenBLAS on conda-forge exports LAPACKE symbols; on Debian use liblapacke-dev (rust.yml)
   - fpm
   - fprettify
+  # Pin GIL CPython (not freethreaded 3.14t) for Limited API / abi3 package builds
+  - python=3.12
   # Python, Sympy
   - ipython
   - sympy
