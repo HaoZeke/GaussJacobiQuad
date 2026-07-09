@@ -24,7 +24,11 @@
         # nixpkgs `fpm` is the Ruby packaging tool — use fortran-lang fpm
         fortran-fpm = pkgs.callPackage ./fortran-fpm.nix { };
 
-        # Toolchain contents for the CI/dev image
+        # Toolchain contents for the CI/dev image.
+        # Do not list packages that re-export the same wrappers:
+        #   - gcc (gfortran wrapper already provides cc)
+        #   - binutils (gfortran wrapper already provides ld.bfd / as / …)
+        # Listing them trips pkgs.buildEnv with conflicting subpaths.
         cafTools = pkgs.buildEnv {
           name = "gjp-caf-tools";
           paths = with pkgs; [
@@ -37,17 +41,16 @@
             gnumake
             which
             git
-            # gfortran wrapper already provides gcc; listing both breaks buildEnv
             gfortran
-            binutils
             pkg-config
             mpich
             mpich.bin
             mpich.dev
             opencoarrays
             fortran-fpm
+            # OpenBLAS already exports BLAS+LAPACK; a separate lapack package
+            # collides on liblapack.so.3 in buildEnv.
             openblas
-            lapack
             python3
             python3Packages.pytest
             python3Packages.numpy
