@@ -88,13 +88,18 @@ jobs:
       - name: Build and push OCI
         env:
           REGISTRY: ghcr.io
-          IMAGE_NAME: ${{ github.repository_owner }}/gaussjacobiquad-caf
+          # GHCR requires lowercase repository names (github.repository_owner may be mixed case)
+          IMAGE_OWNER: ${{ github.repository_owner }}
         run: |
+          set -euo pipefail
+          OWNER="$(echo "$IMAGE_OWNER" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_NAME="${OWNER}/gaussjacobiquad-caf"
           nix build ./docker/caf#oci -o gjp-caf-oci
           docker load < gjp-caf-oci
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          # Tag whatever name dockerTools assigned
-          SRC=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -i gaussjacobiquad-caf | head -1)
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          # dockerTools image is already named ghcr.io/haozeke/gaussjacobiquad-caf:latest
+          SRC=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -i 'gaussjacobiquad-caf' | head -1)
+          test -n "$SRC"
           docker tag "$SRC" "$REGISTRY/$IMAGE_NAME:latest"
           docker tag "$SRC" "$REGISTRY/$IMAGE_NAME:sha-${GITHUB_SHA::7}"
           docker push "$REGISTRY/$IMAGE_NAME:latest"
