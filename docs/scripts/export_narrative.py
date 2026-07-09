@@ -28,21 +28,30 @@ NAV_TARGETS = [
     ("Methods list", "reference/method-names.html"),
 ]
 
-CSS = """:root { --fg: #1a1a1a; --muted: #555; --link: #0b5fff; --bg: #fafafa; --code-bg: #f0f0f0; }
-@media (prefers-color-scheme: dark) {
-  :root { --fg: #e8e8e8; --muted: #aaa; --link: #6db3ff; --bg: #121212; --code-bg: #1e1e1e; }
-}
-body { font-family: system-ui, sans-serif; line-height: 1.55; max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem; color: var(--fg); background: var(--bg); }
-a { color: var(--link); }
-nav.site { font-size: 0.95rem; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--muted); }
-nav.site a { margin-right: 0.75rem; }
-pre, code { font-family: ui-monospace, monospace; background: var(--code-bg); }
-pre { padding: 0.75rem 1rem; overflow-x: auto; border-radius: 4px; }
-table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-th, td { border: 1px solid var(--muted); padding: 0.35rem 0.6rem; text-align: left; }
-h1, h2, h3 { line-height: 1.25; }
-.muted { color: var(--muted); font-size: 0.9rem; }
-"""
+CSS = (
+    ":root { --fg: #1a1a1a; --muted: #555; --link: #0b5fff;\n"
+    "  --bg: #fafafa; --code-bg: #f0f0f0; }\n"
+    "@media (prefers-color-scheme: dark) {\n"
+    "  :root { --fg: #e8e8e8; --muted: #aaa; --link: #6db3ff;\n"
+    "    --bg: #121212; --code-bg: #1e1e1e; }\n"
+    "}\n"
+    "body { font-family: system-ui, sans-serif; line-height: 1.55;\n"
+    "  max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem;\n"
+    "  color: var(--fg); background: var(--bg); }\n"
+    "a { color: var(--link); }\n"
+    "nav.site { font-size: 0.95rem; margin-bottom: 1.5rem;\n"
+    "  padding-bottom: 0.75rem; border-bottom: 1px solid var(--muted); }\n"
+    "nav.site a { margin-right: 0.75rem; }\n"
+    "pre, code { font-family: ui-monospace, monospace;\n"
+    "  background: var(--code-bg); }\n"
+    "pre { padding: 0.75rem 1rem; overflow-x: auto; border-radius: 4px; }\n"
+    "table { border-collapse: collapse; width: 100%; margin: 1rem 0; }\n"
+    "th, td { border: 1px solid var(--muted); padding: 0.35rem 0.6rem;\n"
+    "  text-align: left; }\n"
+    "h1, h2, h3 { line-height: 1.25; }\n"
+    ".muted { color: var(--muted); font-size: 0.9rem; }\n"
+)
+
 
 
 def export_one(src: Path) -> None:

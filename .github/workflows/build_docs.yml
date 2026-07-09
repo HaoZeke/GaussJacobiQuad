@@ -37,16 +37,31 @@ jobs:
           cd apidocs
           wget -q https://github.com/HaoZeke/doxyYoda/releases/download/0.0.2/doxyYoda_0.0.2.tar.gz
           tar xf doxyYoda_0.0.2.tar.gz
+      - name: Install official pandoc
+        # Conda-forge pandoc has hung on methods.org org tables on GHA; use
+        # the upstream amd64 .deb (same major as local/dev).
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/pandoc.deb \
+            https://github.com/jgm/pandoc/releases/download/3.1.11.1/pandoc-3.1.11.1-1-amd64.deb \
+            || curl -fsSL -o /tmp/pandoc.deb \
+            https://github.com/jgm/pandoc/releases/download/3.1.11/pandoc-3.1.11-1-amd64.deb
+          sudo dpkg -i /tmp/pandoc.deb
+          hash -r
+          /usr/bin/pandoc --version | head -1
       - name: Generate Docs
         shell: bash -el {0}
         run: |
           set -euo pipefail
+          # Prefer the official binary over any conda-shadowed pandoc
+          export PATH="/usr/bin:${PATH}"
+          hash -r
+          echo "==> pandoc=$(command -v pandoc) $($(command -v pandoc) --version | head -1)"
           echo "==> $(date -u +%H:%M:%S) pandoc readme.org"
           pandoc readme.org -t gfm+smart -o README.md
-          # Split stages so a hang is attributable; hard timeouts on each
           echo "==> $(date -u +%H:%M:%S) narrative org→html"
           timeout 120 env GJP_DOCS_SKIP_DOXYGEN=1 GJP_DOCS_API_HREF=../index.html \
-            ./docs/scripts/build_docs.sh
+            PATH="/usr/bin:${PATH}" ./docs/scripts/build_docs.sh
           echo "==> $(date -u +%H:%M:%S) doxygen"
           timeout 180 doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
           echo "==> $(date -u +%H:%M:%S) copy narrative"
