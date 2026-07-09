@@ -4,6 +4,7 @@
 Invoked by docs/scripts/build_docs.sh. Avoids bash while-read + heredoc stdin
 races that stalled GHA after the first org file.
 """
+
 from __future__ import annotations
 
 import os
@@ -51,7 +52,6 @@ CSS = (
     "h1, h2, h3 { line-height: 1.25; }\n"
     ".muted { color: var(--muted); font-size: 0.9rem; }\n"
 )
-
 
 
 def export_one(src: Path) -> None:
