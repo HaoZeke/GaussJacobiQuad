@@ -1,5 +1,5 @@
 project('gaussjacobiquad', ['c', 'fortran'],
-       version: '0.2.3',
+       version: '0.2.4',
   default_options : [
     'warning_level=everything',
     'buildtype=release',

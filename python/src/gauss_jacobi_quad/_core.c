@@ -242,7 +242,7 @@ gjp_mod_exec(PyObject *module)
     if (PyModule_AddIntConstant(module, "GJP_ERR_BOGAERT_N", GJP_ERR_BOGAERT_N) < 0)
         return -1;
 
-    if (PyModule_AddStringConstant(module, "__version__", "0.2.3") < 0)
+    if (PyModule_AddStringConstant(module, "__version__", "0.2.4") < 0)
         return -1;
 
     return 0;

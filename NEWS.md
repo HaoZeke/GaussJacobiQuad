@@ -1,11 +1,18 @@
+# 0.2.4 (2026-07-09)
+
+## Features
+
+- Real multi-image CAF for the new methods: `bogaert_caf` (half-node partition),
+  `glr_caf` (independent k-th starters + Newton, not broadcast-only), CAF-aware
+  `auto` (`num_images()>1` → `*_caf`), and batch support for sturm/glr/bogaert.
+  (caf_new_methods)
+
+## Documentation
+
+- Diátaxis docs synced for CAF method table, auto multi-image policy, method
+  names, Fortran/Python API, and Stable ABI + free-threaded packaging. (docs_caf)
+
 # 0.2.3 (2026-07-08)
-
-## Coarray Fortran
-
-- Real multi-image CAF for new methods: `bogaert_caf` (half-node partition),
-  `glr_caf` (independent k-th starters + Newton), CAF-aware `auto`, and batch
-  kernels for sturm/glr/bogaert/algo665_dc. (caf_new_methods)
-
 
 ## Packaging
 
