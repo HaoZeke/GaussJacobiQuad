@@ -45,10 +45,13 @@ jobs:
           export GJP_CINTERP="$PWD/bbdir/libgjp_cinterp.so"
           export LD_LIBRARY_PATH="$PWD/bbdir:${LD_LIBRARY_PATH:-}"
           export DYLD_LIBRARY_PATH="$PWD/bbdir:${DYLD_LIBRARY_PATH:-}"
-          export PYTHONPATH="$PWD/interfaces/PyInterface:${PYTHONPATH:-}"
-          pytest pytests/ -vvv
+          # ctypes loader only for pytests/ (do not leak onto extension tests)
+          PYTHONPATH="$PWD/interfaces/PyInterface${PYTHONPATH:+:$PYTHONPATH}" \
+            pytest pytests/ -vvv
 
           # CPython extension package (meson-python / Stable ABI on GIL CPython)
+          # Clear PYTHONPATH so site-packages wins over interfaces/PyInterface
+          unset PYTHONPATH
           python -c 'import sys,sysconfig; print(sys.version); print("GIL_DISABLED", sysconfig.get_config_var("Py_GIL_DISABLED"))'
           python -m pip install -U pip
           python -m pip install -v .
