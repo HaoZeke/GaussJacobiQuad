@@ -99,14 +99,15 @@ PY
   echo "  $rel -> ${dest#$ROOT/}"
 }
 
-# Materialize the file list first (avoids while-read + process-substitution
-# stdin races if a child ever touches stdin).
-mapfile -d '' -t _org_files < <(find "$ORG" -name '*.org' -print0 | sort -z)
-echo "==> ${#_org_files[@]} org files"
-for f in "${_org_files[@]}"; do
+# Plain newline list (no NUL / process-substitution / mapfile edge cases)
+_org_list="$(mktemp)"
+find "$ORG" -name '*.org' | LC_ALL=C sort > "$_org_list"
+echo "==> $(wc -l < "$_org_list") org files"
+while IFS= read -r f; do
   [[ -n "$f" ]] || continue
   export_one "$f"
-done
+done < "$_org_list"
+rm -f "$_org_list"
 
 echo "==> Narrative site: $SITE"
 # Doxygen is optional here: CI may already have run it once. Set

@@ -43,9 +43,12 @@ jobs:
           set -euo pipefail
           echo "==> $(date -u +%H:%M:%S) pandoc readme.org"
           pandoc readme.org -t gfm+smart -o README.md
-          # Single doxygen pass inside build_docs.sh (do not run twice)
-          echo "==> $(date -u +%H:%M:%S) build_docs.sh"
-          GJP_DOCS_API_HREF=../index.html ./docs/scripts/build_docs.sh
+          # Split stages so a hang is attributable; hard timeouts on each
+          echo "==> $(date -u +%H:%M:%S) narrative org→html"
+          timeout 120 env GJP_DOCS_SKIP_DOXYGEN=1 GJP_DOCS_API_HREF=../index.html \
+            ./docs/scripts/build_docs.sh
+          echo "==> $(date -u +%H:%M:%S) doxygen"
+          timeout 180 doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
           echo "==> $(date -u +%H:%M:%S) copy narrative"
           mkdir -p html/narrative
           cp -a docs/site/. html/narrative/
