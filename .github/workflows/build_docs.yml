@@ -41,11 +41,17 @@ jobs:
         shell: bash -el {0}
         run: |
           set -euo pipefail
+          echo "==> $(date -u +%H:%M:%S) pandoc readme.org"
           pandoc readme.org -t gfm+smart -o README.md
           # Single doxygen pass inside build_docs.sh (do not run twice)
+          echo "==> $(date -u +%H:%M:%S) build_docs.sh"
           GJP_DOCS_API_HREF=../index.html ./docs/scripts/build_docs.sh
+          echo "==> $(date -u +%H:%M:%S) copy narrative"
           mkdir -p html/narrative
           cp -a docs/site/. html/narrative/
+          test -f html/index.html
+          test -f html/narrative/index.html
+          echo "==> $(date -u +%H:%M:%S) docs OK"
       - name: Archive artifact
         shell: sh
         if: runner.os == 'Linux'
