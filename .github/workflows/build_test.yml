@@ -50,9 +50,12 @@ jobs:
             pytest pytests/ -vvv
 
           # CPython extension package (meson-python / Stable ABI on GIL CPython)
-          # Clear PYTHONPATH so site-packages wins over interfaces/PyInterface
-          unset PYTHONPATH
-          python -c 'import sys,sysconfig; print(sys.version); print("GIL_DISABLED", sysconfig.get_config_var("Py_GIL_DISABLED"))'
+          # Force empty PYTHONPATH so site-packages wins over interfaces/PyInterface
+          # (unset alone is not enough if the runner re-injects a stale value).
+          export PYTHONPATH=""
+          python -c 'import sys,sysconfig; print(sys.version); print("GIL_DISABLED", sysconfig.get_config_var("Py_GIL_DISABLED")); print("sys.path[0:3]", sys.path[:3])'
           python -m pip install -U pip
           python -m pip install -v .
-          pytest python/tests -vvv
+          python -c 'import gauss_jacobi_quad as g; print("package_file", g.__file__); assert "PyInterface" not in (g.__file__ or ""), g.__file__; assert hasattr(g, "status_string")'
+          # importlib mode avoids import-path surprises from the source tree
+          PYTHONPATH="" pytest --import-mode=importlib python/tests -vvv

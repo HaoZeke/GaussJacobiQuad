@@ -1,9 +1,15 @@
 name: Build documentation
 on: [push, pull_request]
+
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_docs:
     name: Build documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: true
     steps:
@@ -21,7 +27,7 @@ jobs:
           mkdir -p tags
           cd tags
           # Best-effort: doxygen still builds without this tag file
-          curl -fsSL --retry 3 --retry-delay 2 \
+          curl -fsSL --retry 3 --retry-delay 2 --max-time 60 \
             https://upload.cppreference.com/mwiki/images/f/f8/cppreference-doxygen-web.tag.xml \
             -o cppreference-doxygen-web.tag.xml \
             || echo "warn: cppreference tag download failed; continuing without it"
@@ -34,8 +40,9 @@ jobs:
       - name: Generate Docs
         shell: bash -el {0}
         run: |
+          set -euo pipefail
           pandoc readme.org -t gfm+smart -o README.md
-          doxygen apidocs/Doxygen-GaussJacobiQuad.cfg
+          # Single doxygen pass inside build_docs.sh (do not run twice)
           GJP_DOCS_API_HREF=../index.html ./docs/scripts/build_docs.sh
           mkdir -p html/narrative
           cp -a docs/site/. html/narrative/

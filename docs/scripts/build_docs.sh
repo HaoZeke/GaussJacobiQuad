@@ -47,8 +47,9 @@ export_one() {
   mkdir -p "$(dirname "$dest")"
   local tmp
   tmp="$(mktemp)"
+  # Close stdin so a hung/accidental stdin read cannot stall the export loop
   pandoc "$src" -f org -t html5 -s --css=style.css \
-    --metadata title="$(basename "${rel%.org}")" -o "$tmp"
+    --metadata title="$(basename "${rel%.org}")" -o "$tmp" </dev/null
 
   python3 - "$tmp" "$dest" "$rel" "$API_HREF" <<'PY'
 import re
@@ -92,18 +93,27 @@ if "<body>" in html:
 else:
     html = nav + html
 open(dest, "w", encoding="utf-8").write(html)
-print(f"  depth={depth} api={api_link} -> {dest}")
+print(f"  depth={depth} api={api_link} -> {dest}", flush=True)
 PY
   rm -f "$tmp"
   echo "  $rel -> ${dest#$ROOT/}"
 }
 
-while IFS= read -r -d '' f; do
+# Materialize the file list first (avoids while-read + process-substitution
+# stdin races if a child ever touches stdin).
+mapfile -d '' -t _org_files < <(find "$ORG" -name '*.org' -print0 | sort -z)
+echo "==> ${#_org_files[@]} org files"
+for f in "${_org_files[@]}"; do
+  [[ -n "$f" ]] || continue
   export_one "$f"
-done < <(find "$ORG" -name '*.org' -print0 | sort -z)
+done
 
 echo "==> Narrative site: $SITE"
-if command -v doxygen >/dev/null 2>&1; then
+# Doxygen is optional here: CI may already have run it once. Set
+# GJP_DOCS_SKIP_DOXYGEN=1 to skip; default runs if doxygen is on PATH.
+if [[ "${GJP_DOCS_SKIP_DOXYGEN:-0}" == "1" ]]; then
+  echo "==> skip doxygen (GJP_DOCS_SKIP_DOXYGEN=1)"
+elif command -v doxygen >/dev/null 2>&1; then
   echo "==> Doxygen API"
   (cd "$ROOT" && doxygen apidocs/Doxygen-GaussJacobiQuad.cfg)
   echo "==> Doxygen → html/"
