@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 import numpy as np
 from gauss_jacobi_quad import _core
 
-__version__ = getattr(_core, "__version__", "0.2.5")
+__version__ = getattr(_core, "__version__", "0.2.6")
 
 GJP_OK = _core.GJP_OK
 GJP_ERR_NPTS = _core.GJP_ERR_NPTS

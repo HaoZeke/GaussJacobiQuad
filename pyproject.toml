@@ -10,7 +10,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "gauss-jacobi-quad"
-version = "0.2.5"
+version = "0.2.6"
 description = "CPython extension for GaussJacobiQuad (ISO_C_BINDING; Stable ABI + free-threaded wheels)"
 readme = "python/README.md"
 license = { text = "MIT" }

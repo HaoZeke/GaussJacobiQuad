@@ -1,3 +1,17 @@
+# 0.2.6 (2026-07-09)
+
+## Packaging
+
+- Actually ship free-threaded **cp314t** wheels (cibuildwheel 3.2.1); GIL path
+  remains one `cp39-abi3` wheel covering 3.9–3.14. (ft_314_ship)
+
+## Bug fixes
+
+- CI: pin GIL Python 3.12 for abi3 package tests; isolate ctypes `PYTHONPATH`
+  so extension tests are not shadowed by `interfaces/PyInterface`. (ci_py_iso)
+- Docs CI: use official pandoc (conda pandoc hung on `methods.org`); Doxygen
+  without bibtex/graphviz stalls; narrative export via Python subprocess. (ci_docs)
+
 # 0.2.5 (2026-07-09)
 
 ## Packaging
