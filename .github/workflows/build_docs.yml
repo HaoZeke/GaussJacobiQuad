@@ -16,10 +16,15 @@ jobs:
       - name: Get external tags
         shell: bash -el {0}
         run: |
+          set -euo pipefail
           cd apidocs
           mkdir -p tags
           cd tags
-          curl -fsSL https://upload.cppreference.com/mwiki/images/f/f8/cppreference-doxygen-web.tag.xml -o cppreference-doxygen-web.tag.xml
+          # Best-effort: doxygen still builds without this tag file
+          curl -fsSL --retry 3 --retry-delay 2 \
+            https://upload.cppreference.com/mwiki/images/f/f8/cppreference-doxygen-web.tag.xml \
+            -o cppreference-doxygen-web.tag.xml \
+            || echo "warn: cppreference tag download failed; continuing without it"
       - name: Get Theme
         shell: bash -el {0}
         run: |

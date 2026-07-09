@@ -9,9 +9,22 @@ def extract_values(output_str):
     roots = []
     weights = []
     for line in lines:
-        _, root, _, weight = line.split()
-        roots.append(float(root))
-        weights.append(float(weight))
+        # CLI prints "Root: ... Weight: ..." (and may include fpm build noise)
+        if "Root:" not in line or "Weight:" not in line:
+            continue
+        parts = line.split()
+        # Root: [sign] value Weight: value
+        try:
+            ri = parts.index("Root:")
+            wi = parts.index("Weight:")
+            root = float(parts[ri + 1])
+            weight = float(parts[wi + 1])
+        except (ValueError, IndexError):
+            continue
+        roots.append(root)
+        weights.append(weight)
+    if not roots:
+        raise ValueError(f"no Root/Weight lines in output:\n{output_str[-2000:]}")
     return np.array(roots), np.array(weights)
 
 
@@ -21,6 +34,8 @@ def run_fortran(n, alpha, beta, method):
             "fpm",
             "run",
             "gjp_quad",
+            "--flag",
+            "-fcoarray=single",
             "--",
             str(n),
             "{:.1f}".format(alpha),
@@ -28,8 +43,13 @@ def run_fortran(n, alpha, beta, method):
             method,
         ],
         stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
     )
-    return extract_values(result.stdout.decode())
+    out = result.stdout.decode()
+    if result.returncode != 0:
+        raise RuntimeError(f"fpm run failed ({result.returncode}):\n{out[-3000:]}")
+    return extract_values(out)
 
 
 def run_python(n, alpha, beta):

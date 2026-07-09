@@ -49,14 +49,14 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: pypa/cibuildwheel@v2.23.3
+      - uses: pypa/cibuildwheel@v3.2.1
         # Primary settings in pyproject.toml [tool.cibuildwheel]; env overrides keep CI explicit
+        # v3.1+ includes freethreaded 3.14 images when cpython-freethreading is enabled
         env:
           # cp39-abi3 (GIL 3.9+) + free-threaded 3.13t/3.14t; see pyproject.toml
           CIBW_BUILD: "cp39-* cp313t-* cp314t-*"
           CIBW_SKIP: "*-win* *-macos* pp* *musllinux*"
           CIBW_ENABLE: "cpython-freethreading"
-
           CIBW_ARCHS: "auto64"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_BEFORE_ALL_LINUX: >
