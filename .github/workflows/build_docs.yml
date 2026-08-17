@@ -35,8 +35,8 @@ jobs:
         shell: bash -el {0}
         run: |
           cd apidocs
-          wget -q https://github.com/HaoZeke/doxyYoda/releases/download/0.0.2/doxyYoda_0.0.2.tar.gz
-          tar xf doxyYoda_0.0.2.tar.gz
+          wget -q https://github.com/HaoZeke/doxyYoda/releases/download/v0.2.2/doxyYoda_0.2.2.tar.gz
+          tar xf doxyYoda_0.2.2.tar.gz
       - name: Install official pandoc
         # Conda-forge pandoc has hung on methods.org org tables on GHA; use
         # the upstream amd64 .deb (same major as local/dev).
