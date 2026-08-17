@@ -33,7 +33,7 @@ dependencies:
   - jinja2
   # Documentation
   - pandoc
-  - doxygen==1.9.1 # for doxyYoda
+  - doxygen>=1.17 # doxyYoda 0.2 templates
   - graphviz # for dot
   # Release management
   - towncrier
