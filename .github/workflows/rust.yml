@@ -11,16 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: System deps
-        timeout-minutes: 5
-        run: |
-          sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#http://archive.ubuntu.com/ubuntu#g' \
-            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
-          sudo DEBIAN_FRONTEND=noninteractive apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            gfortran libopenblas-dev liblapacke-dev meson ninja-build pkg-config
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: environment.yml
+          cache-environment: true
       - uses: dtolnay/rust-toolchain@stable
       - name: Build C library
+        shell: bash -l {0}
         run: |
           meson setup bbdir -Dfcoarray=single -Dwarning_level=1
           meson compile -C bbdir
