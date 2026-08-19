@@ -14,7 +14,8 @@ dependencies:
   - gfortran
   - pkg-config
   - openblas
-  # LAPACKE: OpenBLAS on conda-forge exports LAPACKE symbols; on Debian use liblapacke-dev (rust.yml)
+  - liblapacke
+  # meson requires -llapacke. OpenBLAS symbols are not enough after f6cbbcc.
   - fpm
   - fprettify
   # Pin GIL CPython (not freethreaded 3.14t) for Limited API / abi3 package builds

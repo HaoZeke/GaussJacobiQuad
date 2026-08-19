@@ -27,37 +27,31 @@ jobs:
         run: |
           mkdir -p /tmp/_bench_preserve
           cp -r benchmarks/ /tmp/_bench_preserve/
-          cp asv.conf.json /tmp/_bench_preserve/
+          cp asv.conf.json environment.yml /tmp/_bench_preserve/
           git checkout -f ${{ matrix.sha }}
           git clean -fd
           rm -rf benchmarks
           cp -r /tmp/_bench_preserve/benchmarks/ benchmarks/
           cp /tmp/_bench_preserve/asv.conf.json asv.conf.json
+          # main's environment.yml has no liblapacke; meson on main already requires it
+          cp /tmp/_bench_preserve/environment.yml environment.yml
 
-      - uses: actions/setup-python@v5
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: "3.12"
-
-      - name: System deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gfortran libopenblas-dev pkg-config ninja-build
-
-      - uses: astral-sh/setup-uv@v5
+          environment-file: environment.yml
+          cache-environment: true
 
       - name: Install package + asv
+        shell: bash -l {0}
         run: |
-          export LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LIBRARY_PATH:-}
-          uv venv .venv
-          source .venv/bin/activate
-          uv pip install -U pip meson-python meson ninja numpy scipy asv
-          # Editable/path install of the extension wheel
-          uv pip install -v .
+          set -euo pipefail
+          python -m pip install -U pip asv
+          python -m pip install -v .
           python -c "from gauss_jacobi_quad import gauss_jacobi; print(gauss_jacobi(8,0,0)[0][:2])"
 
       - name: Run ASV
+        shell: bash -l {0}
         run: |
-          source .venv/bin/activate
           asv machine --yes
           asv run -E "existing:$(which python)" \
             --set-commit-hash ${{ matrix.sha }} \

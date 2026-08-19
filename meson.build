@@ -76,6 +76,17 @@ if _blas_backend != 'flexiblas'
   endif
 endif
 
+# C executables still link with cc even when link_language is fortran.
+# libgfortran then needs libquadmath from the gfortran private libdir.
+fs = import('fs')
+_qm = run_command(_fc, '-print-file-name=libquadmath.so', check: false)
+if _qm.returncode() == 0
+  _qm_path = _qm.stdout().strip()
+  if fs.is_absolute(_qm_path) and fs.exists(_qm_path)
+    _deps += cc.find_library('quadmath', dirs: [fs.parent(_qm_path)], required: false)
+  endif
+endif
+
 summary({'BLAS backend': _blas_backend}, section: 'Dependencies')
 
 # Fortran kernel sources shared by the static/shared lib and the Python extension
@@ -114,6 +125,8 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -123,6 +136,8 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -132,6 +147,8 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -141,6 +158,8 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -178,6 +197,8 @@ if not _py_pkg
                          ],
                          include_directories: include_directories('interfaces/CInterface'),
                          link_with: [gjp_cinterp],
+                         dependencies: _deps,
+                         link_language: 'fortran',
                          install: true,
   )
 
@@ -187,6 +208,8 @@ if not _py_pkg
                           ],
                           include_directories: include_directories('interfaces/CInterface'),
                           link_with: [gjp_cinterp],
+                          dependencies: _deps,
+                          link_language: 'fortran',
                           install: false,
   )
   test('c_rule', test_c_rule)
