@@ -114,6 +114,7 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
                         install: true,
   )
 
@@ -123,6 +124,7 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
                         install: true,
   )
 
@@ -132,6 +134,7 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
                         install: true,
   )
 
@@ -141,6 +144,7 @@ if not _py_pkg
                         ],
                         fortran_args: _args,
                         link_with: [gjplib],
+                        dependencies: _deps,
                         install: true,
   )
 
