@@ -12,9 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: System deps
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gfortran libopenblas-dev liblapacke-dev meson ninja-build pkg-config
+          sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#http://archive.ubuntu.com/ubuntu#g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            gfortran libopenblas-dev liblapacke-dev meson ninja-build pkg-config
       - uses: dtolnay/rust-toolchain@stable
       - name: Build C library
         run: |

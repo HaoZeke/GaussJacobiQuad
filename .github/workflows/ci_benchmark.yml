@@ -39,9 +39,13 @@ jobs:
           python-version: "3.12"
 
       - name: System deps
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gfortran libopenblas-dev liblapacke-dev pkg-config ninja-build
+          sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu#http://archive.ubuntu.com/ubuntu#g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            gfortran libopenblas-dev liblapacke-dev pkg-config ninja-build
 
       - uses: astral-sh/setup-uv@v5
 
