@@ -115,6 +115,7 @@ if not _py_pkg
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -125,6 +126,7 @@ if not _py_pkg
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -135,6 +137,7 @@ if not _py_pkg
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -145,6 +148,7 @@ if not _py_pkg
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
+                        link_language: 'fortran',
                         install: true,
   )
 
@@ -182,6 +186,7 @@ if not _py_pkg
                          ],
                          include_directories: include_directories('interfaces/CInterface'),
                          link_with: [gjp_cinterp],
+                         dependencies: _deps,
                          install: true,
   )
 
@@ -191,6 +196,7 @@ if not _py_pkg
                           ],
                           include_directories: include_directories('interfaces/CInterface'),
                           link_with: [gjp_cinterp],
+                          dependencies: _deps,
                           install: false,
   )
   test('c_rule', test_c_rule)

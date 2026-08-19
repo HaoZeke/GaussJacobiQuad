@@ -41,7 +41,7 @@ jobs:
       - name: System deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y gfortran libopenblas-dev pkg-config ninja-build
+          sudo apt-get install -y gfortran libopenblas-dev liblapacke-dev pkg-config ninja-build
 
       - uses: astral-sh/setup-uv@v5
 
