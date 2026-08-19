@@ -15,7 +15,9 @@ dependencies:
   - pkg-config
   - openblas
   - liblapacke
+  - libquadmath
   # meson requires -llapacke. OpenBLAS symbols are not enough after f6cbbcc.
+  # C CLIs link with cc; libgfortran then needs libquadmath on the link line.
   - fpm
   - fprettify
   # Pin GIL CPython (not freethreaded 3.14t) for Limited API / abi3 package builds

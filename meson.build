@@ -76,6 +76,11 @@ if _blas_backend != 'flexiblas'
   endif
 endif
 
+_quad = cc.find_library('quadmath', required: false)
+if _quad.found()
+  _deps += _quad
+endif
+
 summary({'BLAS backend': _blas_backend}, section: 'Dependencies')
 
 # Fortran kernel sources shared by the static/shared lib and the Python extension
