@@ -27,12 +27,14 @@ jobs:
         run: |
           mkdir -p /tmp/_bench_preserve
           cp -r benchmarks/ /tmp/_bench_preserve/
-          cp asv.conf.json /tmp/_bench_preserve/
+          cp asv.conf.json environment.yml /tmp/_bench_preserve/
           git checkout -f ${{ matrix.sha }}
           git clean -fd
           rm -rf benchmarks
           cp -r /tmp/_bench_preserve/benchmarks/ benchmarks/
           cp /tmp/_bench_preserve/asv.conf.json asv.conf.json
+          # main's environment.yml has no liblapacke; meson on main already requires it
+          cp /tmp/_bench_preserve/environment.yml environment.yml
 
       - uses: mamba-org/setup-micromamba@v2
         with:
