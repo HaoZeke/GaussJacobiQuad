@@ -9,7 +9,8 @@ algorithms, auto method selection, Coarray Fortran, and C/Python bindings.
 
 | Start here | Link |
 |------------|------|
-| *Docs hub* (Diátaxis) | [[file:docs/orgmode/index.org][docs/orgmode/index.org]] |
+| *Docs hub* (Diátaxis) | [[https://haozeke.github.io/GaussJacobiQuad/narrative/][narrative HTML]] · [[file:docs/orgmode/index.org][org source]] |
+| Doxygen API | this page (C / Fortran / Python surfaces) |
 | Quickstart (build + first rule) | [[file:docs/orgmode/tutorials/quickstart.org][tutorials/quickstart]] |
 | C / Python | [[file:docs/orgmode/howto/bindings.org][howto/bindings]] |
 | CAF multi-image | [[file:docs/orgmode/howto/caf.org][howto/caf]] |

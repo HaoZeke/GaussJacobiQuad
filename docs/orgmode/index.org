@@ -50,7 +50,10 @@ call gauss_jacobi_rule(n, 0.5_dp, 0.5_dp, x, w, "glr")  ! forced
 # Output: docs/site/  (narrative) and html/ when doxygen runs
 #+end_src
 
-API HTML (Doxygen) is produced by CI and locally via =apidocs/Doxygen-GaussJacobiQuad.cfg=.
+API HTML (Doxygen) is the site root
+([[https://haozeke.github.io/GaussJacobiQuad/][haozeke.github.io/GaussJacobiQuad]]).
+This narrative sits at =/narrative/=. Build both with
+=./docs/scripts/build_docs.sh= (=apidocs/Doxygen-GaussJacobiQuad.cfg=).
 
 * Released packages
 
