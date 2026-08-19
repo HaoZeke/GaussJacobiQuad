@@ -23,35 +23,60 @@ if _fc.get_id() == 'gcc'
 endif
 
 # ---------------------- Dependencies
-# Prefer OpenBLAS (BLAS+LAPACK). Fall back to lapack pkg-config / -l flags.
-# LAPACKE C API (dsteqr/dsyev wrappers) is a separate library on many distros.
-_ob = dependency('openblas', required: false)
-if _ob.found()
-  _deps += _ob
+# Prefer FlexiBLAS: one wrapper over BLAS, LAPACK and LAPACKE whose
+# backend is chosen at run time, which is how the distributions and the
+# clusters that carry it expect a consumer to link. OpenBLAS comes next,
+# then a plain lapack pkg-config file, then bare -l flags.
+_blas_backend = ''
+_fb = dependency('flexiblas', required: false)
+if not _fb.found()
+  _fb = cc.find_library('flexiblas', required: false)
+endif
+if _fb.found()
+  _deps += _fb
+  _blas_backend = 'flexiblas'
 else
-  # Honor LIBRARY_PATH / linker search path for OpenBLAS
-  _oblib = cc.find_library('openblas', required: false)
-  if _oblib.found()
-    _deps += _oblib
+  _ob = dependency('openblas', required: false)
+  if _ob.found()
+    _deps += _ob
+    _blas_backend = 'openblas'
   else
-    _lapack = dependency('lapack', required: false)
-    if _lapack.found()
-      _deps += _lapack
+    # Honor LIBRARY_PATH / linker search path for OpenBLAS
+    _oblib = cc.find_library('openblas', required: false)
+    if _oblib.found()
+      _deps += _oblib
+      _blas_backend = 'openblas'
     else
-      _deps += cc.find_library('lapack', required: true)
-      _deps += cc.find_library('blas', required: false)
+      _lapack = dependency('lapack', required: false)
+      if _lapack.found()
+        _deps += _lapack
+        _blas_backend = 'lapack'
+      else
+        _deps += cc.find_library('lapack', required: true)
+        _deps += cc.find_library('blas', required: false)
+        _blas_backend = 'lapack'
+      endif
     endif
   endif
 endif
-_lapacke = dependency('lapacke', required: false)
-if _lapacke.found()
-  _deps += _lapacke
-else
-  _lapacke_lib = cc.find_library('lapacke', required: false)
-  if _lapacke_lib.found()
-    _deps += _lapacke_lib
+
+# gjp_lapack.f90 and gjp_imtqlx_dc.f90 call LAPACKE_dsteqr and
+# LAPACKE_dsyev unconditionally, so this is not optional. Probing it
+# with required: false moved the failure from configure to link, and
+# only where the link forbids undefined symbols: a toolchain without
+# -Wl,--no-undefined produced a library with LAPACKE_* left dangling,
+# which fails at load in whatever program picks it up. FlexiBLAS carries
+# LAPACKE itself, so it needs no second library.
+if _blas_backend != 'flexiblas'
+  _lapacke = dependency('lapacke', required: false)
+  if _lapacke.found()
+    _deps += _lapacke
+  else
+    _deps += cc.find_library('lapacke', required: true)
   endif
 endif
+
+summary({'BLAS backend': _blas_backend}, section: 'Dependencies')
 
 # Fortran kernel sources shared by the static/shared lib and the Python extension
 _gjp_f_sources = files(
