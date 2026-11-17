@@ -35,4 +35,4 @@ jobs:
           auto-draft-on-regression: 'true'
           label-before: main
           label-after: pr
-          runner-info: ubuntu-22.04
+          runner-info: ubuntu-latest
