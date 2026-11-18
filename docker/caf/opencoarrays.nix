@@ -42,7 +42,7 @@ stdenv.mkDerivation rec {
     owner = "sourceryinstitute";
     repo = "OpenCoarrays";
     rev = "74a5d0ac3f2d6ee5f985a13478a87f309a444b07";
-    hash = "sha256-7ZntIRpvDN0HTnZgBGnOhJOX6GKeu5k0jv6Esuois1M=";
+    hash = "sha256-bi9FDSAxtmQoMZGlErIKNRavghLiEQ2h1CZizgGsxE4=";
   };
 
   nativeBuildInputs = [
