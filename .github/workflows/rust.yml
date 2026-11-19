@@ -7,6 +7,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  spectral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check pure-Rust spectral feature
+        working-directory: crates/gauss-jacobi-quad
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --no-default-features --features spectral --all-targets -- -D warnings
+          cargo test --no-default-features --features spectral -- --test-threads=1
+
   test:
     runs-on: ubuntu-latest
     steps:

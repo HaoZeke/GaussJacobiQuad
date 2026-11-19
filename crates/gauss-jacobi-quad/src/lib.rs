@@ -32,10 +32,11 @@ pub use spectral::{
     cc_project, cc_synthesize, chebyshev_antiderivative, clenshaw, clenshaw_bound,
     clenshaw_curtis_panel, direct_cosine_synthesize, direct_project, direct_sine_synthesize,
     dst_project, dst_synthesize, endpoint_trapezoid_array, forward_inplace,
-    gauss_legendre_two_point, half_period_grid, log_composite_trapezoid, log_stable_trapezoid,
-    midpoint_integral, midpoint_trapezoid_enclosure, monotone_exponential_enclosure,
-    piecewise_exponential_integral, piecewise_exponential_integral_by, piecewise_exponential_panel,
-    ChirpGrid, ChirpMap, ClenshawCurtisPanel, ExponentialSample, MapPoint,
+    gauss_legendre_two_point, half_period_grid, log_composite_trapezoid,
+    log_composite_trapezoid_by, log_stable_trapezoid, midpoint_integral,
+    midpoint_trapezoid_enclosure, monotone_exponential_enclosure, piecewise_exponential_integral,
+    piecewise_exponential_integral_by, piecewise_exponential_panel, ChirpGrid, ChirpMap,
+    ClenshawCurtisPanel, EvaluationError, ExponentialSample, HalfPeriodGrid, MapPoint,
     MonotoneExponentialEnclosure, SpectralError,
 };
 
