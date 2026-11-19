@@ -14,7 +14,13 @@ categories = ["science", "api-bindings", "mathematics"]
 exclude = ["/target"]
 
 [dependencies]
+rustfft = { version = "6.2", optional = true }
 thiserror = "1"
+
+[features]
+default = ["native"]
+native = []
+spectral = ["dep:rustfft"]
 
 [dev-dependencies]
 approx = "0.5"
@@ -25,3 +31,7 @@ approx = "0.5"
 [package.metadata.docs.rs]
 # Docs build without the native library; link fails only when building binaries/tests.
 targets = ["x86_64-unknown-linux-gnu"]
+
+[[test]]
+name = "integration"
+required-features = ["native"]

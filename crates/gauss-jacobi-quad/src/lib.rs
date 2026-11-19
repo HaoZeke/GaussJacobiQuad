@@ -8,16 +8,36 @@
 //! # Example
 //!
 //! ```no_run
+//! # #[cfg(feature = "native")]
+//! # {
 //! use gauss_jacobi_quad::{gauss_jacobi, Method};
 //!
 //! let (x, w) = gauss_jacobi(32, 0.0, 0.0, Method::Auto).unwrap();
 //! assert_eq!(x.len(), 32);
 //! assert!(w.iter().all(|&wi| wi > 0.0));
+//! # }
 //! ```
 
+#[cfg(feature = "native")]
 use std::ffi::{CStr, CString};
+#[cfg(feature = "native")]
 use std::os::raw::{c_char, c_double, c_int};
+#[cfg(feature = "native")]
 use std::ptr;
+
+#[cfg(feature = "spectral")]
+mod spectral;
+#[cfg(feature = "spectral")]
+pub use spectral::{
+    cc_project, cc_synthesize, chebyshev_antiderivative, clenshaw, clenshaw_bound,
+    clenshaw_curtis_panel, direct_cosine_synthesize, direct_project, direct_sine_synthesize,
+    dst_project, dst_synthesize, endpoint_trapezoid_array, forward_inplace,
+    gauss_legendre_two_point, half_period_grid, log_composite_trapezoid, log_stable_trapezoid,
+    midpoint_integral, midpoint_trapezoid_enclosure, monotone_exponential_enclosure,
+    piecewise_exponential_integral, piecewise_exponential_integral_by, piecewise_exponential_panel,
+    ChirpGrid, ChirpMap, ClenshawCurtisPanel, ExponentialSample, MapPoint,
+    MonotoneExponentialEnclosure, SpectralError,
+};
 
 /// Status codes matching `GaussJacobiQuadCInterp.h`.
 #[repr(i32)]
@@ -33,6 +53,7 @@ pub enum Status {
     Unknown = -1,
 }
 
+#[cfg(feature = "native")]
 impl From<c_int> for Status {
     fn from(v: c_int) -> Self {
         match v {
@@ -106,6 +127,7 @@ impl Method {
     }
 }
 
+#[cfg(feature = "native")]
 #[link(name = "gjp_cinterp")]
 extern "C" {
     fn gauss_jacobi_rule_c(
@@ -121,6 +143,7 @@ extern "C" {
 }
 
 /// Human-readable status from the C library (static C string).
+#[cfg(feature = "native")]
 pub fn status_string(status: Status) -> String {
     unsafe {
         let p = gjp_status_string(status as c_int);
@@ -135,6 +158,7 @@ pub fn status_string(status: Status) -> String {
 ///
 /// Returns `(nodes, weights)` of length `npts`, ordered as produced by the
 /// library (typically ascending nodes).
+#[cfg(feature = "native")]
 pub fn gauss_jacobi(
     npts: usize,
     alpha: f64,
@@ -154,10 +178,10 @@ pub fn gauss_jacobi(
         None => None,
         Some(s) => Some(CString::new(s)?),
     };
-    let method_ptr = c_method
-        .as_ref()
-        .map(|c| c.as_ptr())
-        .unwrap_or(ptr::null());
+    let method_ptr = match c_method.as_ref() {
+        Some(value) => value.as_ptr(),
+        None => ptr::null(),
+    };
 
     let st = unsafe {
         gauss_jacobi_rule_c(
@@ -182,6 +206,7 @@ pub fn gauss_jacobi(
 
 /// Force a method by raw C string (e.g. `"sturm_caf"` is rejected by C surface;
 /// use Fortran for CAF). Empty / `"auto"` select the policy.
+#[cfg(feature = "native")]
 pub fn gauss_jacobi_method_str(
     npts: usize,
     alpha: f64,
@@ -202,10 +227,10 @@ pub fn gauss_jacobi_method_str(
     } else {
         Some(CString::new(method)?)
     };
-    let method_ptr = c_method
-        .as_ref()
-        .map(|c| c.as_ptr())
-        .unwrap_or(ptr::null());
+    let method_ptr = match c_method.as_ref() {
+        Some(value) => value.as_ptr(),
+        None => ptr::null(),
+    };
     let st = unsafe {
         gauss_jacobi_rule_c(
             npts as c_int,
@@ -227,7 +252,7 @@ pub fn gauss_jacobi_method_str(
     Ok((x, w))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
 
