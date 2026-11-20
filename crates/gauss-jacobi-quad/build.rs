@@ -10,6 +10,9 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    if env::var_os("CARGO_FEATURE_NATIVE").is_none() {
+        return;
+    }
     println!("cargo:rerun-if-env-changed=GJP_CINTERP");
     println!("cargo:rerun-if-env-changed=GJP_CINTERP_DIR");
     println!("cargo:rerun-if-env-changed=GJP_PREFIX");
