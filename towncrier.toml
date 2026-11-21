@@ -1,2 +1,36 @@
+# User-facing release notes. Consumed during `cog bump` (see cog.toml pre_bump_hooks).
+# Add fragments under newsfragments/ as <issue-or-pr>.<type>.md
+# Types: feature, bugfix, doc, removal, misc (towncrier defaults).
 [tool.towncrier]
+package = "GaussJacobiQuad"
 filename = "NEWS.md"
+directory = "newsfragments"
+title_format = "{version} ({project_date})"
+issue_format = "[#{issue}](https://github.com/HaoZeke/GaussJacobiQuad/issues/{issue})"
+underlines = ["", "", ""]
+template = null
+
+[[tool.towncrier.type]]
+directory = "feature"
+name = "Features"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "bugfix"
+name = "Bugfixes"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Improved Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removal"
+name = "Deprecations and Removals"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "misc"
+name = "Misc"
+showcontent = true

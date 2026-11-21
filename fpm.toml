@@ -14,14 +14,22 @@ copyright = "Copyright 2023--present, featom developers"
 #     --link-flag "-L$OC/lib -lcaf_mpi -L$MPICH/lib -lmpifort -lmpi"
 #   cafrun -n 4 ./build/*/app/gjp_bench_caf 6144 0.5 0.5 7 3
 # Confirmed on rg.terra: npts=6144, 1→4 images ≈1.94× on rec_caf compute.
+homepage = "https://github.com/HaoZeke/GaussJacobiQuad"
+description = "Modern Fortran Gauss-Jacobi quadrature (nodes and weights on [-1, 1]) with C and Python interfaces"
+
+[library]
+source-dir = "src"
 [build]
 auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
 link = ["openblas"]
+
+# Install static library + .mod files (not only executables) for fpm consumers.
 [install]
-library = false
+library = true
+
 [fortran]
 implicit-typing = false
 implicit-external = false
