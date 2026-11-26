@@ -75,9 +75,13 @@ jobs:
           NOTES_ARGS=(--generate-notes)
           VER="${TAG#v}"
           # Headings are "# 0.2.6 (date)" or, for 0.1.0, an unhashed "0.1.0 (date)".
-          if [ -f NEWS.md ] && grep -Eq "^#? ?${VER} " NEWS.md 2>/dev/null; then
+          # Escape metacharacters so a dot is not "any character", and anchor the
+          # token between the heading start and the following space (1.0.0 must
+          # not match 1x0x0 or 1.0.0-rc1).
+          VER_RE=$(printf '%s\n' "$VER" | sed 's/[.[\\*^$()+?{|]/\\&/g')
+          if [ -f NEWS.md ] && grep -Eq "^#? ?${VER_RE} " NEWS.md 2>/dev/null; then
             # Extract this version until the next version heading or EOF.
-            awk -v ver="$VER" '
+            awk -v ver="$VER_RE" '
               $0 ~ "^#? ?" ver " " {grab=1; print; next}
               grab && $0 ~ "^#? ?[0-9]+\\.[0-9]+\\.[0-9]+ " {exit}
               grab {print}
