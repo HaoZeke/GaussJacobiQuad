@@ -119,8 +119,19 @@ if not _py_pkg
 
   gaussjacobiquad_dep = declare_dependency(
     link_with: gjplib,
+    # .mod files are written to the library private build dir. Export that
+    # directory so a subproject consumer can `use GaussJacobiQuad`.
+    include_directories: gjplib.private_dir_include(),
     dependencies: _deps,
   )
+
+  test_dep_mod = executable('test_dep_mod',
+    sources: files('test/test_dep_mod.f90'),
+    dependencies: gaussjacobiquad_dep,
+    fortran_args: _args,
+    link_language: 'fortran',
+  )
+  test('dep_mod', test_dep_mod)
 
   # ---------------------- Applications
 
