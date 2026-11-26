@@ -126,16 +126,18 @@ fpm install --prefix /tmp/gjq-prefix
 
 ### meson (subproject / system install)
 
-`meson.build` installs the Fortran library (correct name `GaussJacobiQuad`),
-executables, the C interop library, the public C header, and exposes
-`gaussjacobiquad_dep` via `declare_dependency` for `subproject()` / wrap use.
-An optional `gaussjacobiquad.pc` is installed for pkg-config consumers.
+`meson.build` installs the Fortran library `GaussJacobiQuad`
+(`libGaussJacobiQuad`), the executables, the C interop library
+`gjp_cinterp`, and the public header `GaussJacobiQuadCInterp.h`.
+`gaussjacobiquad_dep` is a `declare_dependency` of that Fortran library
+(`subproject().get_variable('gaussjacobiquad_dep')`).
+The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
 
 ```bash
 meson setup builddir --prefix=/tmp/gjq-prefix
 meson compile -C builddir
 meson install -C builddir
-pkg-config --modversion gaussjacobiquad   # if PKG_CONFIG_PATH includes prefix/lib/pkgconfig
+pkg-config --modversion gjp_cinterp   # if PKG_CONFIG_PATH includes prefix/lib/pkgconfig
 ```
 
 ### Single-file export (vendoring)
