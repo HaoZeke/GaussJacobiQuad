@@ -20,7 +20,7 @@ pre_bump_hooks = [
   "python scripts/add_headers.py --dirs src/ interfaces/ --ftypes 'f90,f77' --cchar '!'",
   "python scripts/add_headers.py --dirs interfaces --ftypes 'c,h' --cchar '//'",
   "python scripts/add_headers.py --dirs interfaces scripts --ftypes 'py' --cchar '#'",
-  "sh -c 'command -v towncrier >/dev/null && towncrier build --version {{version}} --yes || echo \"towncrier not installed; skipping NEWS.md\"'",
+  "sh -c 'if ! command -v towncrier >/dev/null 2>&1; then echo \"towncrier not installed; skipping NEWS.md\"; exit 0; fi; if ! towncrier build --version {{version}} --yes; then echo \"towncrier build failed\" >&2; exit 1; fi'",
 ]
 
 post_bump_hooks = [
