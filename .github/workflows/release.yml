@@ -1,6 +1,6 @@
 name: Release
 
-# Creates a GitHub Release when a semver tag (vX.Y.Z) is pushed. Tags are
+# Creates a GitHub Release when a semver tag (vX.Y.Z or vX.Y.Z-pre) is pushed. Tags are
 # produced locally by `cog bump` (see docs/release.md); this workflow does not
 # choose versions. Zenodo watches the GitHub Release for DOI minting.
 
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing vX.Y.Z tag to publish (required for workflow_dispatch)"
+        description: "Existing vX.Y.Z or vX.Y.Z-pre tag to publish (required for workflow_dispatch)"
         required: true
         type: string
 
@@ -33,7 +33,7 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             if [ -z "$TAG_INPUT" ]; then
-              echo "error: workflow_dispatch requires inputs.tag (vX.Y.Z); refusing to publish GITHUB_REF_NAME" >&2
+              echo "error: workflow_dispatch requires inputs.tag (vX.Y.Z or vX.Y.Z-pre); refusing to publish GITHUB_REF_NAME" >&2
               exit 1
             fi
             TAG="$TAG_INPUT"
@@ -44,8 +44,8 @@ jobs:
             echo "error: release tag is empty" >&2
             exit 1
           fi
-          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "error: tag must be v plus dotted semver (vX.Y.Z), got: $TAG" >&2
+          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "error: tag must be semver vX.Y.Z or vX.Y.Z-pre, got: $TAG" >&2
             exit 1
           fi
           if ! git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
@@ -83,14 +83,20 @@ jobs:
             # Extract this version until the next version heading or EOF.
             awk -v ver="$VER_RE" '
               $0 ~ "^#? ?" ver " " {grab=1; print; next}
-              grab && $0 ~ "^#? ?[0-9]+\\.[0-9]+\\.[0-9]+ " {exit}
+              grab && $0 ~ "^#? ?[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)? " {exit}
               grab {print}
             ' NEWS.md > /tmp/release-notes.md
             if [ -s /tmp/release-notes.md ]; then
               NOTES_ARGS=(--notes-file /tmp/release-notes.md)
             fi
           fi
+          REL_ARGS=()
+          # vX.Y.Z-pre is a GitHub prerelease. Plain vX.Y.Z stays a normal release.
+          if printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+-'; then
+            REL_ARGS+=(--prerelease)
+          fi
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "$TAG" \
+            "${REL_ARGS[@]}" \
             "${NOTES_ARGS[@]}"
