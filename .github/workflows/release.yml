@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to publish (e.g. v0.2.0); defaults to the triggering ref on tag push"
-        required: false
+        description: "Existing vX.Y.Z tag to publish (required for workflow_dispatch)"
+        required: true
         type: string
 
 permissions:
@@ -27,19 +27,43 @@ jobs:
 
       - name: Resolve release tag
         id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_INPUT: ${{ inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.tag }}" ]; then
-            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -z "$TAG_INPUT" ]; then
+              echo "error: workflow_dispatch requires inputs.tag (vX.Y.Z); refusing to publish GITHUB_REF_NAME" >&2
+              exit 1
+            fi
+            TAG="$TAG_INPUT"
           else
-            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            TAG="$GITHUB_REF_NAME"
           fi
+          if [ -z "$TAG" ]; then
+            echo "error: release tag is empty" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "error: tag must be v plus dotted semver (vX.Y.Z), got: $TAG" >&2
+            exit 1
+          fi
+          if ! git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "error: tag $TAG does not exist in this checkout" >&2
+            exit 1
+          fi
+          echo "name=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.name }}
         run: |
-          TAG="${{ steps.tag.outputs.name }}"
-          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+          if [ -z "$TAG" ]; then
+            echo "error: release tag is empty" >&2
+            exit 1
+          fi
+          if ! git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "error: tag $TAG does not exist in this checkout" >&2
             exit 1
           fi
