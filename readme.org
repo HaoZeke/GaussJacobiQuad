@@ -100,19 +100,19 @@ https://doi.org/10.5281/zenodo.8285112
 Method literature is tracked in ookcite collection =GaussJacobiQuad= and exported to
 [[file:docs/refs.bib][docs/refs.bib]] (see [[file:docs/orgmode/explanation/citation.org][citation]]).
 
-Which suggests what one might suspect, that there is a large overhead in calling
-~python~ , and that the ~C~ and ~Fortran~ variants are almost exactly as fast as
-each other. However, the ~f2py~ variant is still way faster than the existing
-~python~ implementations.
-
-#+begin_src bash
-hyperfine --warmup 10 --export-markdown gjp_benchmarks.md \
-    'PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3' \
-    'python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3'
-Summary
-  PYTHONPATH=$(pwd) python interfaces/PyInterface/gjquad_cli.py --npts 5 --alpha 2 --beta 3 ran
-    1.38 ± 0.11 times faster than python scripts/scipy_gauss_jac.py --npts 5 --alpha 2 --beta 3
+#+begin_src bibtex
+@software{goswami_2023_8285112,
+  author       = {Goswami, Rohit},
+  title        = {HaoZeke/GaussJacobiQuad: GaussJacobiQuad I},
+  month        = aug,
+  year         = 2023,
+  publisher    = {Zenodo},
+  version      = {v0.1.0},
+  doi          = {10.5281/zenodo.8285112},
+  url          = {https://doi.org/10.5281/zenodo.8285112}
+}
 #+end_src
+
 ** Development
 *** Developing locally
 A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
@@ -146,28 +146,6 @@ git push origin main --follow-tags
 
 PR commits are linted with ~cog check~ (GitHub Actions workflow ~commit-lint~).
 Preferred commit types: ~feat~, ~fix~, ~docs~, ~chore~, ~ci~, ~build~, ~test~ (conventional commits).
-* License
-MIT.
-*** Citation
-If you use this library (including the interfaces) please remember to cite it as:
-
-#+begin_quote
-Rohit Goswami. (2023). HaoZeke/GaussJacobiQuad: GaussJacobiQuad I (v0.1.0). Zenodo. https://doi.org/10.5281/ZENODO.8285112
-#+end_quote
-
-Or use the ~bibtex~ entry:
-#+begin_src bibtex
-@software{goswami_2023_8285112,
-  author       = {Goswami, Rohit},
-  title        = {HaoZeke/GaussJacobiQuad: GaussJacobiQuad I},
-  month        = aug,
-  year         = 2023,
-  publisher    = {Zenodo},
-  version      = {v0.1.0},
-  doi          = {10.5281/zenodo.8285112},
-  url          = {https://doi.org/10.5281/zenodo.8285112}
-}
-#+end_src
 
 ** License
 MIT — see =LICENSE=.
