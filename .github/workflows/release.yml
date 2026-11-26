@@ -50,11 +50,12 @@ jobs:
           # Prefer NEWS.md section for this version when present; else GH notes.
           NOTES_ARGS=(--generate-notes)
           VER="${TAG#v}"
-          if [ -f NEWS.md ] && grep -q "^${VER} " NEWS.md 2>/dev/null; then
-            # Extract the section for this version (until next version heading or EOF)
+          # Headings are "# 0.2.6 (date)" or, for 0.1.0, an unhashed "0.1.0 (date)".
+          if [ -f NEWS.md ] && grep -Eq "^#? ?${VER} " NEWS.md 2>/dev/null; then
+            # Extract this version until the next version heading or EOF.
             awk -v ver="$VER" '
-              $0 ~ "^" ver " " {grab=1; print; next}
-              grab && /^[0-9]+\.[0-9]+\.[0-9]+ / {exit}
+              $0 ~ "^#? ?" ver " " {grab=1; print; next}
+              grab && $0 ~ "^#? ?[0-9]+\\.[0-9]+\\.[0-9]+ " {exit}
               grab {print}
             ' NEWS.md > /tmp/release-notes.md
             if [ -s /tmp/release-notes.md ]; then
