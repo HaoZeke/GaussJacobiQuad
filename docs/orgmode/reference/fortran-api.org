@@ -22,6 +22,15 @@ call gauss_jacobi_rule(n, 0.0_dp, 0.0_dp, x, w, "bogaert_caf")
 call gauss_jacobi_rule(n, alpha, beta, x, w, "glr_caf")
 #+end_src
 
+* Version
+
+Module =gjp_version= is generated from the same meson project version.
+
+- =gjp_version_major=, =gjp_version_minor=, =gjp_version_patch=
+- =gjp_version_string=
+- =gjp_version_compact= — =10000 * major + 100 * minor + patch=
+- =gjp_get_version([major], [minor], [patch], [string])=
+
 * Related modules
 
 | Module | Role |
