@@ -51,6 +51,7 @@ pub enum Status {
     ErrMethod = 4,
     ErrBogaertAb = 5,
     ErrBogaertN = 6,
+    ErrBounds = 7,
     Unknown = -1,
 }
 
@@ -65,6 +66,7 @@ impl From<c_int> for Status {
             4 => Status::ErrMethod,
             5 => Status::ErrBogaertAb,
             6 => Status::ErrBogaertN,
+            7 => Status::ErrBounds,
             _ => Status::Unknown,
         }
     }
@@ -80,6 +82,7 @@ impl Status {
             Status::ErrMethod => "unknown method",
             Status::ErrBogaertAb => "bogaert requires alpha=beta=0",
             Status::ErrBogaertN => "bogaert requires n >= 21",
+            Status::ErrBounds => "require a < b",
             Status::Unknown => "unknown status",
         }
     }
