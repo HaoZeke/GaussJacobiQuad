@@ -1,4 +1,4 @@
-#+TITLE: Accuracy checks (SymPy)
+#+TITLE: Accuracy checks (SymPy and measured ranges)
 #+OPTIONS: toc:2 num:nil author:nil
 
 * Regime matrix
@@ -29,27 +29,36 @@ See also [[file:../explanation/methods.org][Explanation · Methods]] and =docs/M
 * Measured ranges
 
 =scripts/accuracy_ranges.py= calls the shipped =gauss_jacobi= entry over the
-grid printed below and writes =docs/accuracy_ranges.csv= (max relative node
-and weight error, =|est-ref|/max(|ref|, rel_floor)=). SciPy is the reference
-when it passes the printed Newton and weight-sum checks; otherwise the script
-uses mpmath Golub-Welsch at the printed =mp_dps=. =--plot= writes an optional
-figure (matplotlib). Rows with status =policy= are left out of the maxima.
+grid printed below and writes =docs/accuracy_ranges.csv=. Node error is
+=|dx|/max(|x_ref|, rel_floor)= with =rel_floor=1e-30=. Weight error is
+=|dw_i|/max(|w_i|, weight_tau*max|w|)= with =weight_tau=1e-12=, so a weight
+far below the largest in the rule does not set the headline (the same idea
+as the SymPy harness, which scales a weight tolerance by =max(1, max|w|)=).
+SciPy is the reference only when it passes the Newton and weight-sum checks
+and every node and weight agrees with an mpmath Golub-Welsch rule at the
+printed =mp_dps= to =ref_rel_tol=1e-13= (plain relative error, not the
+weight-tau score). Otherwise that mpmath rule is the reference. The CSV
+=ref= column records which one each cell used. The sweep needs scipy and
+mpmath. =--plot= writes an optional figure and needs matplotlib, which this
+environment does not install. Status =policy= is only the bogaert domain
+(Legendre, =n≥21=) and those rows are left out of the maxima. Any other
+library error is =fail=.
 
 #+begin_src bash
-export GJP_CINTERP=$(find bbdir -name 'libgjp_cinterp.so' | head -1)
-python scripts/accuracy_ranges.py --csv docs/accuracy_ranges.csv --plot accuracy_ranges.png
+export GJP_CINTERP=$(find bbdir \( -name 'libgjp_cinterp.so' -o -name 'libgjp_cinterp.dylib' \) | head -1)
+python scripts/accuracy_ranges.py --csv docs/accuracy_ranges.csv
 #+end_src
 
 Verbatim =GRID= / =RANGE= lines from that script:
 
 #+begin_example
-GRID npts=8,32,64 alpha=-0.9,0,1,5,20 beta=-0.9,0,1,5,20 rel_floor=1e-30 newton_tol=1e-08 sum_tol=1e-08 mp_dps=40 ref_scipy=75 ref_mpmath=0
-RANGE method=rec ok=75 fail=0 policy=0 max_rel_node=3.505851e+00 at n=8 alpha=-0.9 beta=20 max_rel_weight=5.788926e+02 at n=8 alpha=20 beta=-0.9
-RANGE method=gw ok=75 fail=0 policy=0 max_rel_node=4.106505e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=1.264288e-03 at n=64 alpha=20 beta=-0.9
-RANGE method=algo665 ok=75 fail=0 policy=0 max_rel_node=2.231566e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=5.728883e-11 at n=64 alpha=1 beta=-0.9
-RANGE method=algo665_dc ok=75 fail=0 policy=0 max_rel_node=5.580680e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=1.284004e+01 at n=64 alpha=-0.9 beta=20
-RANGE method=sturm ok=75 fail=0 policy=0 max_rel_node=4.206652e-12 at n=64 alpha=0 beta=20 max_rel_weight=5.625690e-11 at n=64 alpha=1 beta=-0.9
+GRID npts=8,32,64 alpha=-0.9,0,1,5,20 beta=-0.9,0,1,5,20 rel_floor=1e-30 weight_tau=1e-12 newton_tol=1e-08 sum_tol=1e-08 mp_dps=40 ref_rel_tol=1e-13 ref_scipy=28 ref_mpmath=47
+RANGE method=rec ok=75 fail=0 policy=0 max_rel_node=3.505851e+00 at n=8 alpha=-0.9 beta=20 max_rel_weight=5.788926e+02 at n=8 alpha=-0.9 beta=20
+RANGE method=gw ok=75 fail=0 policy=0 max_rel_node=3.479760e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=1.947349e-10 at n=64 alpha=0 beta=5
+RANGE method=algo665 ok=75 fail=0 policy=0 max_rel_node=2.858311e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=6.517581e-12 at n=64 alpha=5 beta=5
+RANGE method=algo665_dc ok=75 fail=0 policy=0 max_rel_node=4.953935e-13 at n=64 alpha=-0.9 beta=1 max_rel_weight=9.671671e-10 at n=64 alpha=20 beta=20
+RANGE method=sturm ok=75 fail=0 policy=0 max_rel_node=4.198017e-12 at n=64 alpha=0 beta=20 max_rel_weight=1.718401e-13 at n=64 alpha=-0.9 beta=20
 RANGE method=glr ok=75 fail=0 policy=0 max_rel_node=4.007863e+00 at n=8 alpha=20 beta=20 max_rel_weight=7.417921e+00 at n=8 alpha=20 beta=20
-RANGE method=bogaert ok=2 fail=0 policy=73 max_rel_node=1.174828e-12 at n=32 alpha=0 beta=0 max_rel_weight=1.057888e-12 at n=64 alpha=0 beta=0
-RANGE method=auto ok=75 fail=0 policy=0 max_rel_node=3.901154e-12 at n=64 alpha=5 beta=-0.9 max_rel_weight=5.632023e-11 at n=64 alpha=1 beta=-0.9
+RANGE method=bogaert ok=2 fail=0 policy=73 max_rel_node=1.175259e-12 at n=32 alpha=0 beta=0 max_rel_weight=2.739896e-14 at n=64 alpha=0 beta=0
+RANGE method=auto ok=75 fail=0 policy=0 max_rel_node=3.879043e-12 at n=64 alpha=-0.9 beta=5 max_rel_weight=4.034049e-12 at n=64 alpha=5 beta=20
 #+end_example

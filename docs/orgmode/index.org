@@ -29,6 +29,7 @@ optional auto selection, Coarray Fortran paths, and C/Python surfaces.
 - C: =gauss_jacobi_rule_c= (single-image); Python: PyPI =gauss-jacobi-quad=
   (Stable ABI =cp39-abi3= + free-threaded =cp313t= wheels)
 - SymPy accuracy harness for regime checks
+- Measured-range sweep (=scripts/accuracy_ranges.py=) over =npts= and =(alpha, beta)=
 - Bibliography managed via ookcite collection =GaussJacobiQuad= → =docs/refs.bib=
 
 * Minimal example (Fortran)
