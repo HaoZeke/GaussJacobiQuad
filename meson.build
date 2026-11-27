@@ -283,6 +283,16 @@ if not _py_pkg
   )
   test('c_rule', test_c_rule)
 
+  test_scale = executable('test_scale_interval',
+                         sources: ['test/test_scale_interval.f90'],
+                         fortran_args: _args,
+                         link_with: [gjplib],
+                         dependencies: _deps,
+                         link_language: 'fortran',
+                         install: false,
+  )
+  test('scale_interval', test_scale)
+
   test_c_version = executable('test_c_version',
     sources: ['interfaces/CInterface/test_c_version.c', gjp_version_h],
     c_args: [

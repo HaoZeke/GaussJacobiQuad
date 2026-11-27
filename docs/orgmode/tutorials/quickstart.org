@@ -27,6 +27,10 @@ fpm build --flag "-fcoarray=single"
 fpm test  --flag "-fcoarray=single"
 #+end_src
 
+=fpm= links =-llapacke -lopenblas=. A =liblapacke= symlink to =libopenblas=
+works only when that OpenBLAS exports =LAPACKE_*= symbols. A split OpenBLAS
+needs a separate =liblapacke= (the MinGW import library is =liblapacke.dll.a=).
+
 * First rule: CLI
 
 Preferred Fortran driver dispatches via =gauss_jacobi_rule=:

@@ -60,6 +60,7 @@ pub enum Status {
     ErrMethod = 4,
     ErrBogaertAb = 5,
     ErrBogaertN = 6,
+    ErrBounds = 7,
     Unknown = -1,
 }
 
@@ -74,6 +75,7 @@ impl From<c_int> for Status {
             4 => Status::ErrMethod,
             5 => Status::ErrBogaertAb,
             6 => Status::ErrBogaertN,
+            7 => Status::ErrBounds,
             _ => Status::Unknown,
         }
     }
@@ -86,9 +88,12 @@ impl Status {
             Status::ErrNpts => "npts must be positive",
             Status::ErrAlpha => "alpha must be greater than -1",
             Status::ErrBeta => "beta must be greater than -1",
-            Status::ErrMethod => "unknown method",
-            Status::ErrBogaertAb => "bogaert requires alpha=beta=0",
+            Status::ErrMethod => {
+                "unknown method (use auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert)"
+            }
+            Status::ErrBogaertAb => "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
             Status::ErrBogaertN => "bogaert requires n >= 21",
+            Status::ErrBounds => "invalid interval or scaled weights overflow",
             Status::Unknown => "unknown status",
         }
     }
@@ -103,6 +108,15 @@ pub enum Error {
         msg: &'static str,
         method: Option<String>,
     },
+    /// `gauss_jacobi_scale_c` returned a non-zero status.
+    #[error("gauss_jacobi_scale_c: {status:?} ({msg})")]
+    Scale { status: Status, msg: &'static str },
+    /// `nodes` and `weights` differ in length.
+    #[error("gauss_jacobi_scale: nodes and weights must have the same length")]
+    ScaleLength,
+    /// Empty input, or a length that does not fit in `i32`.
+    #[error("gauss_jacobi_scale: npts must be positive and fit in a C int")]
+    ScaleNpts,
     #[error("invalid method string (interior NUL)")]
     Nul(#[from] std::ffi::NulError),
 }
@@ -147,6 +161,16 @@ extern "C" {
         x: *mut c_double,
         wts: *mut c_double,
         method: *const c_char,
+    ) -> c_int;
+
+    fn gauss_jacobi_scale_c(
+        npts: c_int,
+        alpha: c_double,
+        beta: c_double,
+        a: c_double,
+        b: c_double,
+        x: *mut c_double,
+        wts: *mut c_double,
     ) -> c_int;
 
     fn gjp_status_string(status: c_int) -> *const c_char;
@@ -262,6 +286,74 @@ pub fn gauss_jacobi_method_str(
     Ok((x, w))
 }
 
+/// Map nodes and weights from `[-1, 1]` onto `[a, b]`.
+///
+/// `x = -1` is exactly `a` and `x = 1` is exactly `b`. Weights are multiplied
+/// by `((b - a) / 2)` to the power `alpha + beta + 1`. A non-finite scaled
+/// node or weight is an error. A weight factor that overflows on its own is
+/// not an error when the product with the weight is finite.
+///
+/// `nodes` and `weights` must have the same length, and that length must fit
+/// in `i32`. The C call is not made when the length is rejected.
+#[cfg(feature = "native")]
+pub fn gauss_jacobi_scale(
+    nodes: &[f64],
+    weights: &[f64],
+    alpha: f64,
+    beta: f64,
+    a: f64,
+    b: f64,
+) -> Result<(Vec<f64>, Vec<f64>), Error> {
+    if nodes.len() != weights.len() {
+        return Err(Error::ScaleLength);
+    }
+    if nodes.is_empty() || nodes.len() > i32::MAX as usize {
+        return Err(Error::ScaleNpts);
+    }
+    let mut x = nodes.to_vec();
+    let mut w = weights.to_vec();
+    let st = unsafe {
+        gauss_jacobi_scale_c(
+            nodes.len() as c_int,
+            alpha,
+            beta,
+            a,
+            b,
+            x.as_mut_ptr(),
+            w.as_mut_ptr(),
+        )
+    };
+    let status = Status::from(st);
+    if status != Status::Ok {
+        return Err(Error::Scale {
+            status,
+            msg: status.message(),
+        });
+    }
+    Ok((x, w))
+}
+
+#[cfg(test)]
+mod status_messages {
+    use super::Status;
+
+    #[test]
+    fn method_and_bogaert_match_c_strings() {
+        assert_eq!(
+            Status::ErrMethod.message(),
+            "unknown method (use auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert)"
+        );
+        assert_eq!(
+            Status::ErrBogaertAb.message(),
+            "bogaert requires alpha=beta=0 (Gauss-Legendre only)"
+        );
+        assert_eq!(
+            Status::ErrBounds.message(),
+            "invalid interval or scaled weights overflow"
+        );
+    }
+}
+
 #[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
@@ -280,8 +372,6 @@ mod tests {
     fn glr_matches_algo665() {
         let (xg, wg) = gauss_jacobi(40, 0.5, 0.5, Method::Glr).unwrap();
         let (xa, wa) = gauss_jacobi(40, 0.5, 0.5, Method::Algo665).unwrap();
-        let xg = xg;
-        let xa = xa;
         // sort for comparison
         let mut ig: Vec<_> = (0..xg.len()).collect();
         ig.sort_by(|&i, &j| xg[i].partial_cmp(&xg[j]).unwrap());
@@ -300,5 +390,46 @@ mod tests {
             Error::Library { status, .. } => assert_eq!(status, Status::ErrBogaertAb),
             _ => panic!("unexpected"),
         }
+    }
+
+    #[test]
+    fn scale_rejects_bad_lengths() {
+        let err = gauss_jacobi_scale(&[0.0, 1.0], &[1.0], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        let text = err.to_string();
+        assert!(matches!(err, Error::ScaleLength), "{text}");
+        assert!(text.contains("gauss_jacobi_scale"));
+        assert!(text.contains("same length"));
+        assert!(!text.contains("npts must be positive"), "{text}");
+        let err = gauss_jacobi_scale(&[], &[], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        let text = err.to_string();
+        assert!(matches!(err, Error::ScaleNpts), "{text}");
+        assert!(text.contains("gauss_jacobi_scale"));
+        assert!(text.contains("npts must be positive"));
+        assert!(!text.contains("gauss_jacobi_rule_c"), "{text}");
+    }
+
+    #[test]
+    fn scale_alpha1023_weight_one_is_bounds() {
+        let err = gauss_jacobi_scale(&[0.25], &[1.0], 1023.0, 0.0, -2.0, 2.0).unwrap_err();
+        let text = err.to_string();
+        match err {
+            Error::Scale { status, .. } => assert_eq!(status, Status::ErrBounds),
+            other => panic!("scale overflow reported as {other}: {text}"),
+        }
+        assert!(text.starts_with("gauss_jacobi_scale_c"), "{text}");
+        assert!(text.contains("overflow"), "{text}");
+        assert!(!text.contains("method="), "{text}");
+        let pred = f64::from_bits(1.0f64.to_bits() - 1);
+        let (_x, w) = gauss_jacobi_scale(&[0.25], &[pred], 1023.0, 0.0, -2.0, 2.0).unwrap();
+        assert_eq!(w[0], f64::MAX);
+    }
+
+    #[test]
+    fn scale_wide_endpoint_is_exact() {
+        let (x, w) = gauss_jacobi_scale(&[-1.0], &[0.0], 0.0, 0.0, -1.0, 1.0e16).unwrap();
+        assert_eq!(x[0], -1.0);
+        assert_eq!(w[0], 0.0);
+        let (x, _) = gauss_jacobi_scale(&[1.0], &[0.0], 0.0, 0.0, -1.0e16, 1.0).unwrap();
+        assert_eq!(x[0], 1.0);
     }
 }

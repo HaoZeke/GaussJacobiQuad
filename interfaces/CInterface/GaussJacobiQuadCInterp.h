@@ -30,7 +30,8 @@ enum gjp_status {
     GJP_ERR_BETA = 3,
     GJP_ERR_METHOD = 4,
     GJP_ERR_BOGAERT_AB = 5,
-    GJP_ERR_BOGAERT_N = 6
+    GJP_ERR_BOGAERT_N = 6,
+    GJP_ERR_BOUNDS = 7
 };
 
 /**
@@ -40,6 +41,22 @@ enum gjp_status {
  */
 int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *wts,
                         const char *method);
+
+/**
+ * Map nodes and weights from [-1, 1] to [a, b] in place.
+ * Nodes: t = (b-a)/2 * x + (a+b)/2. x = -1 is exactly a and x = 1 is exactly b.
+ * Weights are multiplied by pow((b-a)/2, alpha+beta+1) so the rule integrates
+ * (b-t)^alpha * (t-a)^beta * f(t) on [a, b].
+ * @return GJP_OK, or GJP_ERR_NPTS / GJP_ERR_ALPHA / GJP_ERR_BETA / GJP_ERR_BOUNDS.
+ *         Non-finite alpha or beta is ALPHA/BETA. Non-finite a or b, a
+ *         non-finite half-width, or a non-finite scaled node or weight,
+ *         is GJP_ERR_BOUNDS. A weight factor that overflows on its own is
+ *         not an error when the product with the weight is finite.
+ *         Any non-zero status leaves both buffers unchanged. NULL x or
+ *         wts with npts > 0 is GJP_ERR_NPTS and does not write.
+ */
+int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b,
+                         double *x, double *wts);
 
 /** Human-readable status (static string). */
 const char *gjp_status_string(int status);

@@ -39,15 +39,19 @@ GJP_ERR_BETA = 3
 GJP_ERR_METHOD = 4
 GJP_ERR_BOGAERT_AB = 5
 GJP_ERR_BOGAERT_N = 6
+GJP_ERR_BOUNDS = 7
 
 _STATUS_MSG = {
     GJP_OK: "ok",
     GJP_ERR_NPTS: "npts must be positive",
     GJP_ERR_ALPHA: "alpha must be greater than -1",
     GJP_ERR_BETA: "beta must be greater than -1",
-    GJP_ERR_METHOD: "unknown method",
+    GJP_ERR_METHOD: (
+        "unknown method (use auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert)"
+    ),
     GJP_ERR_BOGAERT_AB: "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
     GJP_ERR_BOGAERT_N: "bogaert requires n >= 21",
+    GJP_ERR_BOUNDS: "invalid interval or scaled weights overflow",
 }
 
 
@@ -122,6 +126,16 @@ def _lib_api() -> ctypes.CDLL:
             ctypes.c_char_p,
         ]
         _lib.gauss_jacobi_rule_c.restype = ctypes.c_int
+        _lib.gauss_jacobi_scale_c.argtypes = [
+            ctypes.c_int,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+        ]
+        _lib.gauss_jacobi_scale_c.restype = ctypes.c_int
     return _lib
 
 
@@ -167,6 +181,40 @@ def gauss_jacobi(
     )
     if st != GJP_OK:
         raise GaussJacobiError(st, method)
+    return x, w
+
+
+def gauss_jacobi_scale(nodes, weights, alpha: float, beta: float, a: float, b: float):
+    """Map nodes and weights from [-1, 1] to [a, b].
+
+    Nodes go to ``(b - a) / 2 * x + (a + b) / 2``. ``x == -1`` is exactly
+    ``a`` and ``x == 1`` is exactly ``b``. Weights are multiplied by
+    ``((b - a) / 2) ** (alpha + beta + 1)`` so the rule integrates
+    ``(b - t) ** alpha * (t - a) ** beta * f(t)`` on ``[a, b]``.
+    A non-finite scaled node or weight raises ``GaussJacobiError``.
+    A weight factor that overflows on its own is not an error when the
+    product with the weight is finite.
+    """
+    x = np.array(nodes, dtype=np.float64, copy=True)
+    w = np.array(weights, dtype=np.float64, copy=True)
+    if x.ndim != 1 or x.shape != w.shape:
+        raise ValueError("nodes and weights must be 1-d and the same length")
+    # c_int truncates; a wrapped length scales only the start of the buffer.
+    n = int(x.size)
+    if n < 1 or n > 2**31 - 1:
+        raise GaussJacobiError(GJP_ERR_NPTS)
+    lib = _lib_api()
+    st = lib.gauss_jacobi_scale_c(
+        n,
+        float(alpha),
+        float(beta),
+        float(a),
+        float(b),
+        x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        w.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    )
+    if st != GJP_OK:
+        raise GaussJacobiError(st)
     return x, w
 
 

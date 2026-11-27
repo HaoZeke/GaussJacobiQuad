@@ -3,12 +3,13 @@
 # Types: feature, bugfix, doc, removal, misc (towncrier defaults).
 [tool.towncrier]
 package = "GaussJacobiQuad"
+name = "GaussJacobiQuad"
+version = "0.2.6"
 filename = "NEWS.md"
 directory = "newsfragments"
 title_format = "{version} ({project_date})"
 issue_format = "[#{issue}](https://github.com/HaoZeke/GaussJacobiQuad/issues/{issue})"
 underlines = ["", "", ""]
-template = null
 
 [[tool.towncrier.type]]
 directory = "feature"

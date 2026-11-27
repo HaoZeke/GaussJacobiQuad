@@ -24,6 +24,8 @@ auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
+# Links -llapacke -lopenblas. A liblapacke symlink to libopenblas works
+# only when that OpenBLAS exports LAPACKE_* symbols.
 link = ["lapacke", "openblas"]
 
 # Install static library + .mod files (not only executables) for fpm consumers.

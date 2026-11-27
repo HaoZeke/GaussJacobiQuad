@@ -11,15 +11,21 @@
 from __future__ import annotations
 
 import importlib.util
+import math
+import sys
 
 import numpy as np
 import pytest
 from gauss_jacobi_quad import (
+    GJP_ERR_ALPHA,
+    GJP_ERR_BETA,
     GJP_ERR_BOGAERT_AB,
+    GJP_ERR_BOUNDS,
     GJP_OK,
     GaussJacobiError,
     __version__,
     gauss_jacobi,
+    gauss_jacobi_scale,
     status_string,
 )
 
@@ -114,3 +120,109 @@ def test_bogaert_ok_and_policy():
 def test_bad_npts():
     with pytest.raises(GaussJacobiError):
         gauss_jacobi(0, 0.0, 0.0)
+
+
+def test_scale_polynomial_on_interval():
+    """∫_0^3 (3-t) t^2 t^3 dt = 729/14, alpha=1, beta=2."""
+    alpha, beta, a, b = 1.0, 2.0, 0.0, 3.0
+    x, w = gauss_jacobi(8, alpha, beta, method="rec")
+    xs, ws = gauss_jacobi_scale(x, w, alpha, beta, a, b)
+    quad = float(np.dot(ws, xs**3))
+    assert abs(quad - 729.0 / 14.0) < 1e-12
+    assert abs(float(np.sum(ws)) - 27.0 / 4.0) < 1e-12
+    assert np.all((xs > a) & (xs < b))
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, alpha, beta, b, a)
+    assert "status=7" in str(ei.value)
+    assert GJP_ERR_BOUNDS == 7
+
+
+def _status_code(exc):
+    text = str(exc)
+    marker = "status="
+    start = text.rfind(marker)
+    assert start >= 0, text
+    return int(text[start + len(marker) :].split(")", 1)[0].split(",", 1)[0])
+
+
+def test_scale_huge_and_nonfinite():
+    """Huge finite intervals stay finite; inf bounds and NaN parameters are errors."""
+    x, w = gauss_jacobi(4, 0.0, 0.0, method="rec")
+    for a, b in ((1.0e308, 1.7e308), (-1.0e308, 1.0e308)):
+        xs, ws = gauss_jacobi_scale(x, w, 0.0, 0.0, a, b)
+        assert np.all(np.isfinite(xs)) and np.all(np.isfinite(ws))
+        assert np.all((xs > a) & (xs < b))
+        assert np.all(ws > 0)
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 0.0, 0.0, 0.0, np.inf)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, np.nan, 0.0, 0.0, 1.0)
+    assert _status_code(ei.value) == GJP_ERR_ALPHA
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 0.0, np.nan, 0.0, 1.0)
+    assert _status_code(ei.value) == GJP_ERR_BETA
+
+
+def test_scale_endpoints_and_weight_overflow():
+    """Endpoints stay inside [a, b]. An overflowing weight product is status 7."""
+    xs, _ws = gauss_jacobi_scale([-1.0], [1.0], 0.0, 0.0, 1.0, 1.0e16)
+    assert xs[0] == 1.0
+    xn = math.nextafter(-1.0, 0.0)
+    xs, _ws = gauss_jacobi_scale([xn], [1.0], 0.0, 0.0, 1.0, 1.0e16)
+    assert math.isfinite(float(xs[0])) and 1.0 < float(xs[0]) < 1.0e16
+    xs, _ws = gauss_jacobi_scale([-1.0], [1.0], 0.0, 0.0, 1.0e6, 1.0e20)
+    assert xs[0] == 1.0e6
+    hi = sys.float_info.max
+    xs, _ws = gauss_jacobi_scale([1.0], [1.0], 0.0, 0.0, 1.0e308, hi)
+    assert math.isfinite(float(xs[0])) and float(xs[0]) == hi
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale([0.0], [2.0], 0.0, 0.0, -1.0e308, 1.0e308)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
+    assert "status=7" in str(ei.value)
+    assert "invalid interval or scaled weights overflow" in str(ei.value)
+
+
+def test_scale_cancelled_endpoints_and_weight_range():
+    """Lease images inside (a, b) and a lone overflowing factor are not answers."""
+    xs, _ws = gauss_jacobi_scale([-1.0], [0.0], 0.0, 0.0, -1.0, 1.0e16)
+    assert xs[0] == -1.0
+    xn = math.nextafter(-1.0, 0.0)
+    xs, _ws = gauss_jacobi_scale([xn], [0.0], 0.0, 0.0, -1.0, 1.0e16)
+    assert xs[0] < 0.0 and abs(float(xs[0]) + 0.44488848768742173) < 1e-15
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e16, 1.0)
+    assert xs[0] == 1.0
+    xp = math.nextafter(1.0, -1.0)
+    xs, _ws = gauss_jacobi_scale([xp], [0.0], 0.0, 0.0, -1.0e16, 1.0)
+    assert xs[0] > 0.0 and abs(float(xs[0]) - 0.44488848768742173) < 1e-15
+    xs, _ws = gauss_jacobi_scale([-1.0], [0.0], 0.0, 0.0, -1.0e16, -1.0)
+    assert xs[0] == -1.0e16
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e16, -1.0)
+    assert xs[0] == -1.0
+    xs, _ws = gauss_jacobi_scale([xn], [0.0], 0.0, 0.0, 0.0, 3.0)
+    assert xs[0] == 1.6653345369377348e-16
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e308, 1.0)
+    assert xs[0] == 1.0
+    x, w = gauss_jacobi(4, 1022.0, 0.0, method="rec")
+    _xs, ws = gauss_jacobi_scale(x, w, 1022.0, 0.0, 0.0, 0.8)
+    assert np.all(np.isfinite(ws)) and np.all(ws > 1.0e-120) and np.all(ws < 1.0e-80)
+    x, w = gauss_jacobi(8, 0.0, 0.0, method="rec")
+    _xs, ws = gauss_jacobi_scale(x, w, 1023.0, 0.0, -2.0, 2.0)
+    assert np.all(np.isfinite(ws)) and np.all(ws > 1.0e300)
+    tiny = float(np.nextafter(0.0, 1.0))
+    _xs, ws = gauss_jacobi_scale([0.0], [1.0], -0.25, -0.25, 0.0, tiny)
+    assert math.isfinite(float(ws[0])) and 1.0e-170 < float(ws[0]) < 1.0e-150
+    _xs, ws = gauss_jacobi_scale([0.0], [1.0], -0.9, -0.9, 0.0, tiny)
+    assert math.isfinite(float(ws[0])) and float(ws[0]) > 1.0e250
+
+
+def test_scale_alpha1023_unit_weight_overflows():
+    """w=1 on [-2, 2] with alpha=1023 is 2**1024 and must be status 7."""
+    x = np.array([0.25])
+    w = np.array([1.0])
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 1023.0, 0.0, -2.0, 2.0)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
+    pred = math.nextafter(1.0, 0.0)
+    _xs, ws = gauss_jacobi_scale([0.25], [pred], 1023.0, 0.0, -2.0, 2.0)
+    assert float(ws[0]) == sys.float_info.max
