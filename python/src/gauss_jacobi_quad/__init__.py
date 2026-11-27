@@ -58,7 +58,9 @@ def gauss_jacobi_scale(nodes, weights, alpha: float, beta: float, a: float, b: f
     ``((b - a) / 2) ** (alpha + beta + 1)`` so the rule integrates
     ``(b - t) ** alpha * (t - a) ** beta * f(t)`` on ``[a, b]``.
     """
-    x_list, w_list = _core.scale(nodes, weights, float(alpha), float(beta), float(a), float(b))
+    x_list, w_list = _core.scale(
+        nodes, weights, float(alpha), float(beta), float(a), float(b)
+    )
     return np.asarray(x_list, dtype=np.float64), np.asarray(w_list, dtype=np.float64)
 
 
