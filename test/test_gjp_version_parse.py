@@ -109,8 +109,8 @@ class VersionParseTests(unittest.TestCase):
                     self.assertIn('version = "1.2.0"', fpm)
                     self.assertNotIn(version, fpm)
                     town = (root / "towncrier.toml").read_text()
-                    self.assertIn('version = "1.2.0"', town)
-                    self.assertNotIn(version, town)
+                    self.assertIn(f'version = "{version}"', town)
+                    self.assertNotIn('version = "1.2.0"', town)
                     self.assertIn(f"version: '{version}'", meson)
                     self.assertIn(f'gjp_version_string = "{version}"', source)
                     self.assertIn("gjp_version_major = 1", source)
@@ -127,6 +127,7 @@ class VersionParseTests(unittest.TestCase):
                     "fpm.toml",
                     "meson.build",
                     "src/gjp_version.f90",
+                    "towncrier.toml",
                 )
             }
             proc = _apply(root, "1.2.3.4")
