@@ -41,14 +41,18 @@ int gauss_jacobi_scale_c(int npts, double alpha, double beta,
                          double a, double b, double *x, double *wts);
 #+end_src
 
-In-place map from =[-1, 1]= to =[a, b]=. Nodes become
-=t = (b-a)/2 * x + (a+b)/2=, exactly =a= at =x = -1= and exactly =b=
-at =x = 1=. Weights are multiplied by
-=((b-a)/2)**(alpha+beta+1)= so the rule integrates
-=(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=.
-Returns =GJP_ERR_BOUNDS= for an invalid interval or a non-finite scaled
-node or weight. A weight factor that overflows on its own is not an error
-when the product with the weight is finite.
+In-place map from =[-1, 1]= to =[a, b]=. Nodes and weights are the
+ties-to-even binary64 rounding of the real expressions
+=t = (b-a)/2 * x + (a+b)/2= and
+=w * ((b-a)/2)**(alpha+beta+1)=. A half-width that flushes to zero is
+treated as =2**-1075=. =x = -1= is exactly =a= and =x = 1= is exactly =b=.
+That power integrates =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=.
+Returns =GJP_OK=, or =GJP_ERR_NPTS= / =GJP_ERR_ALPHA= / =GJP_ERR_BETA= /
+=GJP_ERR_BOUNDS=. Non-finite alpha or beta is =GJP_ERR_ALPHA= or
+=GJP_ERR_BETA=. An invalid interval or a non-finite scaled node or weight
+is =GJP_ERR_BOUNDS=. A weight factor that overflows on its own is not an
+error when the product with the weight is finite. Any non-zero status
+leaves both buffers unchanged.
 
 * C++ helper
 

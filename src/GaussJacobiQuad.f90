@@ -122,11 +122,12 @@ end subroutine gauss_jacobi_rule
 
 !> Map Gauss-Jacobi nodes and weights from [-1, 1] onto [a, b].
 !>
-!> Nodes go to t = (b-a)/2 * x + (a+b)/2, within 1 ulp of that value,
-!> and exactly a or b at x = -1 or x = 1.
-!> For the Jacobi weight (1-x)**alpha * (1+x)**beta, weights are multiplied
-!> by ((b-a)/2)**(alpha+beta+1) so the mapped rule integrates
-!> (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
+!> Nodes and weights are the ties-to-even binary64 rounding of the real
+!> expressions t = (b-a)/2 * x + (a+b)/2 and
+!> w * ((b-a)/2)**(alpha+beta+1). A half-width that flushes to zero
+!> is treated as 2**-1075. x = -1 is exactly a and x = 1 is exactly b.
+!> For the Jacobi weight (1-x)**alpha * (1+x)**beta, that power maps the
+!> rule onto (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
 !> Requires finite a < b and finite alpha, beta > -1.
 !> (a+b) and (b-a) are not formed when that would overflow.
 !> A non-finite scaled node or weight is an error and does not write.
