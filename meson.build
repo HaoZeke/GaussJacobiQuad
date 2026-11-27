@@ -164,10 +164,17 @@ if not _py_pkg
   )
   test('dep_mod', test_dep_mod)
 
-  meson.add_install_script(
-    _py,
-    files('scripts/install_gjp_mod.py'),
-    get_option('includedir') + '/' + _mod_sub,
+  # Tracked install so `ninja uninstall` removes gjp_version.mod. The copy
+  # also lands in the build root, which the uninstalled pkg-config file
+  # already searches via -I${prefix}.
+  _gjp_version_mod = custom_target(
+    'gjp_version_mod',
+    input: gjplib,
+    output: 'gjp_version.mod',
+    command: [_py, files('scripts/install_gjp_mod.py'), '--stage', '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('includedir') / _mod_sub,
+    build_by_default: true,
   )
 
   # ---------------------- Applications
@@ -238,6 +245,8 @@ if not _py_pkg
 
   # Header dir and the installed module dir. subdirs '.' is ${includedir}
   # (gjp_version.h). _mod_sub is the gjp_version.mod directory.
+  # libraries: puts -lGaussJacobiQuad on Libs. gjp_get_version is defined in
+  # that library; a shared -lgjp_cinterp does not resolve it.
   pkg = import('pkgconfig')
   pkg.generate(
     gjp_cinterp,
@@ -245,8 +254,10 @@ if not _py_pkg
     description: 'GaussJacobiQuad C ABI (gauss_jacobi_rule_c)',
     version: meson.project_version(),
     filebase: 'gjp_cinterp',
+    libraries: gjplib,
     subdirs: ['.', _mod_sub],
     variables: {'moduledir': '${includedir}/' + _mod_sub},
+    uninstalled_variables: {'moduledir': '${prefix}'},
   )
 
   c_cli_gjpq = executable('c_cli_gjpq',
@@ -296,6 +307,17 @@ if not _py_pkg
 
   test('version_parse', _py, args: [files('test/test_gjp_version_parse.py')])
   test('version_agree', _py, args: [files('test/test_gjp_version_agree.py')])
+  _sh = find_program('sh')
+  test(
+    'pkgconfig_c_consumer',
+    _sh,
+    args: [files('ci/test_pkgconfig_consumer.sh'), meson.current_build_dir()],
+  )
+  test(
+    'pkgconfig_uninstalled_mod',
+    _sh,
+    args: [files('ci/test_pkgconfig_uninstalled_mod.sh'), meson.current_build_dir()],
+  )
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
