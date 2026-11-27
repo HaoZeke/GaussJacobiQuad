@@ -31,7 +31,10 @@ def is_release_tag(tag: str) -> bool:
 
 
 def extract_notes(text: str, version: str) -> str:
-    """Return the NEWS section for version, through the line before the next SemVer heading."""
+    """Return the NEWS section for version.
+
+    The section runs through the line before the next SemVer heading.
+    """
     start = re.compile(r"^#? ?" + re.escape(version) + r" ")
     grabbed = []
     started = False
