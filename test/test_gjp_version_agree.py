@@ -1,3 +1,12 @@
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """Finding 6: the checked-in module matches fpm.toml and the meson project version."""
 
 import re

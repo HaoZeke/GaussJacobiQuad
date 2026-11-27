@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> Version constants for the library.
 !> Checked in so fpm, which has no configure_file, builds the same values
 !> meson checks against the project version. scripts/set_version.sh updates

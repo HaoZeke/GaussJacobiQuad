@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """Sweep shipped Gauss-Jacobi rules and record relative node/weight errors.
 
 Drives ``gauss_jacobi`` (ctypes → libgjp_cinterp → Fortran) over a grid of

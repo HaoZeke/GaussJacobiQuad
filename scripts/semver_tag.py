@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """SemVer 2.0.0 checks for the release workflow.
 
 The expression is the numbered-group pattern published at semver.org.

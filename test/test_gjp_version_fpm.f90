@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> fpm builds src/gjp_version.f90. fpm.toml stores major.minor.patch.
 !> The module string may keep a pre-release suffix.
 !> Finds fpm.toml by walking up from the executable, so this test must run
