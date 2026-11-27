@@ -5,7 +5,7 @@
 * GaussJacobiQuad
 
 Permissively licensed *modern Fortran* Gauss–Jacobi quadrature: nodes and
-weights on =[-1, 1]= for weight =(1-x)^α (1+x)^β= (α,β > −1). Multiple algorithms,
+weights on \([-1, 1]\) for weight \((1-x)^{\alpha}(1+x)^{\beta}\) (\(\alpha,\beta > -1\)). Multiple algorithms,
 optional auto selection, Coarray Fortran paths, and C/Python surfaces.
 
 *Navigation* follows the [[https://diataxis.fr/][Diátaxis]] map (same pattern as
