@@ -184,9 +184,13 @@ def gauss_jacobi_scale(nodes, weights, alpha: float, beta: float, a: float, b: f
     w = np.array(weights, dtype=np.float64, copy=True)
     if x.ndim != 1 or x.shape != w.shape:
         raise ValueError("nodes and weights must be 1-d and the same length")
+    # c_int truncates; a wrapped length scales only the start of the buffer.
+    n = int(x.size)
+    if n < 1 or n > 2**31 - 1:
+        raise GaussJacobiError(GJP_ERR_NPTS)
     lib = _lib_api()
     st = lib.gauss_jacobi_scale_c(
-        int(x.size),
+        n,
         float(alpha),
         float(beta),
         float(a),
