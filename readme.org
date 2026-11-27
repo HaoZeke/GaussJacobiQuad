@@ -35,6 +35,8 @@ fpm test  --flag "-fcoarray=single"
 fpm run --flag "-fcoarray=single" gjp_quad -- 32 0.0 0.0 auto
 #+end_src
 
+A monolithic OpenBLAS with no =liblapacke= linker name needs a =liblapacke= symlink to =libopenblas=, or a link-flag override: =fpm= links =-llapacke -lopenblas=.
+
 Preferred library entry:
 
 #+begin_src fortran

@@ -24,6 +24,8 @@ auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
+# A monolithic OpenBLAS with no liblapacke linker name needs a liblapacke
+# symlink to libopenblas, or a link-flag override.
 link = ["lapacke", "openblas"]
 
 # Install static library + .mod files (not only executables) for fpm consumers.
