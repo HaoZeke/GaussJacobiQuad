@@ -328,6 +328,14 @@ if not _py_pkg
     args: [files('ci/test_fpm_install_version.sh')],
     timeout: 900,
   )
+  # Wheel config (pyproject.toml -Dpython_package=true) must compile gjp_version.
+  test(
+    'python_package_compile',
+    _sh,
+    args: [files('ci/test_python_package_compile.sh')],
+    timeout: 900,
+    is_parallel: false,
+  )
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
@@ -350,11 +358,13 @@ if _py_pkg
     py_deps += _m
   endif
 
+  # Same module the native library adds beside _gjp_f_sources. The facade
+  # uses gjp_version, so a wheel that omits it fails with gjp_version.mod missing.
   _ext_sources = files(
     'python/src/gauss_jacobi_quad/_core.c',
     'interfaces/CInterface/GaussJacobiQuadCInterp.c',
     'src/GaussJacobiQuadCCompat.f90',
-  ) + _gjp_f_sources
+  ) + _gjp_f_sources + files('src/gjp_version.f90')
 
   # Free-threaded CPython is a different ABI: full C API + Py_mod_gil, not abi3.
   _py_is_ft = run_command(
