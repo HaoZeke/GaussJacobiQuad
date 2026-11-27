@@ -34,6 +34,17 @@ header_template = Template(
 )
 
 
+def _place_banner(header_text, content):
+    """Put a new banner after a leading shebang, otherwise at the top."""
+    if not content.startswith("#!"):
+        return header_text + content
+    split_at = content.find("\n")
+    if split_at == -1:
+        ending = "\r\n" if "\r\n" in header_text else "\n"
+        return content + ending + header_text
+    return content[: split_at + 1] + header_text + content[split_at + 1 :]
+
+
 def add_headers(
     directories,
     file_types,
@@ -59,28 +70,32 @@ def add_headers(
                 if any(filename.endswith(suffix) for suffix in file_types):
                     filepath = os.path.join(root, filename)
 
-                    with open(filepath, "r") as file:
+                    # newline="" keeps CRLF. Rewrite only when the text changes.
+                    with open(filepath, "r", newline="") as file:
                         content = file.read()
 
+                    line_ending = "\r\n" if "\r\n" in content else "\n"
+                    file_header = header_text.replace("\n", line_ending)
                     # Replace an existing header, or prepend one. The pattern
-                    # consumes the newline after END_HEADER; header_text puts
+                    # consumes the newline after END_HEADER; file_header puts
                     # exactly one back, and the following source is unchanged.
                     header_pattern = (
                         rf"{re.escape(cchar)} BEGIN_HEADER.*?"
-                        rf"{re.escape(cchar)} END_HEADER\n?"
+                        rf"{re.escape(cchar)} END_HEADER\r?\n?"
                     )
                     if "BEGIN_HEADER" in content and "END_HEADER" in content:
-                        content = re.sub(
+                        updated = re.sub(
                             header_pattern,
-                            lambda _match: header_text,
+                            lambda _match, banner=file_header: banner,
                             content,
                             flags=re.DOTALL,
                         )
                     else:
-                        content = header_text + content
+                        updated = _place_banner(file_header, content)
 
-                    with open(filepath, "w") as file:
-                        file.write(content)
+                    if updated != content:
+                        with open(filepath, "w", newline="") as file:
+                            file.write(updated)
 
         print("Headers added or updated in all files in" f" {directory} using {cchar}.")
 

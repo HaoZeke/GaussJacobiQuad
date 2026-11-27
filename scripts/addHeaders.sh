@@ -28,10 +28,27 @@ for file in "${GITROOT}"/src/*.f90; do
 
   # Check for the existing header and replace or append
   if grep -q 'BEGIN_HEADER' "$file"; then
+    if ! grep -q 'END_HEADER' "$file"; then
+      echo "warning: $file has BEGIN_HEADER but no END_HEADER; left unchanged" >&2
+      rm -f "$temp_file"
+      continue
+    fi
     # Prefix, one new header, then the suffix a single time.
+    # Keep any source glued onto the END_HEADER line.
     sed -n '1,/BEGIN_HEADER/{ /BEGIN_HEADER/q; p; }' "$file" > "$temp_file"
     print_header >> "$temp_file"
-    sed -n '/END_HEADER/,$p' "$file" | tail -n +2 >> "$temp_file"
+    awk '
+      BEGIN { marker = "END_HEADER"; n = length(marker); found = 0 }
+      found { print; next }
+      {
+        i = index($0, marker)
+        if (i == 0) next
+        found = 1
+        tail = substr($0, i + n)
+        sub(/\r$/, "", tail)
+        if (length(tail) > 0) print tail
+      }
+    ' "$file" >> "$temp_file"
   else
     print_header > "$temp_file"
     cat "$file" >> "$temp_file"
