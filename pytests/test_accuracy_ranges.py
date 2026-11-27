@@ -14,16 +14,21 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "interfaces" / "PyInterface"))
 
 if "GJP_CINTERP" not in os.environ:
-    for cand in (ROOT / "bbdir").rglob("libgjp_cinterp.so"):
-        os.environ["GJP_CINTERP"] = str(cand)
-        break
+    for pattern in ("libgjp_cinterp.so", "libgjp_cinterp.dylib"):
+        found = next((ROOT / "bbdir").rglob(pattern), None)
+        if found is not None:
+            os.environ["GJP_CINTERP"] = str(found)
+            break
 
 pytest.importorskip("numpy")
 pytest.importorskip("scipy")
 pytest.importorskip("mpmath")
 
 from accuracy_ranges import (  # noqa: E402
+    WEIGHT_TAU,
     format_report,
+    library_rule,
+    max_rel_err,
     mpmath_reference,
     reference,
     run_sweep,
@@ -81,10 +86,68 @@ def test_report_and_csv(tmp_path):
     path = tmp_path / "accuracy.csv"
     write_csv(rows, path)
     lines = path.read_text().splitlines()
-    assert lines[0] == (
-        "method,n,alpha,beta,max_rel_node,max_rel_weight,ref,status"
-    )
+    assert lines[0] == ("method,n,alpha,beta,max_rel_node,max_rel_weight,ref,status")
     assert any(
-        line.startswith("bogaert,8,1,0,") and line.endswith(",policy")
-        for line in lines
+        line.startswith("bogaert,8,1,0,") and line.endswith(",policy") for line in lines
     )
+
+
+def test_weight_metric_floors_at_tau_times_max():
+    ref = np.array([1.0, 1e-20])
+    est = np.array([1.0, 2e-20])
+    scored = max_rel_err(est, ref, weight=True)
+    assert scored == pytest.approx(1e-20 / WEIGHT_TAU)
+    assert scored < 1e-6
+
+
+def test_scipy_gap_cells_use_mpmath():
+    # SciPy weights sit ~5.6e-11 and ~2.3e-11 off mpmath on these cells.
+    for alpha, beta in ((1.0, -0.9), (-0.9, 20.0)):
+        _, _, kind = reference(64, alpha, beta)
+        assert kind == "mpmath"
+
+
+def test_gw_tiny_weight_does_not_set_the_score():
+    rows = run_sweep(npts=(64,), alphas=(20.0,), betas=(-0.9,), methods=("gw",))
+    assert rows[0].status == "ok"
+    # Was 1.264288e-03 from a ~3e-27 weight. Hosts may move the last digits.
+    assert rows[0].max_rel_weight == pytest.approx(1.442642e-13, rel=1e-3, abs=1e-16)
+    assert rows[0].max_rel_weight < 1e-6
+
+
+def test_beta20_weights_against_mpmath():
+    rows = run_sweep(npts=(64,), alphas=(-0.9,), betas=(20.0,), methods=("algo665_dc",))
+    assert rows[0].status == "ok"
+    assert rows[0].ref == "mpmath"
+    _x_m, w_m = mpmath_reference(64, -0.9, 20.0)
+    _x, w, status = library_rule(64, -0.9, 20.0, "algo665_dc")
+    assert status == "ok"
+    scored = max_rel_err(w, w_m, weight=True)
+    assert scored == pytest.approx(rows[0].max_rel_weight, rel=1e-6, abs=0.0)
+    # Was 1.284004e+01 on a ~3e-27 weight.
+    assert rows[0].max_rel_weight == pytest.approx(2.815705e-10, rel=1e-3, abs=1e-16)
+
+
+def test_bogaert_n64_weight_within_rtol():
+    rows = run_sweep(npts=(64,), alphas=(0.0,), betas=(0.0,), methods=("bogaert",))
+    assert rows[0].status == "ok"
+    assert rows[0].ref == "mpmath"
+    # The old line was 1.057888e-12 vs 1.058010e-12 across hosts (one ulp of
+    # the SciPy gap). Compare with a relative band, and against mpmath.
+    assert rows[0].max_rel_weight == pytest.approx(2.739896e-14, rel=1e-3, abs=1e-18)
+
+
+def test_bogaert_legendre_domain():
+    rows = run_sweep(npts=(32,), alphas=(1.0, 0.0), betas=(0.0,), methods=("bogaert",))
+    by_alpha = {row.alpha: row for row in rows}
+    assert by_alpha[1.0].status == "policy"
+    assert by_alpha[0.0].status == "ok"
+
+
+def test_unknown_method_and_bad_alpha_are_fail():
+    bad_method = run_sweep(
+        npts=(8,), alphas=(0.0,), betas=(0.0,), methods=("not-a-method",)
+    )
+    assert bad_method[0].status == "fail"
+    bad_alpha = run_sweep(npts=(8,), alphas=(-1.0,), betas=(0.0,), methods=("rec",))
+    assert bad_alpha[0].status == "fail"
