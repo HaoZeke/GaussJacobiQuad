@@ -188,6 +188,96 @@ def check_shell_updater():
     return failed
 
 
+def check_later_markers(updater, tmp):
+    """END_HEADER after the banner is source, not a second header."""
+    failed = 0
+    self_dir = tmp / "selfsrc"
+    self_dir.mkdir()
+    src = ROOT / "scripts" / "test_add_headers.py"
+    dest = self_dir / src.name
+    dest.write_bytes(src.read_bytes())
+    updater.add_headers([str(self_dir)], ["py"], cchar="#")
+    updated = dest.read_bytes()
+    fixture = (
+        b'b"# BEGIN_HEADER\\r\\n# old\\r\\n' b'# END_HEADER\\r\\nimport stay\\r\\n"'
+    )
+    if fixture not in updated:
+        print("FAIL self: fixture literal was rewritten", file=sys.stderr)
+        failed += 1
+    compiled = subprocess.run(
+        [sys.executable, "-m", "py_compile", str(dest)],
+        capture_output=True,
+        text=True,
+    )
+    if compiled.returncode != 0:
+        print(
+            "FAIL self: py_compile EXIT:%s" % compiled.returncode,
+            file=sys.stderr,
+        )
+        failed += 1
+    else:
+        updater.add_headers([str(self_dir)], ["py"], cchar="#")
+        if dest.read_bytes() != updated:
+            print("FAIL self: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    emb_dir = tmp / "embedded"
+    emb_dir.mkdir()
+    sample = emb_dir / "embedded.py"
+    sample.write_text(
+        "# BEGIN_HEADER\n"
+        "# old\n"
+        "# END_HEADER\n"
+        "note = 'keep END_HEADER in this string'\n"
+        "also = '# BEGIN_HEADER\\n# END_HEADER\\n'\n"
+    )
+    updater.add_headers([str(emb_dir)], ["py"], cchar="#")
+    text = sample.read_text()
+    if "keep END_HEADER in this string" not in text or "BEGIN_HEADER\\n" not in text:
+        print("FAIL embedded: string was rewritten", file=sys.stderr)
+        failed += 1
+    elif (
+        subprocess.run(
+            [sys.executable, "-m", "py_compile", str(sample)],
+            capture_output=True,
+        ).returncode
+        != 0
+    ):
+        print("FAIL embedded: py_compile", file=sys.stderr)
+        failed += 1
+
+    mixed_dir = tmp / "mixed"
+    mixed_dir.mkdir()
+    mixed = mixed_dir / "mixed.py"
+    mixed.write_bytes(b"# BEGIN_HEADER\n# old\n# END_HEADER\n" b"x = 'a\r\nb'\n")
+    updater.add_headers([str(mixed_dir)], ["py"], cchar="#")
+    mixed_bytes = mixed.read_bytes()
+    if b"\r\n# END_HEADER" in mixed_bytes:
+        print("FAIL mixed: banner picked up a later CRLF", file=sys.stderr)
+        failed += 1
+    elif b"x = 'a\r\nb'\n" not in mixed_bytes:
+        print("FAIL mixed: body CRLF was rewritten", file=sys.stderr)
+        failed += 1
+
+    cache = tmp / "pkg" / "__pycache__"
+    cache.mkdir(parents=True)
+    blob = b"\xcb\x00not-utf8"
+    cached = cache / "mod.cpython-312.pyc"
+    cached.write_bytes(blob)
+    stray = tmp / "pkg" / "not_c.pyc"
+    stray.write_bytes(blob)
+    try:
+        updater.add_headers([str(tmp / "pkg")], ["c"], cchar="//")
+    except UnicodeDecodeError:
+        print("FAIL bytecode: decoded a .pyc", file=sys.stderr)
+        failed += 1
+    else:
+        if cached.read_bytes() != blob or stray.read_bytes() != blob:
+            print("FAIL bytecode: .pyc bytes changed", file=sys.stderr)
+            failed += 1
+    return failed
+
+
 def main():
     updater = load_add_headers()
     failed = 0
@@ -229,6 +319,7 @@ def main():
             if check_syntax(dest, suffix, src) != 0:
                 failed += 1
         failed += check_crlf_and_shebang(updater, tmp)
+        failed += check_later_markers(updater, tmp)
     failed += check_shell_updater()
     if failed:
         print("failed %s" % failed)

@@ -45,6 +45,39 @@ def _place_banner(header_text, content):
     return content[: split_at + 1] + header_text + content[split_at + 1 :]
 
 
+def _line_ending(content):
+    """Use the first line break, so a later CRLF does not flip the banner."""
+    nl = content.find("\n")
+    if nl > 0 and content[nl - 1] == "\r":
+        return "\r\n"
+    return "\n"
+
+
+def _extension(filename):
+    dot = filename.rfind(".")
+    if dot < 0:
+        return ""
+    return filename[dot + 1 :]
+
+
+def _leading_banner_pattern(cchar):
+    """One banner at the start of the file, after an optional shebang.
+
+    Blank lines between the shebang and the banner stay. END_HEADER text
+    later in the file, including inside a string, is not a match.
+    """
+    cc = re.escape(cchar)
+    return re.compile(
+        r"\A(?P<prefix>#![^\n]*\n)?"
+        r"(?P<blanks>(?:[ \t]*\r?\n)*)"
+        + cc
+        + r" BEGIN_HEADER.*?"
+        + cc
+        + r" END_HEADER\r?\n?",
+        flags=re.DOTALL,
+    )
+
+
 def add_headers(
     directories,
     file_types,
@@ -63,39 +96,38 @@ def add_headers(
     # The template keeps its trailing newline; force one anyway so a write
     # cannot glue the next source line onto END_HEADER.
     header_text = header_text.rstrip("\n") + "\n"
+    pattern = _leading_banner_pattern(cchar)
     for directory in directories:
         # Iterate over all files in the specified directory
         for root, dirs, files in os.walk(directory):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
             for filename in files:
-                if any(filename.endswith(suffix) for suffix in file_types):
-                    filepath = os.path.join(root, filename)
+                # `.pyc` ends with `c`; match the extension, and skip bytecode.
+                if filename.endswith(".pyc"):
+                    continue
+                if not any(_extension(filename) == suffix for suffix in file_types):
+                    continue
+                filepath = os.path.join(root, filename)
 
-                    # newline="" keeps CRLF. Rewrite only when the text changes.
-                    with open(filepath, "r", newline="") as file:
-                        content = file.read()
+                # newline="" keeps CRLF. Rewrite only when the text changes.
+                with open(filepath, "r", newline="", encoding="utf-8") as file:
+                    content = file.read()
 
-                    line_ending = "\r\n" if "\r\n" in content else "\n"
-                    file_header = header_text.replace("\n", line_ending)
-                    # Replace an existing header, or prepend one. The pattern
-                    # consumes the newline after END_HEADER; file_header puts
-                    # exactly one back, and the following source is unchanged.
-                    header_pattern = (
-                        rf"{re.escape(cchar)} BEGIN_HEADER.*?"
-                        rf"{re.escape(cchar)} END_HEADER\r?\n?"
-                    )
-                    if "BEGIN_HEADER" in content and "END_HEADER" in content:
-                        updated = re.sub(
-                            header_pattern,
-                            lambda _match, banner=file_header: banner,
-                            content,
-                            flags=re.DOTALL,
-                        )
-                    else:
-                        updated = _place_banner(file_header, content)
+                line_ending = _line_ending(content)
+                file_header = header_text.replace("\n", line_ending)
 
-                    if updated != content:
-                        with open(filepath, "w", newline="") as file:
-                            file.write(updated)
+                def _replace(found, banner=file_header):
+                    prefix = found.group("prefix") or ""
+                    blanks = found.group("blanks") or ""
+                    return prefix + blanks + banner
+
+                updated = pattern.sub(_replace, content, count=1)
+                if updated == content and pattern.search(content) is None:
+                    updated = _place_banner(file_header, content)
+
+                if updated != content:
+                    with open(filepath, "w", newline="", encoding="utf-8") as file:
+                        file.write(updated)
 
         print("Headers added or updated in all files in" f" {directory} using {cchar}.")
 
