@@ -13,9 +13,15 @@ def main() -> int:
         sys.stderr.write("usage: install_gjp_mod.py INCLUDE/REL/DIR\n")
         return 2
     build = Path(os.environ["MESON_BUILD_ROOT"])
-    prefix = Path(os.environ.get("MESON_INSTALL_DESTDIR_PREFIX", os.environ["MESON_INSTALL_PREFIX"]))
+    prefix = Path(
+        os.environ.get(
+            "MESON_INSTALL_DESTDIR_PREFIX", os.environ["MESON_INSTALL_PREFIX"]
+        )
+    )
     dest = prefix / sys.argv[1]
-    found = [path for path in build.rglob("*.mod") if path.name.lower() == "gjp_version.mod"]
+    found = [
+        path for path in build.rglob("*.mod") if path.name.lower() == "gjp_version.mod"
+    ]
     if len(found) != 1:
         sys.stderr.write(f"expected one gjp_version.mod under {build}, found {found}\n")
         return 1

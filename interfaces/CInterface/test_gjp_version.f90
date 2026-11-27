@@ -1,6 +1,6 @@
 program test_gjp_version
 use gjp_version, only: gjp_version_major, gjp_version_minor, gjp_version_patch, &
-    gjp_version_string, gjp_version_compact, gjp_get_version
+                       gjp_version_string, gjp_version_compact, gjp_get_version
 implicit none
 character(len=64) :: buf
 integer :: major, minor, patch, got_major, got_minor, got_patch, compact, ios
@@ -9,15 +9,15 @@ character(len=:), allocatable :: got_string
 if (command_argument_count() /= 4) error stop "expected major minor patch string"
 call get_command_argument(1, buf, status=ios)
 if (ios /= 0) error stop "argument 1"
-read(buf, *, iostat=ios) major
+read (buf, *, iostat=ios) major
 if (ios /= 0) error stop "major"
 call get_command_argument(2, buf, status=ios)
 if (ios /= 0) error stop "argument 2"
-read(buf, *, iostat=ios) minor
+read (buf, *, iostat=ios) minor
 if (ios /= 0) error stop "minor"
 call get_command_argument(3, buf, status=ios)
 if (ios /= 0) error stop "argument 3"
-read(buf, *, iostat=ios) patch
+read (buf, *, iostat=ios) patch
 if (ios /= 0) error stop "patch"
 call get_command_argument(4, buf, status=ios)
 if (ios /= 0) error stop "argument 4"
