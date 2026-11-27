@@ -107,7 +107,7 @@ def _replace_one(text: str, pattern: str, repl: str, path: Path) -> str:
 
 
 def apply_version(version: str, root: Path | None = None) -> tuple[int, int, int]:
-    """Rewrite release files. fpm.toml gets only major.minor.patch."""
+    """Rewrite release files. fpm.toml and towncrier.toml get only major.minor.patch."""
     major, minor, patch = parse_version(version)
     triple = f"{major}.{minor}.{patch}"
     root = _ROOT if root is None else root
@@ -116,12 +116,19 @@ def apply_version(version: str, root: Path | None = None) -> tuple[int, int, int
     doxy = root / "apidocs" / "Doxygen-GaussJacobiQuad.cfg"
     citation = root / "CITATION.cff"
     source = root / "src" / "gjp_version.f90"
+    towncrier = root / "towncrier.toml"
     updated = {
         fpm: _replace_one(
             fpm.read_text(),
             r'^version = "[^"]*"',
             f'version = "{triple}"',
             fpm,
+        ),
+        towncrier: _replace_one(
+            towncrier.read_text(),
+            r'^version = "[^"]*"',
+            f'version = "{triple}"',
+            towncrier,
         ),
         meson: _replace_one(
             meson.read_text(),
