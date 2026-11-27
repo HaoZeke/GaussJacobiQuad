@@ -68,3 +68,44 @@ def test_scale_polynomial_on_interval():
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi_scale(x, w, alpha, beta, b, a)
     assert ei.value.status == GJP_ERR_BOUNDS
+
+
+def test_scale_huge_and_nonfinite():
+    """Huge finite intervals stay finite; inf bounds and NaN alpha are errors."""
+    x, w = gauss_jacobi(4, 0.0, 0.0, method="rec")
+    for a, b in ((1.0e308, 1.7e308), (-1.0e308, 1.0e308)):
+        try:
+            xs, ws = gauss_jacobi_scale(x, w, 0.0, 0.0, a, b)
+        except GaussJacobiError as exc:
+            assert getattr(exc, "status", 1) != 0
+            assert "status=0" not in str(exc)
+        else:
+            assert np.all(np.isfinite(xs)) and np.all(np.isfinite(ws))
+            assert np.all((xs > a) & (xs < b))
+            assert np.all(ws > 0)
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 0.0, 0.0, 0.0, np.inf)
+    assert getattr(ei.value, "status", 7) != 0
+    assert "status=0" not in str(ei.value)
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, np.nan, 0.0, 0.0, 1.0)
+    assert getattr(ei.value, "status", 2) != 0
+    assert "status=0" not in str(ei.value)
+
+
+def test_scale_rejects_length_outside_c_int(monkeypatch):
+    """Lengths that do not fit in c_int raise before the call."""
+
+    class _Wide:
+        ndim = 1
+        shape = (2**32 + 2,)
+        size = 2**32 + 2
+
+        @property
+        def ctypes(self):
+            raise AssertionError("c_int call should not run")
+
+    monkeypatch.setattr(_gjq.np, "array", lambda *a, **k: _Wide())
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale([0.0, 1.0], [1.0, 1.0], 0.0, 0.0, 0.0, 1.0)
+    assert ei.value.status == _gjq.GJP_ERR_NPTS

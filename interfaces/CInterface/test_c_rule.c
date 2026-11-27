@@ -102,6 +102,96 @@ int main(void) {
             rc = 1;
         }
     }
+    /* Huge finite intervals: finite values, or a nonzero status.
+       Never status 0 with inf/NaN. Non-finite inputs are nonzero. */
+    {
+        enum { n = 4 };
+        double x[4], w[4], y[4], z[4];
+        double a, b;
+        int i, st = gauss_jacobi_rule_c(n, 0.0, 0.0, x, w, "rec");
+        if (st != GJP_OK) {
+            fprintf(stderr, "huge setup failed: %s\n", gjp_status_string(st));
+            rc = 1;
+        } else {
+            for (i = 0; i < n; ++i) {
+                y[i] = x[i];
+                z[i] = w[i];
+            }
+            a = 1e308;
+            b = 1.7e308;
+            st = gauss_jacobi_scale_c(n, 0.0, 0.0, a, b, x, w);
+            if (st == GJP_OK) {
+                for (i = 0; i < n; ++i) {
+                    if (!isfinite(x[i]) || !isfinite(w[i]) || !(x[i] > a && x[i] < b)) {
+                        fprintf(stderr, "FAIL [1e308, 1.7e308] status 0 non-finite\n");
+                        rc = 1;
+                        break;
+                    }
+                }
+            }
+            a = -1e308;
+            b = 1e308;
+            st = gauss_jacobi_scale_c(n, 0.0, 0.0, a, b, y, z);
+            if (st == GJP_OK) {
+                for (i = 0; i < n; ++i) {
+                    if (!isfinite(y[i]) || !isfinite(z[i]) || !(y[i] > a && y[i] < b)) {
+                        fprintf(stderr, "FAIL [-1e308, 1e308] status 0 non-finite\n");
+                        rc = 1;
+                        break;
+                    }
+                }
+            }
+            st = gauss_jacobi_scale_c(n, 0.0, 0.0, 0.0, HUGE_VAL, x, w);
+            if (st == GJP_OK) {
+                fprintf(stderr, "FAIL +inf bound status 0\n");
+                rc = 1;
+            }
+            st = gauss_jacobi_scale_c(n, nan(""), 0.0, 0.0, 1.0, x, w);
+            if (st == GJP_OK) {
+                fprintf(stderr, "FAIL NaN alpha status 0\n");
+                rc = 1;
+            }
+            st = gauss_jacobi_scale_c(n, 100.0, 100.0, -1e200, 1e200, x, w);
+            if (st == GJP_OK) {
+                fprintf(stderr, "FAIL non-finite scale factor status 0\n");
+                rc = 1;
+            }
+        }
+    }
+    /* Errors must not write. NULL pointers return GJP_ERR_NPTS. */
+    {
+        double x[4] = {1.0, 2.0, 3.0, 4.0};
+        double w[4] = {5.0, 6.0, 7.0, 8.0};
+        double xc[4], wc[4];
+        int st;
+        memcpy(xc, x, sizeof x);
+        memcpy(wc, w, sizeof w);
+        st = gauss_jacobi_scale_c(4, nan(""), 2.0, 0.0, 3.0, x, w);
+        if (st == GJP_OK || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
+            fprintf(stderr, "FAIL NaN alpha wrote buffers st=%d\n", st);
+            rc = 1;
+        }
+        st = gauss_jacobi_scale_c(4, 0.0, 0.0, -HUGE_VAL, 1.0, x, w);
+        if (st == GJP_OK || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
+            fprintf(stderr, "FAIL -inf endpoint wrote buffers st=%d\n", st);
+            rc = 1;
+        }
+        st = gauss_jacobi_scale_c(4, 0.0, 0.0, 0.0, 1.0, NULL, w);
+        if (st != GJP_ERR_NPTS || memcmp(w, wc, sizeof w)) {
+            fprintf(stderr, "FAIL NULL x st=%d\n", st);
+            rc = 1;
+        }
+        st = gauss_jacobi_scale_c(4, 0.0, 0.0, 0.0, 1.0, x, NULL);
+        if (st != GJP_ERR_NPTS || memcmp(x, xc, sizeof x)) {
+            fprintf(stderr, "FAIL NULL w st=%d\n", st);
+            rc = 1;
+        }
+        st = gauss_jacobi_scale_c(4, 0.0, 0.0, 0.0, 1.0, NULL, NULL);
+        if (st != GJP_ERR_NPTS) {
+            fprintf(stderr, "FAIL NULL both st=%d\n", st);
+            rc = 1;
+        }
+    }
     if (rc == 0)
         printf("test_c_rule PASSED\n");
     else
