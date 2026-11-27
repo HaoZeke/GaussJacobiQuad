@@ -125,7 +125,11 @@ pipx run pre-commit run --all-files
 pipx run pre-commit install
 #+end_src
 *** Updating licenses
-When the headers in the sources need to be updated modify ~add_headers.py~ and run:
+Fortran, C, Python, and Rust sources carry the MIT ~BEGIN_HEADER~ block.
+~pre-commit~ inserts ~scripts/license_header.txt~ when it is missing, still
+accepts the 2023 citation block in ~scripts/license_header_legacy.txt~, and the
+~license headers~ workflow fails a pull request that has neither.
+When the wording needs to change, edit those files and ~add_headers.py~, then run:
 #+begin_src sh
 python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,f77" --cchar '!'
 python scripts/add_headers.py --dirs interfaces --ftypes "c,h" --cchar '//'

@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 import argparse
 import os
 import re
-from datetime import datetime
 
 from jinja2 import Template
 
 # Get the Git root directory
 GITROOT = os.popen("git rev-parse --show-toplevel").read().strip()
 
-# Get the current date
-current_date = datetime.now().strftime("%Y-%m-%d")
-
-# Get the latest commit hash
-commit_hash = os.popen("git rev-parse HEAD").read().strip()[:7]
-
-# Define the header template using Jinja2
+# Same text as scripts/license_header.txt (what pre-commit inserts).
 header_template = Template(
     """{{cchar}} BEGIN_HEADER
 {{cchar}} -----------------------------------------------------------------------------
@@ -25,18 +27,8 @@ header_template = Template(
 {{cchar}} Source: {{library_name}} Library
 {{cchar}} License: MIT
 {{cchar}} GitHub Repository: {{repository_url}}
-{{cchar}} Date: {{date}}
-{{cchar}} Commit: {{commit}}
 {{cchar}} -----------------------------------------------------------------------------
-{{cchar}} This code is part of the {{library_name}} library, providing an efficient
-{{cchar}} implementation for Gauss-Jacobi quadrature nodes and weights computation.
-{{cchar}} -----------------------------------------------------------------------------
-{{cchar}} To cite this software:
-{{cchar}} Rohit Goswami (2023). HaoZeke/GaussJacobiQuad: v0.1.0.
-{{cchar}} Zenodo: https://doi.org/10.5281/ZENODO.8285112
-{{cchar}} ---------------------------------------------------------------------
 {{cchar}} END_HEADER
-
 """
 )
 
@@ -48,16 +40,12 @@ def add_headers(
     author="Rohit Goswami <rgoswami[at]ieee.org>",
     repository_url="https://github.com/HaoZeke/GaussJacobiQuad",
     library_name="GaussJacobiQuad",
-    date=current_date,
-    commit=commit_hash,
 ):
     # Fill in the template variables
     header_text = header_template.render(
         author=author,
         repository_url=repository_url,
         library_name=library_name,
-        date=current_date,
-        commit=commit_hash,
         cchar=cchar,
     )
     for directory in directories:

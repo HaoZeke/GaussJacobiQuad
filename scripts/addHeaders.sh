@@ -6,19 +6,15 @@ GITROOT=$(git rev-parse --show-toplevel)
 # Function to print the header
 print_header() {
   cat << EOF
-# BEGIN_HEADER
-# -----------------------------------------------------------------------------
-# Gauss-Jacobi Quadrature Implementation
-# Authors: Rohit Goswami (rog32[at]hi[dot]is)
-# Source: GaussJacobiQuad Library
-# License: MIT
-# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
-# -----------------------------------------------------------------------------
-# This code is part of the GaussJacobiQuad library, providing an efficient
-# implementation for Gauss-Jacobi quadrature nodes and weights computation.
-# -----------------------------------------------------------------------------
-# END_HEADER
-#
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 EOF
 }
 

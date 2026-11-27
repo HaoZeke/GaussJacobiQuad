@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> Glaser–Liu–Rokhlin (GLR) root finding via Prüfer phase marching + Newton.
 !>
 !> Structure (Glaser, Liu, Rokhlin, SIAM J. Sci. Comput. 2007): convert the
