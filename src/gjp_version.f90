@@ -17,11 +17,15 @@ public :: gjp_get_version
 integer, parameter :: gjp_version_major = 0
 integer, parameter :: gjp_version_minor = 2
 integer, parameter :: gjp_version_patch = 6
+! 0.2.6-rc.1 and 0.2.6 share compact 206. String order ranks
+! "0.2.6-rc.1" after "0.2.6". The packing stays that way: fpm rejects
+! a pre-release version, so these integers stay the release triple.
 character(len=*), parameter :: gjp_version_string = "0.2.6"
 integer, parameter :: gjp_version_in_range = 1 / &
                       merge(1, 0, gjp_version_major >= 0 .and. gjp_version_major <= 99 .and. &
                             gjp_version_minor >= 0 .and. gjp_version_minor <= 99 .and. &
                             gjp_version_patch >= 0 .and. gjp_version_patch <= 99)
+! Compact ignores pre-release text, so 0.2.6-rc.1 and 0.2.6 are both 206.
 integer, parameter :: gjp_version_compact = &
                       (10000 * gjp_version_major + 100 * gjp_version_minor + gjp_version_patch) * &
                       gjp_version_in_range
