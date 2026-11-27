@@ -110,8 +110,31 @@ _gjp_f_sources = files(
 
 # ---------------------- Native library / apps / C ABI (skip install when packaging wheel)
 if not _py_pkg
+  # Header and Fortran module are generated from this project version.
+  _gjp_ver = meson.project_version().split('.')
+  _gjp_major = _gjp_ver[0]
+  _gjp_minor = _gjp_ver[1]
+  _gjp_patch = _gjp_ver[2].split('-')[0].split('+')[0]
+  _gjp_ver_data = configuration_data()
+  _gjp_ver_data.set('GJP_VERSION_MAJOR', _gjp_major)
+  _gjp_ver_data.set('GJP_VERSION_MINOR', _gjp_minor)
+  _gjp_ver_data.set('GJP_VERSION_PATCH', _gjp_patch)
+  _gjp_ver_data.set('GJP_VERSION_STRING', meson.project_version())
+  gjp_version_h = configure_file(
+    input: 'interfaces/CInterface/gjp_version.h.in',
+    output: 'gjp_version.h',
+    configuration: _gjp_ver_data,
+    install: true,
+    install_dir: get_option('includedir'),
+  )
+  gjp_version_f90 = configure_file(
+    input: 'interfaces/CInterface/gjp_version.f90.in',
+    output: 'gjp_version.f90',
+    configuration: _gjp_ver_data,
+  )
+
   gjplib = library('GaussJacobiQuad',
-                sources: _gjp_f_sources,
+                sources: [_gjp_f_sources, gjp_version_f90],
                 fortran_args: _args,
                 dependencies: _deps,
                 install: true,
@@ -229,6 +252,28 @@ if not _py_pkg
                           install: false,
   )
   test('c_rule', test_c_rule)
+
+  test_c_version = executable('test_c_version',
+    sources: ['interfaces/CInterface/test_c_version.c', gjp_version_h],
+    c_args: [
+      '-DEXPECT_MAJOR=' + _gjp_major,
+      '-DEXPECT_MINOR=' + _gjp_minor,
+      '-DEXPECT_PATCH=' + _gjp_patch,
+      '-DEXPECT_STRING="' + meson.project_version() + '"',
+    ],
+  )
+  test('c_version', test_c_version)
+
+  test_gjp_version = executable('test_gjp_version',
+    sources: 'interfaces/CInterface/test_gjp_version.f90',
+    fortran_args: _args,
+    link_with: [gjplib],
+    dependencies: _deps,
+    link_language: 'fortran',
+  )
+  test('fortran_version', test_gjp_version, args: [
+    _gjp_major, _gjp_minor, _gjp_patch, meson.project_version(),
+  ])
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
