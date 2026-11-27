@@ -4,6 +4,7 @@ use GaussJacobiQuad, only: gauss_jacobi_rule, gauss_jacobi_scale
 use gjp_types, only: dp
 use, intrinsic :: ieee_arithmetic, only: ieee_is_finite, ieee_next_after
 use, intrinsic :: iso_c_binding, only: c_double, c_int
+use, intrinsic :: iso_fortran_env, only: int64
 implicit none
 
 interface
@@ -171,5 +172,56 @@ xs(1) = 0.0_dp
 ws(1) = 1.0_dp
 call gauss_jacobi_scale(1, -0.9_dp, -0.9_dp, 0.0_dp, edge, xs, ws)
 if (.not. ieee_is_finite(ws(1)) .or. ws(1) < 1.0e250_dp) error stop "subnormal half p=-0.8"
+
+! Reviewer images, plus near-cancellation, overflow-adjacent, and huge-ratio
+! pairs. Each entry is a, b, x, and the correctly rounded image.
+block
+    integer, parameter :: nlock = 14
+    integer(int64), parameter :: lock(4, nlock) = reshape([ &
+                                                          int(z'C00B0B8AD6203548', int64), int(z'40417FD9C31752FE', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'C00B0B8AD6203543', int64), &
+                                                          int(z'BFA95FA5F425D75E', int64), int(z'3FE5E952758AE35F', int64), &
+                                                          int(z'BFEBB093A01F6698', int64), int(z'BF1B94A33920DC3A', int64), &
+                                                          int(z'BF343DCC3E402080', int64), int(z'3FB00880ED342634', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'BF343DCC3E402040', int64), &
+                                                          int(z'7E37E43C8800759C', int64), int(z'7FEFFFFFFFFFFFFF', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'7E37E43C8C00759C', int64), &
+                                                          int(z'C1E0000000000000', int64), int(z'4540000000000000', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'3E80000000000000', int64), &
+                                                          int(z'0000000000000000', int64), int(z'4008000000000000', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'3CA8000000000000', int64), &
+                                                          int(z'BFF0000000000000', int64), int(z'4341C37937E08000', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'BFDC790D903EFFFF', int64), &
+                                                          int(z'4010322FE7216CB2', int64), int(z'4010322FE7216CB4', int64), &
+                                                          int(z'3FD0000000000000', int64), int(z'4010322FE7216CB3', int64), &
+                                                          int(z'C0F0000000000000', int64), int(z'4520000000000000', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'41BFFF0000000000', int64), &
+                                                          int(z'C11CBA6B387D1AE4', int64), int(z'412A81F5077331B5', int64), &
+                                                          int(z'3FD160B51B47533C', int64), int(z'41173DC92735AF53', int64), &
+                                                          int(z'C018002994F18826', int64), int(z'C018002994F18822', int64), &
+                                                          int(z'3FD0000000000000', int64), int(z'C018002994F18824', int64), &
+                                                          int(z'C240000000000000', int64), int(z'43D0000000000000', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'C23FFFFFFF000000', int64), &
+                                                          int(z'7FE1CCF385EBC8A0', int64), int(z'7FEFFFFFFFFFFFFF', int64), &
+                                                          int(z'BFEFFFFFFFFFFFFF', int64), int(z'7FE1CCF385EBC8A0', int64), &
+                                                          int(z'C12C80B97F64820E', int64), int(z'41237FE0AC94AC8B', int64), &
+                                                          int(z'BFDEFB68CF907B80', int64), int(z'C1201ED9085CF85A', int64) &
+                                                          ], [4, nlock])
+    integer :: k
+    do k = 1, nlock
+        xs(1) = transfer(lock(3, k), 0.0_dp)
+        ws(1) = 0.0_dp
+        call gauss_jacobi_scale(1, 0.0_dp, 0.0_dp, &
+                                transfer(lock(1, k), 0.0_dp), transfer(lock(2, k), 0.0_dp), xs, ws)
+        if (transfer(xs(1), 0_int64) /= lock(4, k)) error stop "affine image"
+    end do
+end block
+xs(1) = 0.0_dp
+ws(1) = 2.0_dp
+call gauss_jacobi_scale(1, huge(1.0_dp), huge(1.0_dp), 0.0_dp, 2.0_dp, xs, ws)
+if (ws(1) /= 2.0_dp) error stop "unit half weight"
+stc = gjp_scale_f(1_c_int, huge(0.0_c_double), huge(0.0_c_double), &
+                  0.0_c_double, 2.0_c_double, xs, ws)
+if (stc /= 0_c_int .or. ws(1) /= 2.0_dp) error stop "unit half weight c"
 print '(A)', "scale endpoints and weight range OK"
 end program test_scale_interval
