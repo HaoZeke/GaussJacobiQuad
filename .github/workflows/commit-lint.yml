@@ -1,0 +1,30 @@
+name: Commit lint
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cog-check:
+    name: Conventional commits (cog check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Lint commits reachable from this ref. ignore_merge_commits is set in
+      # cog.toml; from_latest_tag limits scope to post-v0.1.0 work on main while
+      # PRs are still fully covered via the action's default full-history check
+      # when the branch only has conventional commits.
+      - name: Conventional commits check
+        uses: cocogitto/cocogitto-action@v3
+        with:
+          check: true
+          check-latest-tag-only: true

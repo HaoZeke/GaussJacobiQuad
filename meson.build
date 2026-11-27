@@ -110,11 +110,16 @@ _gjp_f_sources = files(
 
 # ---------------------- Native library / apps / C ABI (skip install when packaging wheel)
 if not _py_pkg
-  gjplib = library('GaussJacobiQaud',
+  gjplib = library('GaussJacobiQuad',
                 sources: _gjp_f_sources,
                 fortran_args: _args,
                 dependencies: _deps,
                 install: true,
+  )
+
+  gaussjacobiquad_dep = declare_dependency(
+    link_with: gjplib,
+    dependencies: _deps,
   )
 
   # ---------------------- Applications

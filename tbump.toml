@@ -1,5 +1,14 @@
-# Uncomment this if your project is hosted on GitHub:
-github_url = "https://github.com/HaoZeke/GaussJacobiQuad/"
+# DEPRECATED — do not use tbump on this repository.
+#
+# Release engineering moved to cocogitto (`cog`). See:
+#   - cog.toml          (semver, hooks, commit types)
+#   - towncrier.toml    (NEWS.md / newsfragments/)
+#   - scripts/set_version.sh
+#   - docs/release.md   (how to cut a release)
+#
+# Historical note: this file previously listed fpm.toml, meson.build, and the
+# Doxygen config as versioned files and ran towncrier + add_headers.py before
+# a REL: commit. Those steps are now pre_bump_hooks in cog.toml.
 
 [version]
 current = "0.2.6"

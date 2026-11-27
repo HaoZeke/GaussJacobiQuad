@@ -113,5 +113,39 @@ Method literature is tracked in ookcite collection =GaussJacobiQuad= and exporte
 }
 #+end_src
 
+** Development
+*** Developing locally
+A ~pre-commit~ job is setup on CI to enforce consistent styles, so it is best to
+set it up locally as well (using [[https://pypa.github.io/pipx][pipx]] for isolation):
+
+#+begin_src sh
+# Run before commiting
+pipx run pre-commit run --all-files
+# Or install the git hook to enforce this
+pipx run pre-commit install
+#+end_src
+*** Updating licenses
+When the headers in the sources need to be updated modify ~add_headers.py~ and run:
+#+begin_src sh
+python scripts/add_headers.py --dirs src/ interfaces/ --ftypes "f90,f77" --cchar '!'
+python scripts/add_headers.py --dirs interfaces --ftypes "c,h" --cchar '//'
+python scripts/add_headers.py --dirs interfaces scripts --ftypes "py" --cchar '#'
+#+end_src
+Remember to do this before exporting the code into other projects (e.g. [[https://github.com/atomic-solvers/featom][featom]]).
+*** Releases
+Releases are cut with [[https://docs.cocogitto.io/][cocogitto]] (~cog~) and [[https://towncrier.readthedocs.io/][towncrier]] (~NEWS.md~ from
+~newsfragments/~). See [[file:docs/release.md][docs/release.md]] for the full checklist; in short, on ~main~:
+
+#+begin_src sh
+cog bump --auto --dry-run
+cog bump --auto --annotated "Release vX.Y.Z
+
+See NEWS.md."
+git push origin main --follow-tags
+#+end_src
+
+PR commits are linted with ~cog check~ (GitHub Actions workflow ~commit-lint~).
+Preferred commit types: ~feat~, ~fix~, ~docs~, ~chore~, ~ci~, ~build~, ~test~ (conventional commits).
+
 ** License
 MIT — see =LICENSE=.
