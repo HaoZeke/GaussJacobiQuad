@@ -74,6 +74,9 @@ def export_one(src: Path) -> None:
                 "-t",
                 "html5",
                 "-s",
+                # KaTeX, not --mathjax: pandoc 3.1.11.1's MathJax template
+                # also loads polyfill.io.
+                "--katex",
                 "--css=style.css",
                 f"--metadata=title={title}",
                 "-o",
