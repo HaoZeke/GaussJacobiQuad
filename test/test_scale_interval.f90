@@ -488,6 +488,28 @@ block
     expb = ior(ishft(int(z'3FF3BEF7', int64), 32), int(z'BCE56284', int64))
     if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
         error stop "Legendre [-100,100] weight"
+    ! w * 3**2 on [0, 6] (alpha=1, p=2). Fraction ties-to-even: exact
+    ! rational, remainder against half the denominator, even quotient kept.
+    ! The product is the midpoint above even 0x1.0000000000006p+10.
+    wv = transfer(ior(ishft(int(z'405C71C7', int64), 32), int(z'1C71C728', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.25_dp
+    stc = gjp_scale_f(1_c_int, 1.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 6.0_c_double, xs, ws)
+    expb = ior(ishft(int(z'40900000', int64), 32), int(z'00000006', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "half 3 square tie"
+    ! w * 9**2 on [0, 18] is the overflow midpoint 2**1024 - 2**970.
+    ! The same rounding is non-finite: status 7, both buffers unchanged.
+    wv = transfer(ior(ishft(int(z'7F8948B0', int64), 32), int(z'FCD6E9E0', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.25_dp
+    xkeep = xs(1)
+    wkeep = ws(1)
+    stc = gjp_scale_f(1_c_int, 1.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 18.0_c_double, xs, ws)
+    if (stc /= 7_c_int .or. xs(1) /= xkeep .or. ws(1) /= wkeep) &
+        error stop "half 9 overflow tie"
 end block
 print '(A)', "scale endpoints and weight range OK"
 end program test_scale_interval

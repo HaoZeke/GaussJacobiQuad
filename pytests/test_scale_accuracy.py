@@ -497,6 +497,36 @@ def test_overflow_tie_splittings_and_interior_tie():
     _assert_weight_bits(ws[0], float.fromhex("0x1.fffffffffffcep+1023"))
 
 
+def test_normal_binade_integer_power_ties():
+    """Exact ties in the normal binade through an integer power.
+
+    Expected values are one ties-to-even binary64 rounding of the exact
+    rational ``w * half**p``. The rational is a ``Fraction`` of the binary64
+    inputs. The rounder compares the remainder with half the denominator and
+    keeps an even quotient on an exact half. ``float(mpf)`` is not used.
+
+    ``alpha=1``, ``beta=0`` on ``[0, 6]`` is ``half=3``, ``p=2``. ``w * 9``
+    is the midpoint above the even significand ``0x1.0000000000006p+10``.
+    ``alpha=1``, ``beta=0`` on ``[0, 18]`` is ``half=9``, ``p=2``. ``w * 81``
+    is the overflow midpoint ``2**1024 - 2**970``, which rounds to non-finite.
+    """
+    w = float.fromhex("0x1.c71c71c71c728p+6")
+    expect = _round_fraction(Fraction(w) * Fraction(3) ** 2)
+    assert expect.hex() == "0x1.0000000000006p+10"
+    _x, ws = gauss_jacobi_scale([0.25], [w], 1.0, 0.0, 0.0, 6.0)
+    _assert_weight_bits(ws[0], expect)
+
+    w = float.fromhex("0x1.948b0fcd6e9e0p+1017")
+    assert math.isinf(_round_fraction(Fraction(w) * Fraction(9) ** 2))
+    x = np.array([0.25])
+    ww = np.array([w])
+    kept = _weight_bits(w)
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, ww, 1.0, 0.0, 0.0, 18.0)
+    assert ei.value.status == GJP_ERR_BOUNDS
+    assert x[0] == 0.25 and _weight_bits(ww[0]) == kept
+
+
 def test_exact_underflow_ties_and_signed_zero():
     _x, ws = gauss_jacobi_scale([0.0], [1.0], 106.5, 0.0, 0.0, 2.0**-9)
     _assert_weight_bits(ws[0], 0.0)
