@@ -25,10 +25,13 @@ x, w = gauss_jacobi(n, alpha, beta, method="bogaert")
 x, w = gauss_jacobi_scale(x, w, alpha, beta, a, b)  # [-1, 1] -> [a, b]
 #+end_src
 
-=gauss_jacobi_scale= maps nodes with =(b-a)/2 * x + (a+b)/2= and multiplies
-weights by =((b-a)/2)**(alpha+beta+1)= so the rule integrates
+=gauss_jacobi_scale= maps nodes with =(b-a)/2 * x + (a+b)/2=, exactly =a=
+at =x = -1= and exactly =b= at =x = 1=, and multiplies weights by
+=((b-a)/2)**(alpha+beta+1)= so the rule integrates
 =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=. Raises =GaussJacobiError=
-on an invalid interval or when scaled weights overflow (=GJP_ERR_BOUNDS=).
+on an invalid interval or when the scaled weight is non-finite
+(=GJP_ERR_BOUNDS=). A weight factor that overflows on its own is not an
+error when the product with the weight is finite.
 
 - Returns: two =numpy.ndarray= of shape =(n,)= (nodes, weights).
 - Raises: =GaussJacobiError= (message includes =status=N= matching C =GJP_ERR_*=).

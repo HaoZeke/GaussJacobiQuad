@@ -35,7 +35,7 @@ fpm test  --flag "-fcoarray=single"
 fpm run --flag "-fcoarray=single" gjp_quad -- 32 0.0 0.0 auto
 #+end_src
 
-A monolithic OpenBLAS with no =liblapacke= linker name needs a =liblapacke= symlink to =libopenblas=, or a link-flag override: =fpm= links =-llapacke -lopenblas=.
+=fpm= links =-llapacke -lopenblas=. A =liblapacke= symlink to =libopenblas= works only when that OpenBLAS exports =LAPACKE_*= symbols. A split OpenBLAS needs a separate =liblapacke= (the MinGW import library is =liblapacke.dll.a=).
 
 Preferred library entry:
 

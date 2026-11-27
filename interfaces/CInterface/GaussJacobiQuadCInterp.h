@@ -35,7 +35,7 @@ int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *
 
 /**
  * Map nodes and weights from [-1, 1] to [a, b] in place.
- * Nodes: t = (b-a)/2 * x + (a+b)/2.
+ * Nodes: t = (b-a)/2 * x + (a+b)/2. x = -1 is exactly a and x = 1 is exactly b.
  * Weights are multiplied by pow((b-a)/2, alpha+beta+1) so the rule integrates
  * (b-t)^alpha * (t-a)^beta * f(t) on [a, b].
  * @return GJP_OK, or GJP_ERR_NPTS / GJP_ERR_ALPHA / GJP_ERR_BETA / GJP_ERR_BOUNDS.

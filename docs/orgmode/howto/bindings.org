@@ -18,7 +18,7 @@ meson test -C bbdir c_rule
 #+end_src
 
 OpenBLAS/LAPACK must be visible to the linker (=LIBRARY_PATH= / pkg-config).
-A monolithic OpenBLAS with no =liblapacke= linker name needs a =liblapacke= symlink to =libopenblas=, or a link-flag override.
+A =liblapacke= symlink to =libopenblas= works only when that OpenBLAS exports =LAPACKE_*= symbols. A split OpenBLAS needs a separate =liblapacke= (the MinGW import library is =liblapacke.dll.a=).
 
 * C CLI
 

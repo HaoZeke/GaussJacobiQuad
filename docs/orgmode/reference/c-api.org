@@ -24,10 +24,13 @@ int gauss_jacobi_scale_c(int npts, double alpha, double beta,
 #+end_src
 
 In-place map from =[-1, 1]= to =[a, b]=. Nodes become
-=t = (b-a)/2 * x + (a+b)/2=. Weights are multiplied by
+=t = (b-a)/2 * x + (a+b)/2=, exactly =a= at =x = -1= and exactly =b=
+at =x = 1=. Weights are multiplied by
 =((b-a)/2)**(alpha+beta+1)= so the rule integrates
 =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=.
-Returns =GJP_ERR_BOUNDS= for an invalid interval or a non-finite scaled node or weight.
+Returns =GJP_ERR_BOUNDS= for an invalid interval or a non-finite scaled
+node or weight. A weight factor that overflows on its own is not an error
+when the product with the weight is finite.
 
 * C++ helper
 
