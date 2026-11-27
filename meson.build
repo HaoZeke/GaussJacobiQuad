@@ -313,10 +313,13 @@ if not _py_pkg
     _sh,
     args: [files('ci/test_pkgconfig_consumer.sh'), meson.current_build_dir()],
   )
+  # `meson test` builds test executables only. The uninstalled .pc
+  # reads gjp_version.mod from the build root, so stage it first.
   test(
     'pkgconfig_uninstalled_mod',
     _sh,
     args: [files('ci/test_pkgconfig_uninstalled_mod.sh'), meson.current_build_dir()],
+    depends: _gjp_version_mod,
   )
 endif
 
