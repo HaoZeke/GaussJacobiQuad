@@ -119,10 +119,15 @@ Confirm consumers can still build and install from the tagged tree.
 `fpm.toml` sets `[install] library = true` so `fpm install` ships the static
 library and `.mod` files, not only executables.
 
+`src/gjp_rec.f90` uses coarrays (`this_image` / `num_images`), so `fpm build`
+needs `--flag -fcoarray=single`. The same flag belongs on `fpm test` and
+`fpm install`, which compile those sources. Meson passes it from the
+`fcoarray` option (default `single`); fpm does not.
+
 ```bash
-fpm build
-fpm test
-fpm install --prefix /tmp/gjq-prefix
+fpm build --flag -fcoarray=single
+fpm test --flag -fcoarray=single
+fpm install --prefix /tmp/gjq-prefix --flag -fcoarray=single
 # expects libGaussJacobiQuad.a (or equivalent) and modules under the prefix
 ```
 
@@ -142,7 +147,11 @@ The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
 meson setup builddir --prefix=/tmp/gjq-prefix
 meson compile -C builddir
 meson install -C builddir
-pkg-config --modversion gjp_cinterp   # if PKG_CONFIG_PATH includes prefix/lib/x86_64-linux-gnu/pkgconfig
+# gjp_cinterp.pc is <prefix>/<libdir>/pkgconfig/gjp_cinterp.pc.
+# libdir is lib/<multiarch> on Debian, lib64 on some distros, and lib on
+# macOS and conda. Put that directory on PKG_CONFIG_PATH. Find it with
+# `meson configure builddir` or `pkg-config --variable=pcfiledir gjp_cinterp`.
+pkg-config --modversion gjp_cinterp
 ```
 
 ### Single-file export (vendoring)

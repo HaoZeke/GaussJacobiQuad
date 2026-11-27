@@ -1,5 +1,7 @@
 !> fpm builds src/gjp_version.f90. fpm.toml stores major.minor.patch.
 !> The module string may keep a pre-release suffix.
+!> Finds fpm.toml by walking up from the executable, so this test must run
+!> in-tree. An out-of-tree fpm --build-dir cannot see fpm.toml.
 program test_gjp_version_fpm
 use gjp_version, only: gjp_version_major, gjp_version_minor, gjp_version_patch, &
                        gjp_version_string, gjp_version_compact
@@ -53,7 +55,10 @@ if (gjp_version_major < 0 .or. gjp_version_major > 99 .or. &
 if (gjp_version_compact /= &
     10000 * gjp_version_major + 100 * gjp_version_minor + gjp_version_patch) &
     error stop "compact"
-if (index(gjp_version_string, trim(triple)) /= 1) error stop "string triple"
+if (index(gjp_version_string, trim(triple)) /= 1 .and. .not. &
+    (gjp_version_patch == 0 .and. &
+     index(gjp_version_string//".0", trim(triple)) == 1)) &
+    error stop "string triple"
 print "(A)", "fpm version agrees with gjp_version"
 
 contains
