@@ -24,11 +24,14 @@ call gauss_jacobi_rule(n, alpha, beta, x, w, "glr_caf")
 
 * Version
 
-Module =gjp_version= is generated from the same meson project version.
+Module =gjp_version= is =src/gjp_version.f90=. Meson and fpm both compile it
+(fpm has no configure_file). =scripts/set_version.sh= keeps that file,
+=fpm.toml=, and the meson project version on one string. The C header is
+generated from that version.
 
-- =gjp_version_major=, =gjp_version_minor=, =gjp_version_patch=
+- =gjp_version_major=, =gjp_version_minor=, =gjp_version_patch= — each in 0..99
 - =gjp_version_string=
-- =gjp_version_compact= — =10000 * major + 100 * minor + patch=
+- =gjp_version_compact= — =10000 * major + 100 * minor + patch= (tblite's packing)
 - =gjp_get_version([major], [minor], [patch], [string])=
 
 * Related modules

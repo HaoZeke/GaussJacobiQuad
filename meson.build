@@ -110,11 +110,22 @@ _gjp_f_sources = files(
 
 # ---------------------- Native library / apps / C ABI (skip install when packaging wheel)
 if not _py_pkg
-  # Header and Fortran module are generated from this project version.
-  _gjp_ver = meson.project_version().split('.')
-  _gjp_major = _gjp_ver[0]
-  _gjp_minor = _gjp_ver[1]
-  _gjp_patch = _gjp_ver[2].split('-')[0].split('+')[0]
+  # C header is generated. The Fortran module is src/gjp_version.f90 so fpm
+  # (no configure_file) and meson compile the same constants.
+  # Packing matches tblite: 10000*major + 100*minor + patch, each in 0..99.
+  _py = find_program('python3', required: true)
+  _gjp_parsed = run_command(
+    _py,
+    files('scripts/parse_gjp_version.py'),
+    '--check-fortran',
+    files('src/gjp_version.f90'),
+    meson.project_version(),
+    check: true,
+  )
+  _gjp_nums = _gjp_parsed.stdout().strip().split()
+  _gjp_major = _gjp_nums[0]
+  _gjp_minor = _gjp_nums[1]
+  _gjp_patch = _gjp_nums[2]
   _gjp_ver_data = configuration_data()
   _gjp_ver_data.set('GJP_VERSION_MAJOR', _gjp_major)
   _gjp_ver_data.set('GJP_VERSION_MINOR', _gjp_minor)
@@ -127,14 +138,11 @@ if not _py_pkg
     install: true,
     install_dir: get_option('includedir'),
   )
-  gjp_version_f90 = configure_file(
-    input: 'interfaces/CInterface/gjp_version.f90.in',
-    output: 'gjp_version.f90',
-    configuration: _gjp_ver_data,
-  )
+  # Compiler-specific, same layout tblite uses for installed .mod files.
+  _mod_sub = meson.project_name() + '/' + _fc.get_id() + '-' + _fc.version()
 
   gjplib = library('GaussJacobiQuad',
-                sources: [_gjp_f_sources, gjp_version_f90],
+                sources: [_gjp_f_sources, files('src/gjp_version.f90')],
                 fortran_args: _args,
                 dependencies: _deps,
                 install: true,
@@ -155,6 +163,12 @@ if not _py_pkg
     link_language: 'fortran',
   )
   test('dep_mod', test_dep_mod)
+
+  meson.add_install_script(
+    _py,
+    files('scripts/install_gjp_mod.py'),
+    get_option('includedir') + '/' + _mod_sub,
+  )
 
   # ---------------------- Applications
 
@@ -212,14 +226,18 @@ if not _py_pkg
                           'src/GaussJacobiQuadCCompat.f90',
                           'interfaces/CInterface/GaussJacobiQuadCInterp.c',
                         ],
-                        include_directories: include_directories('interfaces/CInterface'),
+                        include_directories: [
+                          include_directories('interfaces/CInterface'),
+                          gjplib.private_dir_include(),
+                        ],
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
                         install: true,
   )
 
-  # pkg-config for Rust/Python consumers
+  # Header dir and the installed module dir. subdirs '.' is ${includedir}
+  # (gjp_version.h). _mod_sub is the gjp_version.mod directory.
   pkg = import('pkgconfig')
   pkg.generate(
     gjp_cinterp,
@@ -227,7 +245,8 @@ if not _py_pkg
     description: 'GaussJacobiQuad C ABI (gauss_jacobi_rule_c)',
     version: meson.project_version(),
     filebase: 'gjp_cinterp',
-    subdirs: '.',
+    subdirs: ['.', _mod_sub],
+    variables: {'moduledir': '${includedir}/' + _mod_sub},
   )
 
   c_cli_gjpq = executable('c_cli_gjpq',
@@ -274,6 +293,9 @@ if not _py_pkg
   test('fortran_version', test_gjp_version, args: [
     _gjp_major, _gjp_minor, _gjp_patch, meson.project_version(),
   ])
+
+  test('version_parse', _py, args: [files('test/test_gjp_version_parse.py')])
+  test('version_agree', _py, args: [files('test/test_gjp_version_agree.py')])
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
