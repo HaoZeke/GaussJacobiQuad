@@ -288,10 +288,11 @@ pub fn gauss_jacobi_method_str(
 
 /// Map nodes and weights from `[-1, 1]` onto `[a, b]`.
 ///
-/// Nodes and weights are the ties-to-even binary64 rounding of the real
-/// expressions `(b - a) / 2 * x + (a + b) / 2` and
-/// `w * ((b - a) / 2)` to the power `alpha + beta + 1`. A half-width that
-/// flushes to zero is treated as `2**-1075`. `x = -1` is exactly `a` and
+/// Nodes are one ties-to-even binary64 rounding of the real expression
+/// `(b - a) / 2 * x + (a + b) / 2`. Weights are one ties-to-even binary64
+/// rounding of `w * H**(alpha + beta + 1)`, where `H` is the binary64
+/// half-width `fl((b - a) / 2)`. A half-width that flushes to zero is
+/// treated as `2**-1075`. `x = -1` is exactly `a` and
 /// `x = 1` is exactly `b`. A non-finite scaled node or weight is an error.
 /// A weight factor that overflows on its own is not an error when the
 /// product with the weight is finite.
