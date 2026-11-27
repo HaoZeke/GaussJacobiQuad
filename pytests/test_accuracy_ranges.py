@@ -25,6 +25,8 @@ pytest.importorskip("scipy")
 pytest.importorskip("mpmath")
 
 from accuracy_ranges import (  # noqa: E402
+    REF_REL_TOL,
+    REL_FLOOR,
     WEIGHT_TAU,
     format_report,
     library_rule,
@@ -110,9 +112,31 @@ def test_scipy_gap_cells_use_mpmath():
 def test_gw_tiny_weight_does_not_set_the_score():
     rows = run_sweep(npts=(64,), alphas=(20.0,), betas=(-0.9,), methods=("gw",))
     assert rows[0].status == "ok"
-    # Was 1.264288e-03 from a ~3e-27 weight. Hosts may move the last digits.
-    assert rows[0].max_rel_weight == pytest.approx(1.442642e-13, rel=1e-3, abs=1e-16)
-    assert rows[0].max_rel_weight < 1e-6
+    assert rows[0].ref == "mpmath"
+    _x_m, w_m = mpmath_reference(64, 20.0, -0.9, dps=40)
+    _x, w, status = library_rule(64, 20.0, -0.9, "gw")
+    assert status == "ok"
+    scored = max_rel_err(w, w_m, weight=True)
+    assert scored == pytest.approx(rows[0].max_rel_weight, rel=1e-6, abs=0.0)
+    # The smallest weight (~3e-27) is under WEIGHT_TAU * max|w|. Unfloored,
+    # that component was the old headline (1.264288e-03). It must not set
+    # the score.
+    i_tiny = int(np.argmin(np.abs(w_m)))
+    peak = float(np.max(np.abs(w_m)))
+    assert abs(float(w_m[i_tiny])) < WEIGHT_TAU * peak
+    floor = max(REL_FLOOR, WEIGHT_TAU * peak)
+    per = np.abs(w - w_m) / np.maximum(np.abs(w_m), floor)
+    assert float(per[i_tiny]) < scored
+    # Same score on Linux OpenBLAS 0.3.26 and reference LAPACK 3.12
+    # (gfortran 13.3.0), 1.442641896562202e-13, matching the measured CSV.
+    # GitHub macOS-latest is 2.1245686687601543e-13. Twice that worst still
+    # rejects a 10x inflated error. 1e-6 keeps the unfloored failure out.
+    worst = 2.1245686687601543e-13
+    bound = 2.0 * worst
+    assert 10.0 * scored > bound
+    assert scored < bound
+    assert rows[0].max_rel_weight < bound
+    assert scored < 1e-6
 
 
 def test_beta20_weights_against_mpmath():
@@ -138,9 +162,21 @@ def test_bogaert_n64_weight_within_rtol():
     rows = run_sweep(npts=(64,), alphas=(0.0,), betas=(0.0,), methods=("bogaert",))
     assert rows[0].status == "ok"
     assert rows[0].ref == "mpmath"
-    # The old line was 1.057888e-12 vs 1.058010e-12 across hosts (one ulp of
-    # the SciPy gap). Compare with a relative band, and against mpmath.
-    assert rows[0].max_rel_weight == pytest.approx(2.739896e-14, rel=1e-3, abs=1e-18)
+    _x_m, w_m = mpmath_reference(64, 0.0, 0.0, dps=40)
+    _x, w, status = library_rule(64, 0.0, 0.0, "bogaert")
+    assert status == "ok"
+    scored = max_rel_err(w, w_m, weight=True)
+    assert scored == pytest.approx(rows[0].max_rel_weight, rel=1e-6, abs=0.0)
+    # Legendre n=64 stays inside REF_REL_TOL. Linux OpenBLAS 0.3.26 and
+    # reference LAPACK 3.12 both score 2.739895740818578e-14 (the measured
+    # CSV). GitHub macOS-latest is 1.7987101809954026e-14. Twice the worst
+    # is still under REF_REL_TOL, and a 10x inflated error still fails.
+    worst = 2.739895740818578e-14
+    bound = 2.0 * worst
+    assert 10.0 * scored > bound
+    assert bound < REF_REL_TOL
+    assert scored < bound
+    assert rows[0].max_rel_weight < bound
 
 
 def test_bogaert_legendre_domain():
