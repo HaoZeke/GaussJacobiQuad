@@ -205,3 +205,15 @@ def test_scale_cancelled_endpoints_and_weight_range():
     assert math.isfinite(float(ws[0])) and 1.0e-170 < float(ws[0]) < 1.0e-150
     _xs, ws = gauss_jacobi_scale([0.0], [1.0], -0.9, -0.9, 0.0, tiny)
     assert math.isfinite(float(ws[0])) and float(ws[0]) > 1.0e250
+
+
+def test_scale_alpha1023_unit_weight_overflows():
+    """w=1 on [-2, 2] with alpha=1023 is 2**1024 and must be status 7."""
+    x = np.array([0.25])
+    w = np.array([1.0])
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 1023.0, 0.0, -2.0, 2.0)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
+    pred = math.nextafter(1.0, 0.0)
+    _xs, ws = gauss_jacobi_scale([0.25], [pred], 1023.0, 0.0, -2.0, 2.0)
+    assert float(ws[0]) == sys.float_info.max

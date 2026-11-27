@@ -6,6 +6,7 @@ import os
 import random
 import struct
 import sys
+from fractions import Fraction
 from pathlib import Path
 
 import mpmath as mp
@@ -45,16 +46,85 @@ def _ulp(a, b):
     return abs(ordered(a) - ordered(b))
 
 
+def _floor_log2_ratio(n, d):
+    e = n.bit_length() - d.bit_length()
+
+    def ge(exp):
+        if exp >= 0:
+            return n >= (d << exp)
+        return (n << (-exp)) >= d
+
+    if not ge(e):
+        e -= 1
+    elif ge(e + 1):
+        e += 1
+    return e
+
+
+def _round_fraction(frac):
+    """Binary64 round-ties-to-even, including subnormals and overflow."""
+    if frac == 0:
+        return 0.0
+    sign = -1.0 if frac < 0 else 1.0
+    n = abs(frac.numerator)
+    d = frac.denominator
+    if n >= (d << 1024):
+        return math.copysign(math.inf, sign)
+    e = _floor_log2_ratio(n, d)
+    if e < -1022:
+        num = n << 1074
+        quot, rem = divmod(num, d)
+        if 2 * rem > d or (2 * rem == d and (quot & 1)):
+            quot += 1
+        return math.copysign(math.ldexp(quot, -1074), sign)
+    shift = 52 - e
+    if shift >= 0:
+        num, den = n << shift, d
+    else:
+        num, den = n, d << (-shift)
+    quot, rem = divmod(num, den)
+    if 2 * rem > den or (2 * rem == den and (quot & 1)):
+        quot += 1
+    if quot == (1 << 53):
+        quot >>= 1
+        e += 1
+    if e > 1023:
+        return math.copysign(math.inf, sign)
+    return math.copysign(math.ldexp(quot, e - 52), sign)
+
+
+def _mpf_to_float(val):
+    if val == 0:
+        return math.copysign(0.0, -1.0 if mp.sign(val) < 0 else 1.0)
+    sign, man, exp, _bc = val._mpf_
+    frac = Fraction(int(man), 1) * Fraction(2) ** int(exp)
+    if sign:
+        frac = -frac
+    return _round_fraction(frac)
+
+
 def _cr_node(a, b, x):
-    aa, bb, xx = mp.mpf(float(a)), mp.mpf(float(b)), mp.mpf(float(x))
-    return float(aa + (xx + 1) * (bb - aa) / 2)
+    a = float(a)
+    b = float(b)
+    x = float(x)
+    if not (math.isfinite(a) and math.isfinite(b) and math.isfinite(x)):
+        return float(a + (x + 1.0) * (b - a) / 2.0)
+    # Exact dyadic image. float(mpf) drops a subnormal sticky bit.
+    fa, fb, fx = Fraction(a), Fraction(b), Fraction(x)
+    return _round_fraction((fa * (1 - fx) + fb * (1 + fx)) / 2)
 
 
 def _cr_weight(half, p, w):
-    if w == 0.0:
-        return 0.0
-    val = mp.exp(mp.log(mp.mpf(abs(w))) + mp.mpf(p) * mp.log(mp.mpf(half)))
-    return float(mp.sign(w) * val)
+    w = float(w)
+    if w == 0.0 or p == 0:
+        return w
+    hh = half if isinstance(half, mp.mpf) else mp.mpf(float(half))
+    if hh == 1:
+        return w
+    val = mp.power(mp.mpf(abs(w)), 1) * mp.power(hh, mp.mpf(p))
+    if w < 0.0:
+        val = -val
+    return _mpf_to_float(val)
 
 
 def _intervals():
@@ -108,8 +178,8 @@ def test_weight_products_track_exact_power():
     w = 5.2872834730297891e304
     half = (mp.mpf("0.8") - mp.mpf(0)) / 2
     _x, ws = gauss_jacobi_scale([0.0], [w], 1022.0, 0.0, 0.0, 0.8)
-    ref = float(mp.exp(mp.log(mp.mpf(w)) + 1023 * mp.log(half)))
-    assert _ulp(ws[0], ref) <= 2048
+    ref = _cr_weight(float(half), 1023, w)
+    assert _ulp(ws[0], ref) <= 1
     leg_w = [
         0.10122853629037609,
         0.22238103445337445,
@@ -119,15 +189,15 @@ def test_weight_products_track_exact_power():
     _x, ws = gauss_jacobi_scale(leg_w, leg_w, 1023.0, 0.0, -2.0, 2.0)
     for src, got in zip(leg_w, ws):
         assert math.isfinite(float(got)) and got != 0.0
-        assert _ulp(got, _cr_weight(2.0, 1024, src)) <= 2048
+        assert _ulp(got, _cr_weight(2.0, 1024, src)) <= 1
     half = mp.ldexp(1, -1075)
     tiny = float(np.nextafter(0.0, 1.0))
     _x, ws = gauss_jacobi_scale([0.0], [1.0], -0.25, -0.25, 0.0, tiny)
-    ref = float(mp.exp(mp.mpf("0.5") * mp.log(half)))
-    assert _ulp(ws[0], ref) <= 2048
+    ref = _cr_weight(half, 0.5, 1.0)
+    assert _ulp(ws[0], ref) <= 1
     _x, ws = gauss_jacobi_scale([0.0], [1.0], -0.9, -0.9, 0.0, tiny)
-    ref = float(mp.exp(mp.mpf("-0.8") * mp.log(half)))
-    assert _ulp(ws[0], ref) <= 2048
+    ref = _cr_weight(half, -0.8, 1.0)
+    assert _ulp(ws[0], ref) <= 1
     nodes = np.array([0.0])
     weights = np.array([2.0])
     with pytest.raises(GaussJacobiError) as ei:
@@ -224,3 +294,137 @@ def test_random_nodes_within_one_ulp():
             worst = max(worst, u)
             assert u <= 1, (a, b, x, t, _cr_node(a, b, x), u)
     print(f"MAX_ULP_RANDOM {worst}")
+
+
+def _bits(x):
+    return struct.unpack(">Q", struct.pack(">d", float(x)))[0]
+
+
+def _from_bits(b):
+    return struct.unpack(">d", int(b).to_bytes(8, "big"))[0]
+
+
+def _first_nonfinite_weight(half, p, seed):
+    lo = _bits(seed) - 4000
+    hi = _bits(seed) + 4000
+    if not math.isfinite(_cr_weight(half, p, _from_bits(lo))):
+        raise AssertionError("seed window starts non-finite")
+    if math.isfinite(_cr_weight(half, p, _from_bits(hi))):
+        raise AssertionError("seed window stays finite")
+    while lo + 1 < hi:
+        mid = (lo + hi) // 2
+        if math.isfinite(_cr_weight(half, p, _from_bits(mid))):
+            lo = mid
+        else:
+            hi = mid
+    return hi
+
+
+def test_subnormal_sticky_node_rounds_up():
+    """2**-1075 + 2**-2149 is above the tie and rounds to 2**-1074."""
+    a = 0.0
+    b = 2.0**-1074
+    x = 2.0**-1074
+    ref = _cr_node(a, b, x)
+    assert ref == 2.0**-1074
+    assert float(mp.mpf(a) + (mp.mpf(x) + 1) * (mp.mpf(b) - mp.mpf(a)) / 2) == 0.0
+    got, _w = gauss_jacobi_scale([x], [0.0], 0.0, 0.0, a, b)
+    assert got[0] == ref
+
+
+def test_weight_overflow_both_sides():
+    """Status 7 iff the correctly rounded product is non-finite."""
+    cases = [
+        (2.0, 1024, 1023.0, 0.0, -2.0, 2.0, 1.0, -8, 260),
+        (2.0, 1023, 1022.0, 0.0, -2.0, 2.0, 2.0, -8, 16),
+        (4.0, 512, 511.0, 0.0, -4.0, 4.0, 1.0, -8, 16),
+        (
+            1.25,
+            3181,
+            3180.0,
+            0.0,
+            0.0,
+            2.5,
+            float.fromhex("0x1.ed709438659dcp-1"),
+            -40,
+            16,
+        ),
+        (
+            10.0,
+            309,
+            308.0,
+            0.0,
+            0.0,
+            20.0,
+            float.fromhex("0x1.702ae4d1fb5b5p-3"),
+            -201,
+            16,
+        ),
+        (
+            1.5,
+            1751,
+            1750.0,
+            0.0,
+            0.0,
+            3.0,
+            float.fromhex("0x1.a8ce6778183bbp-1"),
+            -8,
+            8,
+        ),
+    ]
+    pinned = {
+        1.0: None,
+        float.fromhex("0x1.0000000000100p+0"): None,
+        float.fromhex("0x1.0000000000101p+0"): None,
+        math.nextafter(1.0, 0.0): sys.float_info.max,
+        float.fromhex("0x1.ed709438659dcp-1"): float.fromhex("0x1.ffffffffffff6p+1023"),
+        float.fromhex("0x1.702ae4d1fb5b5p-3"): float.fromhex("0x1.fffffffffffd5p+1023"),
+        float.fromhex("0x1.702ae4d1fb5cbp-3"): float.fromhex("0x1.ffffffffffff4p+1023"),
+        float.fromhex("0x1.a8ce6778183bbp-1"): sys.float_info.max,
+    }
+    for half, p, alpha, beta, a, b, seed, lo_off, hi_off in cases:
+        edge = _first_nonfinite_weight(half, p, seed)
+        for step in range(lo_off, hi_off + 1):
+            w = _from_bits(edge + step)
+            x = np.array([0.25])
+            ww = np.array([w])
+            ref = _cr_weight(half, p, w)
+            if not math.isfinite(ref):
+                with pytest.raises(GaussJacobiError) as ei:
+                    gauss_jacobi_scale(x, ww, alpha, beta, a, b)
+                assert ei.value.status == GJP_ERR_BOUNDS
+                assert x[0] == 0.25 and ww[0] == w
+            else:
+                got_x, got_w = gauss_jacobi_scale(x, ww, alpha, beta, a, b)
+                assert _ulp(got_w[0], ref) <= 1, (
+                    alpha,
+                    w.hex(),
+                    got_w[0].hex(),
+                    ref.hex(),
+                )
+                assert math.isfinite(float(got_x[0]))
+            if w in pinned and pinned[w] is not None and math.isfinite(ref):
+                assert ref == pinned[w]
+    # Named overflows through the ctypes wrapper.
+    for w in (
+        1.0,
+        float.fromhex("0x1.0000000000100p+0"),
+        float.fromhex("0x1.0000000000101p+0"),
+        -1.0,
+    ):
+        x = np.array([0.25])
+        ww = np.array([w])
+        with pytest.raises(GaussJacobiError) as ei:
+            gauss_jacobi_scale(x, ww, 1023.0, 0.0, -2.0, 2.0)
+        assert ei.value.status == GJP_ERR_BOUNDS
+        assert ww[0] == w and x[0] == 0.25
+    x = np.array([0.25])
+    ww = np.array([2.0])
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, ww, 1022.0, 0.0, -2.0, 2.0)
+    assert ei.value.status == GJP_ERR_BOUNDS
+    x = np.array([0.25])
+    ww = np.array([1.0])
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, ww, 511.0, 0.0, -4.0, 4.0)
+    assert ei.value.status == GJP_ERR_BOUNDS
