@@ -32,7 +32,7 @@ repos:
   hooks:
   - id: insert-license
     name: license header (Fortran)
-    files: \.f90$
+    files: \.(f90|pyf)$
     args:
       - --license-filepath
       - scripts/license_header.txt
@@ -41,6 +41,8 @@ repos:
       - --comment-style
       - "!"
       - --no-extra-eol
+      - --insert-license-after-regex
+      - '^! -\*- f90 -\*-$'
   - id: insert-license
     name: license header (C and Rust)
     files: \.(c|h|rs)$
