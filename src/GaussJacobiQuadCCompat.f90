@@ -13,12 +13,13 @@ use gjp_sturm, only: gauss_jacobi_sturm
 use gjp_glr, only: gauss_jacobi_glr
 use gjp_bogaert, only: gauss_jacobi_bogaert, bogaert_min_n
 use gjp_auto, only: select_method_auto
-use gjp_types, only: dp
+use gjp_types, only: dp, GJP_ERR_BOUNDS
 implicit none
 
 private
 public :: gauss_jacobi_rule_c
 public :: gauss_jacobi_rec_c, gauss_jacobi_gw_c, gauss_jacobi_algo665_c
+public :: GJP_ERR_BOUNDS
 
 integer(c_int), parameter, public :: GJP_OK = 0_c_int
 integer(c_int), parameter, public :: GJP_ERR_NPTS = 1_c_int
@@ -27,7 +28,6 @@ integer(c_int), parameter, public :: GJP_ERR_BETA = 3_c_int
 integer(c_int), parameter, public :: GJP_ERR_METHOD = 4_c_int
 integer(c_int), parameter, public :: GJP_ERR_BOGAERT_AB = 5_c_int
 integer(c_int), parameter, public :: GJP_ERR_BOGAERT_N = 6_c_int
-integer(c_int), parameter, public :: GJP_ERR_BOUNDS = 7_c_int
 
 contains
 

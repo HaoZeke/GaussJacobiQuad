@@ -99,6 +99,18 @@ pub enum Error {
         msg: &'static str,
         method: Option<String>,
     },
+    /// `gauss_jacobi_scale_c` returned a non-zero status.
+    #[error("gauss_jacobi_scale_c: {status:?} ({msg})")]
+    Scale {
+        status: Status,
+        msg: &'static str,
+    },
+    /// `nodes` and `weights` differ in length.
+    #[error("gauss_jacobi_scale: nodes and weights must have the same length")]
+    ScaleLength,
+    /// Empty input, or a length that does not fit in `i32`.
+    #[error("gauss_jacobi_scale: npts must be positive and fit in a C int")]
+    ScaleNpts,
     #[error("invalid method string (interior NUL)")]
     Nul(#[from] std::ffi::NulError),
 }
@@ -281,12 +293,11 @@ pub fn gauss_jacobi_scale(
     a: f64,
     b: f64,
 ) -> Result<(Vec<f64>, Vec<f64>), Error> {
-    if nodes.len() != weights.len() || nodes.is_empty() || nodes.len() > i32::MAX as usize {
-        return Err(Error::Library {
-            status: Status::ErrNpts,
-            msg: Status::ErrNpts.message(),
-            method: None,
-        });
+    if nodes.len() != weights.len() {
+        return Err(Error::ScaleLength);
+    }
+    if nodes.is_empty() || nodes.len() > i32::MAX as usize {
+        return Err(Error::ScaleNpts);
     }
     let mut x = nodes.to_vec();
     let mut w = weights.to_vec();
@@ -303,10 +314,9 @@ pub fn gauss_jacobi_scale(
     };
     let status = Status::from(st);
     if status != Status::Ok {
-        return Err(Error::Library {
+        return Err(Error::Scale {
             status,
             msg: status.message(),
-            method: None,
         });
     }
     Ok((x, w))
@@ -376,15 +386,33 @@ mod tests {
     #[test]
     fn scale_rejects_bad_lengths() {
         let err = gauss_jacobi_scale(&[0.0, 1.0], &[1.0], 0.0, 0.0, 0.0, 1.0).unwrap_err();
-        match err {
-            Error::Library { status, .. } => assert_eq!(status, Status::ErrNpts),
-            _ => panic!("unexpected"),
-        }
+        let text = err.to_string();
+        assert!(matches!(err, Error::ScaleLength), "{text}");
+        assert!(text.contains("gauss_jacobi_scale"));
+        assert!(text.contains("same length"));
+        assert!(!text.contains("npts must be positive"), "{text}");
         let err = gauss_jacobi_scale(&[], &[], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        let text = err.to_string();
+        assert!(matches!(err, Error::ScaleNpts), "{text}");
+        assert!(text.contains("gauss_jacobi_scale"));
+        assert!(text.contains("npts must be positive"));
+        assert!(!text.contains("gauss_jacobi_rule_c"), "{text}");
+    }
+
+    #[test]
+    fn scale_alpha1023_weight_one_is_bounds() {
+        let err = gauss_jacobi_scale(&[0.25], &[1.0], 1023.0, 0.0, -2.0, 2.0).unwrap_err();
+        let text = err.to_string();
         match err {
-            Error::Library { status, .. } => assert_eq!(status, Status::ErrNpts),
-            _ => panic!("unexpected"),
+            Error::Scale { status, .. } => assert_eq!(status, Status::ErrBounds),
+            other => panic!("scale overflow reported as {other}: {text}"),
         }
+        assert!(text.starts_with("gauss_jacobi_scale_c"), "{text}");
+        assert!(text.contains("overflow"), "{text}");
+        assert!(!text.contains("method="), "{text}");
+        let pred = f64::from_bits(1.0f64.to_bits() - 1);
+        let (_x, w) = gauss_jacobi_scale(&[0.25], &[pred], 1023.0, 0.0, -2.0, 2.0).unwrap();
+        assert_eq!(w[0], f64::MAX);
     }
 
     #[test]

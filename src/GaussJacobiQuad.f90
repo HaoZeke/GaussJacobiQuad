@@ -17,7 +17,7 @@ use gjp_bogaert, only: gauss_jacobi_bogaert, gauss_jacobi_bogaert_caf
 use gjp_glr, only: gauss_jacobi_glr, gauss_jacobi_glr_caf
 use gjp_caf, only: gauss_jacobi_batch_caf
 use gjp_auto, only: select_method_auto
-use gjp_types, only: dp
+use gjp_types, only: dp, GJP_ERR_BOUNDS
 use iso_c_binding, only: c_double, c_int
 use, intrinsic :: iso_fortran_env, only: int64
 implicit none
@@ -25,9 +25,10 @@ public :: gauss_jacobi, gauss_jacobi_rule, gauss_jacobi_batch_caf
 public :: select_method_auto, gauss_jacobi_scale
 private :: scale_interval, gjp_scale_f, affine_image, weight_image
 private :: aff_from_double, aff_uadd, aff_usub, aff_ucmp, aff_sadd, aff_smul
-private :: aff_bit, aff_sticky, aff_round
-! Same value as GaussJacobiQuadCCompat::GJP_ERR_BOUNDS and the C enum.
-integer, parameter, private :: GJP_ERR_BOUNDS = 7
+private :: aff_bit, aff_sticky, aff_round, pow2_exp
+! Each operand is an integer significand times 2**1074. aff_round divides
+! that product by 2**2149. 280 base-2**16 limbs cover every finite binary64
+! product (the leading limb stays near 262).
 integer, parameter, private :: aff_nl = 280
 integer, parameter, private :: aff_lw = 16
 integer(int64), parameter, private :: aff_mask = 65535_int64
@@ -110,6 +111,7 @@ end subroutine gauss_jacobi_rule
 !> Requires finite a < b and finite alpha, beta > -1.
 !> (a+b) and (b-a) are not formed when that would overflow.
 !> A non-finite scaled node or weight is an error and does not write.
+!> An overflowing weight factor is not an error when the product is finite.
 subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
@@ -154,10 +156,10 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
     real(dp), intent(inout) :: x(npts), wts(npts)
-    real(dp) :: half, mid, fac, log_half, p, t, tw
+    real(dp) :: half, mid, p, t, tw
     real(dp), allocatable :: xt(:), wt(:)
     integer :: i
-    logical :: lease_ok, use_direct
+    logical :: lease_ok
 
     status = 0
     if (npts <= 0) then
@@ -178,38 +180,13 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
     end if
     ! Weight factor (b-a)/2. Split it when a+b or b-a overflows.
     ! Nodes are affine_image, not this half/mid form.
+    ! 0.5*b - 0.5*a is finite for every finite a < b.
     half = 0.5_dp * (b - a)
     mid = 0.5_dp * (a + b)
     lease_ok = ieee_is_finite(half) .and. ieee_is_finite(mid)
-    if (.not. lease_ok) then
-        half = 0.5_dp * b - 0.5_dp * a
-        if (.not. ieee_is_finite(half)) then
-            status = GJP_ERR_BOUNDS
-            return
-        end if
-    end if
+    if (.not. lease_ok) half = 0.5_dp * b - 0.5_dp * a
     p = alpha + beta + 1.0_dp
-    fac = 0.0_dp
-    log_half = 0.0_dp
-    use_direct = .false.
-    if (half > 0.0_dp) then
-        log_half = log(half)
-        if (half == 1.0_dp) then
-            fac = 1.0_dp
-            use_direct = .true.
-        else if (ieee_is_finite(p)) then
-            fac = half**p
-            use_direct = ieee_is_finite(fac) .and. fac > 0.0_dp
-        end if
-    else if (half == 0.0_dp) then
-        ! 0.5*(b-a) flushed. The only positive gap of two doubles is
-        ! 2**-1074, so the mathematical half-width is 2**-1075.
-        log_half = -1075.0_dp * log(2.0_dp)
-    else
-        status = GJP_ERR_BOUNDS
-        return
-    end if
-    if (.not. ieee_is_finite(log_half)) then
+    if (half < 0.0_dp) then
         status = GJP_ERR_BOUNDS
         return
     end if
@@ -230,7 +207,7 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
             status = GJP_ERR_BOUNDS
             return
         end if
-        tw = weight_image(wts(i), p, fac, log_half, use_direct)
+        tw = weight_image(wts(i), p, half)
         if (.not. ieee_is_finite(tw)) then
             status = GJP_ERR_BOUNDS
             return
@@ -459,6 +436,7 @@ pure function aff_round(neg, mag) result(y)
     logical, intent(in) :: neg
     integer(int64), intent(in) :: mag(0:)
     real(dp) :: y
+    ! mag is the image times 2**2149 (2**1074 from each factor).
     integer, parameter :: sh = 2149
     integer, parameter :: sub = 1075
     integer :: i, k, e, j
@@ -520,26 +498,81 @@ pure function aff_round(neg, mag) result(y)
     y = transfer(bits, 0.0_dp)
 end function aff_round
 
-!> half**p * w. The direct product is kept when it is finite and nonzero.
-!> Overflow of half**p alone, or a flushed half-width, is evaluated as
-!> exp(log(|w|) + p*log(half)) so a finite product is not reported as 0
-!> or as status 7.
-pure function weight_image(w, p, fac, log_half, use_direct) result(tw)
-    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
-    real(dp), intent(in) :: w, p, fac, log_half
-    logical, intent(in) :: use_direct
+!> Correctly rounded w * H**p. H is half, or 2**-1075 when half flushed to 0.
+!> A power-of-two H and an integer p use scale, so overflow is exact.
+!> Every other product is formed in real128 and rounded to binary64.
+!> A non-finite result is an overflow; the caller does not write.
+pure function weight_image(w, p, half) result(tw)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite, ieee_value, ieee_positive_inf
+    use, intrinsic :: iso_fortran_env, only: real128
+    real(dp), intent(in) :: w, p, half
     real(dp) :: tw
-    ! Factor 1 (half == 1, log(half) == 0) skips the product, including Inf*0.
-    if (w == 0.0_dp .or. p == 0.0_dp .or. log_half == 0.0_dp) then
+    real(real128) :: hq, wq, pq, prod
+    integer :: k, iscal
+    integer(int64) :: pk
+    ! Factor 1 skips the product, including a non-finite power times one.
+    if (w == 0.0_dp .or. p == 0.0_dp .or. half == 1.0_dp) then
         tw = w
         return
     end if
-    if (use_direct) then
-        tw = fac * w
-        if (ieee_is_finite(tw) .and. tw /= 0.0_dp) return
+    if (.not. ieee_is_finite(p)) then
+        if (half > 1.0_dp) then
+            tw = ieee_value(0.0_dp, ieee_positive_inf)
+        else
+            tw = 0.0_dp
+        end if
+        if (w < 0.0_dp) tw = -tw
+        return
     end if
-    tw = exp(log(abs(w)) + p * log_half)
+    k = pow2_exp(half)
+    if (k /= -100000 .and. p == aint(p) .and. abs(p) <= 2.0_dp**52) then
+        pk = int(p, int64) * int(k, int64)
+        if (pk > 4096_int64) then
+            iscal = 4096
+        else if (pk < -4096_int64) then
+            iscal = -4096
+        else
+            iscal = int(pk)
+        end if
+        tw = scale(w, iscal)
+        return
+    end if
+    if (half == 0.0_dp) then
+        hq = 2.0_real128**(-1075)
+    else
+        hq = real(half, real128)
+    end if
+    wq = abs(real(w, real128))
+    pq = real(p, real128)
+    prod = exp(log(wq) + pq * log(hq))
+    tw = real(prod, dp)
     if (w < 0.0_dp) tw = -tw
 end function weight_image
+
+!> Exponent k with h = 2**k, or -100000 when h is not a positive power of two.
+!> h = 0 stands for the flushed half-width 2**-1075.
+pure function pow2_exp(h) result(k)
+    real(dp), intent(in) :: h
+    integer :: k
+    integer(int64) :: bits, frac
+    integer :: expf, b
+    k = -100000
+    if (h == 0.0_dp) then
+        k = -1075
+        return
+    end if
+    if (h < 0.0_dp) return
+    bits = transfer(h, 0_int64)
+    expf = int(iand(ishft(bits, -52), 2047_int64))
+    frac = iand(bits, 4503599627370495_int64)
+    if (expf == 0) then
+        if (frac /= 0_int64 .and. iand(frac, frac - 1_int64) == 0_int64) then
+            b = trailz(frac)
+            k = b - 1074
+        end if
+    else if (frac == 0_int64) then
+        k = expf - 1023
+    end if
+end function pow2_exp
 
 end module GaussJacobiQuad
