@@ -29,7 +29,8 @@ header_template = Template(
 {{cchar}} GitHub Repository: {{repository_url}}
 {{cchar}} -----------------------------------------------------------------------------
 {{cchar}} END_HEADER
-"""
+""",
+    keep_trailing_newline=True,
 )
 
 
@@ -48,6 +49,9 @@ def add_headers(
         library_name=library_name,
         cchar=cchar,
     )
+    # The template keeps its trailing newline; force one anyway so a write
+    # cannot glue the next source line onto END_HEADER.
+    header_text = header_text.rstrip("\n") + "\n"
     for directory in directories:
         # Iterate over all files in the specified directory
         for root, dirs, files in os.walk(directory):
@@ -58,11 +62,17 @@ def add_headers(
                     with open(filepath, "r") as file:
                         content = file.read()
 
-                    # Check for the existing header and replace or append
+                    # Replace an existing header, or prepend one. The pattern
+                    # consumes the newline after END_HEADER; header_text puts
+                    # exactly one back, and the following source is unchanged.
+                    header_pattern = (
+                        rf"{re.escape(cchar)} BEGIN_HEADER.*?"
+                        rf"{re.escape(cchar)} END_HEADER\n?"
+                    )
                     if "BEGIN_HEADER" in content and "END_HEADER" in content:
                         content = re.sub(
-                            rf"{cchar} BEGIN_HEADER.*?{cchar} END_HEADER\n",
-                            header_text,
+                            header_pattern,
+                            lambda _match: header_text,
                             content,
                             flags=re.DOTALL,
                         )

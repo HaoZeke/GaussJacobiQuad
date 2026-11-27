@@ -23,28 +23,23 @@ for file in "${GITROOT}"/src/*.f90; do
   # Skip if no files found
   [ -e "$file" ] || continue
 
-  # Create a temporary file
-  temp_file=$(mktemp)
+  # Same directory as the source, so the replace stays on one filesystem.
+  temp_file=$(mktemp "$(dirname "$file")/.hdr.XXXXXX")
 
   # Check for the existing header and replace or append
   if grep -q 'BEGIN_HEADER' "$file"; then
-    # Print everything before BEGIN_HEADER to the temporary file
-    sed -n '/BEGIN_HEADER/!p' "$file" > "$temp_file"
-
-    # Print the new header to the temporary file
+    # Prefix, one new header, then the suffix a single time.
+    sed -n '1,/BEGIN_HEADER/{ /BEGIN_HEADER/q; p; }' "$file" > "$temp_file"
     print_header >> "$temp_file"
-
-    # Print everything after END_HEADER to the temporary file
     sed -n '/END_HEADER/,$p' "$file" | tail -n +2 >> "$temp_file"
   else
-    # Print the new header to the temporary file
     print_header > "$temp_file"
-
-    # Concatenate the original file
     cat "$file" >> "$temp_file"
   fi
 
-  # Replace the original file with the new one
+  if ! chmod --reference="$file" "$temp_file" 2>/dev/null; then
+    chmod "$(stat -c %a "$file" 2>/dev/null || stat -f %OLp "$file")" "$temp_file"
+  fi
   mv "$temp_file" "$file"
 done
 
