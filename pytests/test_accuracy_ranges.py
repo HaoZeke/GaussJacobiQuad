@@ -124,8 +124,14 @@ def test_beta20_weights_against_mpmath():
     assert status == "ok"
     scored = max_rel_err(w, w_m, weight=True)
     assert scored == pytest.approx(rows[0].max_rel_weight, rel=1e-6, abs=0.0)
-    # Was 1.284004e+01 on a ~3e-27 weight.
-    assert rows[0].max_rel_weight == pytest.approx(2.815705e-10, rel=1e-3, abs=1e-16)
+    # Was 1.284004e+01 on a ~3e-27 weight. The corrected score moves with
+    # the compiler and BLAS: 2.81570509e-10 in the measured CSV,
+    # 1.778188454172291e-10 on GitHub ubuntu-latest, and
+    # 1.7790996226302387e-10 with conda-forge OpenBLAS 0.3.34 and
+    # gfortran 15.3.0. The bound is twice the worst of those.
+    bound = 2.0 * 2.81570509e-10
+    assert scored < bound
+    assert rows[0].max_rel_weight < bound
 
 
 def test_bogaert_n64_weight_within_rtol():
