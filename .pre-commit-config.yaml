@@ -42,7 +42,7 @@ repos:
       - "!"
       - --no-extra-eol
       - --insert-license-after-regex
-      - '^! -\*- f90 -\*-$'
+      - '^!\s*-\*-\s*f90\s*-\*-$'
   - id: insert-license
     name: license header (C and Rust)
     files: \.(c|h|rs)$
