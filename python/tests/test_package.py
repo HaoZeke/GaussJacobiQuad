@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import importlib.util
+import math
+import sys
 
 import numpy as np
 import pytest
 from gauss_jacobi_quad import (
+    GJP_ERR_ALPHA,
+    GJP_ERR_BETA,
     GJP_ERR_BOGAERT_AB,
     GJP_ERR_BOUNDS,
     GJP_OK,
@@ -124,24 +128,47 @@ def test_scale_polynomial_on_interval():
     assert GJP_ERR_BOUNDS == 7
 
 
+def _status_code(exc):
+    text = str(exc)
+    marker = "status="
+    start = text.rfind(marker)
+    assert start >= 0, text
+    return int(text[start + len(marker) :].split(")", 1)[0].split(",", 1)[0])
+
+
 def test_scale_huge_and_nonfinite():
-    """Huge finite intervals stay finite; inf bounds and NaN alpha are errors."""
+    """Huge finite intervals stay finite; inf bounds and NaN parameters are errors."""
     x, w = gauss_jacobi(4, 0.0, 0.0, method="rec")
     for a, b in ((1.0e308, 1.7e308), (-1.0e308, 1.0e308)):
-        try:
-            xs, ws = gauss_jacobi_scale(x, w, 0.0, 0.0, a, b)
-        except GaussJacobiError as exc:
-            assert getattr(exc, "status", 1) != 0
-            assert "status=0" not in str(exc)
-        else:
-            assert np.all(np.isfinite(xs)) and np.all(np.isfinite(ws))
-            assert np.all((xs > a) & (xs < b))
-            assert np.all(ws > 0)
+        xs, ws = gauss_jacobi_scale(x, w, 0.0, 0.0, a, b)
+        assert np.all(np.isfinite(xs)) and np.all(np.isfinite(ws))
+        assert np.all((xs > a) & (xs < b))
+        assert np.all(ws > 0)
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi_scale(x, w, 0.0, 0.0, 0.0, np.inf)
-    assert getattr(ei.value, "status", 7) != 0
-    assert "status=0" not in str(ei.value)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi_scale(x, w, np.nan, 0.0, 0.0, 1.0)
-    assert getattr(ei.value, "status", 2) != 0
-    assert "status=0" not in str(ei.value)
+    assert _status_code(ei.value) == GJP_ERR_ALPHA
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, 0.0, np.nan, 0.0, 1.0)
+    assert _status_code(ei.value) == GJP_ERR_BETA
+
+
+def test_scale_endpoints_and_weight_overflow():
+    """Endpoints stay inside [a, b]. An overflowing weight product is status 7."""
+    xs, _ws = gauss_jacobi_scale([-1.0], [1.0], 0.0, 0.0, 1.0, 1.0e16)
+    assert xs[0] == 1.0
+    xn = math.nextafter(-1.0, 0.0)
+    xs, _ws = gauss_jacobi_scale([xn], [1.0], 0.0, 0.0, 1.0, 1.0e16)
+    assert math.isfinite(float(xs[0])) and 1.0 < float(xs[0]) < 1.0e16
+    xs, _ws = gauss_jacobi_scale([-1.0], [1.0], 0.0, 0.0, 1.0e6, 1.0e20)
+    assert xs[0] == 1.0e6
+    hi = sys.float_info.max
+    xs, _ws = gauss_jacobi_scale([1.0], [1.0], 0.0, 0.0, 1.0e308, hi)
+    assert math.isfinite(float(xs[0])) and float(xs[0]) == hi
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale([0.0], [2.0], 0.0, 0.0, -1.0e308, 1.0e308)
+    assert _status_code(ei.value) == GJP_ERR_BOUNDS
+    assert "status=7" in str(ei.value)
+    assert "invalid interval or scaled weights overflow" in str(ei.value)

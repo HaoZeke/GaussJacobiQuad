@@ -1,4 +1,5 @@
 /* In-repo C consumer: drives shipped gauss_jacobi_rule_c vs algo665 reference. */
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,7 +121,10 @@ int main(void) {
             a = 1e308;
             b = 1.7e308;
             st = gauss_jacobi_scale_c(n, 0.0, 0.0, a, b, x, w);
-            if (st == GJP_OK) {
+            if (st != GJP_OK) {
+                fprintf(stderr, "FAIL [1e308, 1.7e308] status %d\n", st);
+                rc = 1;
+            } else {
                 for (i = 0; i < n; ++i) {
                     if (!isfinite(x[i]) || !isfinite(w[i]) || !(x[i] > a && x[i] < b)) {
                         fprintf(stderr, "FAIL [1e308, 1.7e308] status 0 non-finite\n");
@@ -132,7 +136,10 @@ int main(void) {
             a = -1e308;
             b = 1e308;
             st = gauss_jacobi_scale_c(n, 0.0, 0.0, a, b, y, z);
-            if (st == GJP_OK) {
+            if (st != GJP_OK) {
+                fprintf(stderr, "FAIL [-1e308, 1e308] status %d\n", st);
+                rc = 1;
+            } else {
                 for (i = 0; i < n; ++i) {
                     if (!isfinite(y[i]) || !isfinite(z[i]) || !(y[i] > a && y[i] < b)) {
                         fprintf(stderr, "FAIL [-1e308, 1e308] status 0 non-finite\n");
@@ -142,18 +149,23 @@ int main(void) {
                 }
             }
             st = gauss_jacobi_scale_c(n, 0.0, 0.0, 0.0, HUGE_VAL, x, w);
-            if (st == GJP_OK) {
-                fprintf(stderr, "FAIL +inf bound status 0\n");
+            if (st != GJP_ERR_BOUNDS) {
+                fprintf(stderr, "FAIL +inf bound status %d\n", st);
                 rc = 1;
             }
             st = gauss_jacobi_scale_c(n, nan(""), 0.0, 0.0, 1.0, x, w);
-            if (st == GJP_OK) {
-                fprintf(stderr, "FAIL NaN alpha status 0\n");
+            if (st != GJP_ERR_ALPHA) {
+                fprintf(stderr, "FAIL NaN alpha status %d\n", st);
+                rc = 1;
+            }
+            st = gauss_jacobi_scale_c(n, 0.0, nan(""), 0.0, 1.0, x, w);
+            if (st != GJP_ERR_BETA) {
+                fprintf(stderr, "FAIL NaN beta status %d\n", st);
                 rc = 1;
             }
             st = gauss_jacobi_scale_c(n, 100.0, 100.0, -1e200, 1e200, x, w);
-            if (st == GJP_OK) {
-                fprintf(stderr, "FAIL non-finite scale factor status 0\n");
+            if (st != GJP_ERR_BOUNDS) {
+                fprintf(stderr, "FAIL non-finite scale factor status %d\n", st);
                 rc = 1;
             }
         }
@@ -167,12 +179,17 @@ int main(void) {
         memcpy(xc, x, sizeof x);
         memcpy(wc, w, sizeof w);
         st = gauss_jacobi_scale_c(4, nan(""), 2.0, 0.0, 3.0, x, w);
-        if (st == GJP_OK || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
+        if (st != GJP_ERR_ALPHA || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
             fprintf(stderr, "FAIL NaN alpha wrote buffers st=%d\n", st);
             rc = 1;
         }
+        st = gauss_jacobi_scale_c(4, 2.0, nan(""), 0.0, 3.0, x, w);
+        if (st != GJP_ERR_BETA || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
+            fprintf(stderr, "FAIL NaN beta wrote buffers st=%d\n", st);
+            rc = 1;
+        }
         st = gauss_jacobi_scale_c(4, 0.0, 0.0, -HUGE_VAL, 1.0, x, w);
-        if (st == GJP_OK || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
+        if (st != GJP_ERR_BOUNDS || memcmp(x, xc, sizeof x) || memcmp(w, wc, sizeof w)) {
             fprintf(stderr, "FAIL -inf endpoint wrote buffers st=%d\n", st);
             rc = 1;
         }
@@ -189,6 +206,59 @@ int main(void) {
         st = gauss_jacobi_scale_c(4, 0.0, 0.0, 0.0, 1.0, NULL, NULL);
         if (st != GJP_ERR_NPTS) {
             fprintf(stderr, "FAIL NULL both st=%d\n", st);
+            rc = 1;
+        }
+    }
+    /* Lease sum misses endpoints; a finite factor times w can still overflow. */
+    {
+        double x[1], w[1], xn, xkeep, wkeep;
+        int st;
+        if (strcmp(gjp_status_string(GJP_ERR_BOUNDS),
+                   "invalid interval or scaled weights overflow") != 0) {
+            fprintf(stderr, "FAIL bounds string: %s\n", gjp_status_string(GJP_ERR_BOUNDS));
+            rc = 1;
+        }
+        x[0] = -1.0;
+        w[0] = 1.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, 1.0, 1e16, x, w);
+        printf("C [1,1e16] x=-1 st=%d x=%.17g\n", st, x[0]);
+        if (st != GJP_OK || !isfinite(x[0]) || x[0] != 1.0) {
+            fprintf(stderr, "FAIL [1,1e16] x=-1\n");
+            rc = 1;
+        }
+        xn = nextafter(-1.0, 0.0);
+        x[0] = xn;
+        w[0] = 1.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, 1.0, 1e16, x, w);
+        printf("C [1,1e16] next st=%d x=%.17g\n", st, x[0]);
+        if (st != GJP_OK || !isfinite(x[0]) || !(x[0] > 1.0 && x[0] < 1e16)) {
+            fprintf(stderr, "FAIL [1,1e16] nextafter\n");
+            rc = 1;
+        }
+        x[0] = -1.0;
+        w[0] = 1.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, 1e6, 1e20, x, w);
+        printf("C [1e6,1e20] x=-1 st=%d x=%.17g\n", st, x[0]);
+        if (st != GJP_OK || !isfinite(x[0]) || x[0] != 1e6) {
+            fprintf(stderr, "FAIL [1e6,1e20] x=-1\n");
+            rc = 1;
+        }
+        x[0] = 1.0;
+        w[0] = 1.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, 1e308, DBL_MAX, x, w);
+        printf("C [1e308,DBL_MAX] x=1 st=%d x=%.17g\n", st, x[0]);
+        if (st != GJP_OK || !isfinite(x[0]) || x[0] != DBL_MAX) {
+            fprintf(stderr, "FAIL [1e308,DBL_MAX] x=1\n");
+            rc = 1;
+        }
+        x[0] = 0.0;
+        w[0] = 2.0;
+        xkeep = x[0];
+        wkeep = w[0];
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e308, 1e308, x, w);
+        printf("C weight overflow st=%d w=%.17g\n", st, w[0]);
+        if (st != GJP_ERR_BOUNDS || x[0] != xkeep || w[0] != wkeep) {
+            fprintf(stderr, "FAIL weight overflow wrote or status %d\n", st);
             rc = 1;
         }
     }
