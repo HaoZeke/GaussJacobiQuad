@@ -321,6 +321,13 @@ if not _py_pkg
     args: [files('ci/test_pkgconfig_uninstalled_mod.sh'), meson.current_build_dir()],
     depends: _gjp_version_mod,
   )
+  # Clean fpm install must ship gjp_version.mod and link a consumer.
+  test(
+    'fpm_install_version',
+    _sh,
+    args: [files('ci/test_fpm_install_version.sh')],
+    timeout: 900,
+  )
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
