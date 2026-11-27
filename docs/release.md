@@ -91,7 +91,7 @@ What happens (from `cog.toml` `pre_bump_hooks`, then cog itself):
 2. **`scripts/set_version.sh`** — writes the release triple `X.Y.Z` into
    `fpm.toml` (fpm rejects pre-release text) and the project version into
    `meson.build`, `src/gjp_version.f90`, `apidocs/Doxygen-GaussJacobiQuad.cfg`,
-   and `vX.Y.Z` into `CITATION.cff`.
+   and `v` plus the project version, rc suffix kept, into `CITATION.cff`.
 3. **License headers** — `scripts/add_headers.py` refreshes Fortran/C/Python
    headers (commit / date / citation line).
 4. **towncrier** — consumes `newsfragments/*`, prepends a dated section to
@@ -133,7 +133,7 @@ fpm install --prefix /tmp/gjq-prefix
 `gjp_cinterp`, and the public headers `GaussJacobiQuadCInterp.h`
 and `gjp_version.h` into `include/`. Only `gjp_version.mod` is
 installed under
-`include/gaussjacobiquad/<fortran-id>-<fortran-version>/`.
+`include/gaussjacobiquad/<compiler-id>-<compiler-version>/`.
 `gaussjacobiquad_dep` is a `declare_dependency` of that Fortran library
 (`subproject().get_variable('gaussjacobiquad_dep')`).
 The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
@@ -142,7 +142,7 @@ The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
 meson setup builddir --prefix=/tmp/gjq-prefix
 meson compile -C builddir
 meson install -C builddir
-pkg-config --modversion gjp_cinterp   # if PKG_CONFIG_PATH includes prefix/lib/pkgconfig
+pkg-config --modversion gjp_cinterp   # if PKG_CONFIG_PATH includes prefix/lib/x86_64-linux-gnu/pkgconfig
 ```
 
 ### Single-file export (vendoring)
