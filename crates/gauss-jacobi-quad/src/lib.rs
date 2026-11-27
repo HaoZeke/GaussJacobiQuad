@@ -101,10 +101,7 @@ pub enum Error {
     },
     /// `gauss_jacobi_scale_c` returned a non-zero status.
     #[error("gauss_jacobi_scale_c: {status:?} ({msg})")]
-    Scale {
-        status: Status,
-        msg: &'static str,
-    },
+    Scale { status: Status, msg: &'static str },
     /// `nodes` and `weights` differ in length.
     #[error("gauss_jacobi_scale: nodes and weights must have the same length")]
     ScaleLength,
@@ -281,6 +278,11 @@ pub fn gauss_jacobi_method_str(
 }
 
 /// Map nodes and weights from `[-1, 1]` onto `[a, b]`.
+///
+/// `x = -1` is exactly `a` and `x = 1` is exactly `b`. Weights are multiplied
+/// by `((b - a) / 2)` to the power `alpha + beta + 1`. A non-finite scaled
+/// node or weight is an error. A weight factor that overflows on its own is
+/// not an error when the product with the weight is finite.
 ///
 /// `nodes` and `weights` must have the same length, and that length must fit
 /// in `i32`. The C call is not made when the length is rejected.

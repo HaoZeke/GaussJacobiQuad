@@ -43,7 +43,8 @@ int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *
  *         non-finite half-width, or a non-finite scaled node or weight,
  *         is GJP_ERR_BOUNDS. A weight factor that overflows on its own is
  *         not an error when the product with the weight is finite.
- *         NULL x or wts with npts > 0 is GJP_ERR_NPTS and does not write.
+ *         Any non-zero status leaves both buffers unchanged. NULL x or
+ *         wts with npts > 0 is GJP_ERR_NPTS and does not write.
  */
 int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b,
                          double *x, double *wts);

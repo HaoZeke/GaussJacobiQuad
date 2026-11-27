@@ -20,7 +20,8 @@ and exactly =b= at =x = 1=. Weights are multiplied by
 (the image of =(1-x)**alpha * (1+x)**beta=). Requires finite =a < b=.
 A non-finite scaled node or weight is an error. A weight factor that
 overflows on its own is not an error when the product with the weight
-is finite.
+is finite. =-ffast-math= and =-ffinite-math-only= are unsupported,
+because they delete the finite checks that reject that node or weight.
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto

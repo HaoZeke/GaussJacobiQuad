@@ -1,7 +1,8 @@
 """GaussJacobiQuad Python package — CPython extension over ISO_C_BINDING C ABI.
 
 Primary path: extension module ``gauss_jacobi_quad._core`` (multi-phase init,
-free-threading aware) linked to ``gauss_jacobi_rule_c``.
+free-threading aware) linked to ``gauss_jacobi_rule_c`` and
+``gauss_jacobi_scale_c``.
 """
 
 from __future__ import annotations
@@ -54,9 +55,13 @@ def gauss_jacobi(
 def gauss_jacobi_scale(nodes, weights, alpha: float, beta: float, a: float, b: float):
     """Map Gauss–Jacobi nodes and weights from [-1, 1] to [a, b].
 
-    Nodes go to ``(b - a) / 2 * x + (a + b) / 2``. Weights are multiplied by
+    Nodes go to ``(b - a) / 2 * x + (a + b) / 2``. ``x == -1`` is exactly
+    ``a`` and ``x == 1`` is exactly ``b``. Weights are multiplied by
     ``((b - a) / 2) ** (alpha + beta + 1)`` so the rule integrates
     ``(b - t) ** alpha * (t - a) ** beta * f(t)`` on ``[a, b]``.
+    A non-finite scaled node or weight raises ``GaussJacobiError``.
+    A weight factor that overflows on its own is not an error when the
+    product with the weight is finite.
     """
     x_list, w_list = _core.scale(
         nodes, weights, float(alpha), float(beta), float(a), float(b)
