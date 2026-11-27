@@ -9,6 +9,7 @@
 !> and by meson at configure time.
 module gjp_version
 implicit none
+private
 public :: gjp_version_major, gjp_version_minor, gjp_version_patch
 public :: gjp_version_string, gjp_version_compact
 public :: gjp_get_version
