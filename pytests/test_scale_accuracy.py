@@ -527,6 +527,24 @@ def test_normal_binade_integer_power_ties():
     assert x[0] == 0.25 and _weight_bits(ww[0]) == kept
 
 
+def test_subnormal_sticky_integer_power():
+    """Sticky bits under a subnormal round bit round an even quotient up.
+
+    ``alpha=1``, ``beta=0`` on ``[0, 3]`` is ``H = fl((b-a)/2) = 1.5`` and
+    ``p = 2``. ``w = 0x0.0000000000003p-1022`` is ``3 * 2**-1074``.
+    An independent ``Fraction`` ties-to-even oracle evaluates
+    ``w * (3/2)**2 = 27/4 * 2**-1074``, which is 6.75 ulps of ``2**-1074``.
+    The quotient 6 is even and the remainder is above half an ulp (round
+    bit 1, sticky 1), so the rounded value is 7 ulps,
+    ``0x0.0000000000007p-1022``.
+    """
+    w = float.fromhex("0x0.0000000000003p-1022")
+    expect = _round_fraction(Fraction(w) * Fraction(3, 2) ** 2)
+    assert expect.hex() == "0x0.0000000000007p-1022"
+    _x, ws = gauss_jacobi_scale([0.0], [w], 1.0, 0.0, 0.0, 3.0)
+    _assert_weight_bits(ws[0], expect)
+
+
 def test_exact_underflow_ties_and_signed_zero():
     _x, ws = gauss_jacobi_scale([0.0], [1.0], 106.5, 0.0, 0.0, 2.0**-9)
     _assert_weight_bits(ws[0], 0.0)
