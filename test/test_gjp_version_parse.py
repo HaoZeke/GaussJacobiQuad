@@ -108,6 +108,9 @@ class VersionParseTests(unittest.TestCase):
                     source = (root / "src" / "gjp_version.f90").read_text()
                     self.assertIn('version = "1.2.0"', fpm)
                     self.assertNotIn(version, fpm)
+                    town = (root / "towncrier.toml").read_text()
+                    self.assertIn('version = "1.2.0"', town)
+                    self.assertNotIn(version, town)
                     self.assertIn(f"version: '{version}'", meson)
                     self.assertIn(f'gjp_version_string = "{version}"', source)
                     self.assertIn("gjp_version_major = 1", source)
@@ -131,6 +134,20 @@ class VersionParseTests(unittest.TestCase):
             for rel, text in before.items():
                 self.assertEqual((root / rel).read_text(), text)
 
+    def test_apply_rewrites_towncrier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _copy_apply_tree(root)
+            before = (root / "towncrier.toml").read_text()
+            self.assertIn('version = "0.2.6"', before)
+            proc = _apply(root, "9.9.9")
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(proc.stdout.strip(), "9 9 9")
+            after = (root / "towncrier.toml").read_text()
+            self.assertIn('version = "9.9.9"', after)
+            self.assertNotIn('version = "0.2.6"', after)
+            self.assertIn('version = "9.9.9"', (root / "fpm.toml").read_text())
+
 
 _APPLY_FILES = (
     "fpm.toml",
@@ -139,6 +156,7 @@ _APPLY_FILES = (
     "CITATION.cff",
     "src/gjp_version.f90",
     "scripts/parse_gjp_version.py",
+    "towncrier.toml",
 )
 
 
