@@ -56,7 +56,7 @@ int st = gauss_jacobi_rule(32, 0.0, 0.0, x, w); // method defaults to nullptr â†
 #+end_src
 
 Status codes: =GJP_OK=, =GJP_ERR_NPTS=, =GJP_ERR_ALPHA=, =GJP_ERR_BETA=,
-=GJP_ERR_METHOD=, =GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=.
+=GJP_ERR_METHOD=, =GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=, =GJP_ERR_BOUNDS=.
 
 Legacy named wrappers (=gauss_jacobi_rec_c=, =gauss_jacobi_gw_c=, =gauss_jacobi_algo665_c=) remain for ABI stability.
 
