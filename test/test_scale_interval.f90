@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> Integrate a polynomial on a non-symmetric interval with the scaled rule.
 program test_scale_interval
 use GaussJacobiQuad, only: gauss_jacobi_rule, gauss_jacobi_scale

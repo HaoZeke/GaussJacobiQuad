@@ -1,3 +1,12 @@
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """mpmath reference for gauss_jacobi_scale_c on wide and ordinary intervals."""
 from __future__ import annotations
 
