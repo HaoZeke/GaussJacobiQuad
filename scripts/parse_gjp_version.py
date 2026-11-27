@@ -31,10 +31,14 @@ def parse_version(version: str) -> tuple[int, int, int]:
     for index, part in enumerate(core.split(".")):
         match = _LEADING_INT.match(part)
         if not match:
-            raise VersionError(f"component {part!r} in {version!r} has no leading integer")
+            raise VersionError(
+                f"component {part!r} in {version!r} has no leading integer"
+            )
         rest = part[match.end() :]
         if rest and index != len(core.split(".")) - 1:
-            raise VersionError(f"non-numeric {rest!r} in component {part!r} of {version!r}")
+            raise VersionError(
+                f"non-numeric {rest!r} in component {part!r} of {version!r}"
+            )
         nums.append(int(match.group(1)))
         if rest:
             break
@@ -71,7 +75,11 @@ def main(argv: list[str]) -> int:
     if len(argv) == 4 and argv[1] == "--check-fortran":
         major, minor, patch = parse_version(argv[3])
         got_major, got_minor, got_patch, got_string = fortran_constants(Path(argv[2]))
-        if (got_major, got_minor, got_patch) != (major, minor, patch) or got_string != argv[3]:
+        if (got_major, got_minor, got_patch) != (
+            major,
+            minor,
+            patch,
+        ) or got_string != argv[3]:
             raise VersionError(
                 f"{argv[2]} has {got_major}.{got_minor}.{got_patch} ({got_string!r}) "
                 f"but the project version is {argv[3]!r} -> {major}.{minor}.{patch}"
