@@ -30,6 +30,7 @@ dependencies:
   - pip
   # More testing
   - pytest
+  - mpmath
   # Headers
   - jinja2
   # Documentation

@@ -172,3 +172,36 @@ def test_scale_endpoints_and_weight_overflow():
     assert _status_code(ei.value) == GJP_ERR_BOUNDS
     assert "status=7" in str(ei.value)
     assert "invalid interval or scaled weights overflow" in str(ei.value)
+
+
+def test_scale_cancelled_endpoints_and_weight_range():
+    """Lease images inside (a, b) and a lone overflowing factor are not answers."""
+    xs, _ws = gauss_jacobi_scale([-1.0], [0.0], 0.0, 0.0, -1.0, 1.0e16)
+    assert xs[0] == -1.0
+    xn = math.nextafter(-1.0, 0.0)
+    xs, _ws = gauss_jacobi_scale([xn], [0.0], 0.0, 0.0, -1.0, 1.0e16)
+    assert xs[0] < 0.0 and abs(float(xs[0]) + 0.44488848768742173) < 1e-15
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e16, 1.0)
+    assert xs[0] == 1.0
+    xp = math.nextafter(1.0, -1.0)
+    xs, _ws = gauss_jacobi_scale([xp], [0.0], 0.0, 0.0, -1.0e16, 1.0)
+    assert xs[0] > 0.0 and abs(float(xs[0]) - 0.44488848768742173) < 1e-15
+    xs, _ws = gauss_jacobi_scale([-1.0], [0.0], 0.0, 0.0, -1.0e16, -1.0)
+    assert xs[0] == -1.0e16
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e16, -1.0)
+    assert xs[0] == -1.0
+    xs, _ws = gauss_jacobi_scale([xn], [0.0], 0.0, 0.0, 0.0, 3.0)
+    assert xs[0] == 1.6653345369377348e-16
+    xs, _ws = gauss_jacobi_scale([1.0], [0.0], 0.0, 0.0, -1.0e308, 1.0)
+    assert xs[0] == 1.0
+    x, w = gauss_jacobi(4, 1022.0, 0.0, method="rec")
+    _xs, ws = gauss_jacobi_scale(x, w, 1022.0, 0.0, 0.0, 0.8)
+    assert np.all(np.isfinite(ws)) and np.all(ws > 1.0e-120) and np.all(ws < 1.0e-80)
+    x, w = gauss_jacobi(8, 0.0, 0.0, method="rec")
+    _xs, ws = gauss_jacobi_scale(x, w, 1023.0, 0.0, -2.0, 2.0)
+    assert np.all(np.isfinite(ws)) and np.all(ws > 1.0e300)
+    tiny = float(np.nextafter(0.0, 1.0))
+    _xs, ws = gauss_jacobi_scale([0.0], [1.0], -0.25, -0.25, 0.0, tiny)
+    assert math.isfinite(float(ws[0])) and 1.0e-170 < float(ws[0]) < 1.0e-150
+    _xs, ws = gauss_jacobi_scale([0.0], [1.0], -0.9, -0.9, 0.0, tiny)
+    assert math.isfinite(float(ws[0])) and float(ws[0]) > 1.0e250

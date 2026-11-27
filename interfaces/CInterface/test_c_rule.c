@@ -261,6 +261,55 @@ int main(void) {
             fprintf(stderr, "FAIL weight overflow wrote or status %d\n", st);
             rc = 1;
         }
+        x[0] = -1.0;
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1.0, 1e16, x, w);
+        if (st != GJP_OK || x[0] != -1.0) {
+            fprintf(stderr, "FAIL [-1,1e16] x=-1 got %.17g st=%d\n", x[0], st);
+            rc = 1;
+        }
+        x[0] = nextafter(-1.0, 0.0);
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1.0, 1e16, x, w);
+        if (st != GJP_OK || !(x[0] < 0.0) || fabs(x[0] + 0.44488848768742173) > 1e-15) {
+            fprintf(stderr, "FAIL [-1,1e16] nextafter got %.17g\n", x[0]);
+            rc = 1;
+        }
+        x[0] = 1.0;
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e16, 1.0, x, w);
+        if (st != GJP_OK || x[0] != 1.0) {
+            fprintf(stderr, "FAIL [-1e16,1] x=1 got %.17g st=%d\n", x[0], st);
+            rc = 1;
+        }
+        x[0] = nextafter(1.0, -1.0);
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e16, 1.0, x, w);
+        if (st != GJP_OK || !(x[0] > 0.0) || fabs(x[0] - 0.44488848768742173) > 1e-15) {
+            fprintf(stderr, "FAIL [-1e16,1] nextafter got %.17g\n", x[0]);
+            rc = 1;
+        }
+        x[0] = -1.0;
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e16, -1.0, x, w);
+        if (st != GJP_OK || x[0] != -1e16) {
+            fprintf(stderr, "FAIL [-1e16,-1] x=-1 got %.17g\n", x[0]);
+            rc = 1;
+        }
+        x[0] = 1.0;
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e16, -1.0, x, w);
+        if (st != GJP_OK || x[0] != -1.0) {
+            fprintf(stderr, "FAIL [-1e16,-1] x=1 got %.17g\n", x[0]);
+            rc = 1;
+        }
+        x[0] = 1.0;
+        w[0] = 0.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, -1e308, 1.0, x, w);
+        if (st != GJP_OK || x[0] != 1.0) {
+            fprintf(stderr, "FAIL [-1e308,1] x=1 got %.17g st=%d\n", x[0], st);
+            rc = 1;
+        }
     }
     if (rc == 0)
         printf("test_c_rule PASSED\n");
