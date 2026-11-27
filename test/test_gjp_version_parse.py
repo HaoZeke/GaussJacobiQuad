@@ -48,6 +48,22 @@ class VersionParseTests(unittest.TestCase):
     def test_build_metadata(self):
         self.assertEqual(parse_version("1.2.3+gabcdef"), (1, 2, 3))
 
+    def test_dotted_dev_post_rc(self):
+        self.assertEqual(parse_version("1.2.0.dev1"), (1, 2, 0))
+        self.assertEqual(parse_version("1.2.3.post1"), (1, 2, 3))
+        self.assertEqual(parse_version("1.2.0.rc1"), (1, 2, 0))
+        self.assertEqual(parse_version("1.2.0rc.1"), (1, 2, 0))
+
+    def test_fourth_component_rejected(self):
+        with self.assertRaises(VersionError):
+            parse_version("1.2.3.4")
+
+    def test_junk_last_component_rejected(self):
+        for version in ("1.2.3&x", "1.2.3/foo"):
+            with self.subTest(version=version):
+                with self.assertRaises(VersionError):
+                    parse_version(version)
+
     def test_project_version(self):
         self.assertEqual(parse_version("0.2.6"), (0, 2, 6))
 

@@ -23,15 +23,21 @@ def main() -> int:
         raise SystemExit(f"missing {source}")
     fpm_version = quoted_version(ROOT / "fpm.toml", r'(?m)^version\s*=\s*"([^"]+)"')
     meson_version = quoted_version(ROOT / "meson.build", r"version:\s*'([^']+)'")
-    if fpm_version != meson_version:
-        raise SystemExit(f"fpm.toml {fpm_version} != meson.build {meson_version}")
     major, minor, patch, text = parser.fortran_constants(source)
-    if text != fpm_version:
-        raise SystemExit(f"{source} string {text!r} != project version {fpm_version!r}")
-    parsed = parser.parse_version(fpm_version)
-    if (major, minor, patch) != parsed:
-        raise SystemExit(f"{source} components {(major, minor, patch)} != {parsed}")
-    print(f"agree {fpm_version} -> {major}.{minor}.{patch}")
+    fpm_parts = parser.parse_version(fpm_version)
+    meson_parts = parser.parse_version(meson_version)
+    triple = f"{major}.{minor}.{patch}"
+    if fpm_parts != (major, minor, patch) or meson_parts != (major, minor, patch):
+        raise SystemExit(
+            f"components fpm {fpm_parts} meson {meson_parts} "
+            f"module {(major, minor, patch)}"
+        )
+    # fpm rejects pre-release text, so fpm.toml stores only the release triple.
+    if fpm_version != triple:
+        raise SystemExit(f"fpm.toml {fpm_version!r} != release triple {triple}")
+    if text != meson_version:
+        raise SystemExit(f"{source} string {text!r} != meson {meson_version!r}")
+    print(f"agree fpm {fpm_version} meson {meson_version} -> {triple}")
     return 0
 
 
