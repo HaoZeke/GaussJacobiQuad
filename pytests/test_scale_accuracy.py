@@ -31,6 +31,17 @@ GJP_ERR_BOUNDS = _gjq.GJP_ERR_BOUNDS
 mp.mp.prec = 8000
 
 
+def _weight_bits(x):
+    return struct.pack(">d", float(x))
+
+
+def _assert_weight_bits(got, ref):
+    assert _weight_bits(got) == _weight_bits(ref), (
+        float(got).hex(),
+        float(ref).hex(),
+    )
+
+
 def _ulp(a, b):
     a = float(a)
     b = float(b)
@@ -179,7 +190,7 @@ def test_weight_products_track_exact_power():
     half = (mp.mpf("0.8") - mp.mpf(0)) / 2
     _x, ws = gauss_jacobi_scale([0.0], [w], 1022.0, 0.0, 0.0, 0.8)
     ref = _cr_weight(float(half), 1023, w)
-    assert _ulp(ws[0], ref) <= 1
+    _assert_weight_bits(ws[0], ref)
     leg_w = [
         0.10122853629037609,
         0.22238103445337445,
@@ -189,15 +200,15 @@ def test_weight_products_track_exact_power():
     _x, ws = gauss_jacobi_scale(leg_w, leg_w, 1023.0, 0.0, -2.0, 2.0)
     for src, got in zip(leg_w, ws):
         assert math.isfinite(float(got)) and got != 0.0
-        assert _ulp(got, _cr_weight(2.0, 1024, src)) <= 1
+        _assert_weight_bits(got, _cr_weight(2.0, 1024, src))
     half = mp.ldexp(1, -1075)
     tiny = float(np.nextafter(0.0, 1.0))
     _x, ws = gauss_jacobi_scale([0.0], [1.0], -0.25, -0.25, 0.0, tiny)
     ref = _cr_weight(half, 0.5, 1.0)
-    assert _ulp(ws[0], ref) <= 1
+    _assert_weight_bits(ws[0], ref)
     _x, ws = gauss_jacobi_scale([0.0], [1.0], -0.9, -0.9, 0.0, tiny)
     ref = _cr_weight(half, -0.8, 1.0)
-    assert _ulp(ws[0], ref) <= 1
+    _assert_weight_bits(ws[0], ref)
     nodes = np.array([0.0])
     weights = np.array([2.0])
     with pytest.raises(GaussJacobiError) as ei:
@@ -396,12 +407,7 @@ def test_weight_overflow_both_sides():
                 assert x[0] == 0.25 and ww[0] == w
             else:
                 got_x, got_w = gauss_jacobi_scale(x, ww, alpha, beta, a, b)
-                assert _ulp(got_w[0], ref) <= 1, (
-                    alpha,
-                    w.hex(),
-                    got_w[0].hex(),
-                    ref.hex(),
-                )
+                _assert_weight_bits(got_w[0], ref)
                 assert math.isfinite(float(got_x[0]))
             if w in pinned and pinned[w] is not None and math.isfinite(ref):
                 assert ref == pinned[w]
@@ -428,3 +434,127 @@ def test_weight_overflow_both_sides():
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi_scale(x, ww, 511.0, 0.0, -4.0, 4.0)
     assert ei.value.status == GJP_ERR_BOUNDS
+
+
+def _overflow_tie_pairs():
+    """Ordered 53-bit factor pairs of 2**54 - 1. Each product is the overflow tie."""
+    odd = (1 << 54) - 1
+    n = odd
+    facs = []
+    d = 3
+    while d * d <= n:
+        while n % d == 0:
+            facs.append(d)
+            n //= d
+        d += 2
+    if n > 1:
+        facs.append(n)
+    divs = [1]
+    for f in facs:
+        divs += [x * f for x in divs]
+    pairs = []
+    for d in sorted(set(divs)):
+        q = odd // d
+        if d.bit_length() <= 53 and q.bit_length() <= 53:
+            pairs.append((d, q))
+    return pairs
+
+
+def test_overflow_tie_splittings_and_interior_tie():
+    """H=81 * w is the overflow tie, and so is every 53-bit splitting of it."""
+    w = float.fromhex("0x1.948b0fcd6e9e0p+1017")
+    for sign in (1.0, -1.0):
+        x = np.array([0.25])
+        ww = np.array([sign * w])
+        kept_x, kept_w = float(x[0]), float(ww[0])
+        with pytest.raises(GaussJacobiError) as ei:
+            gauss_jacobi_scale(x, ww, 0.0, 0.0, 0.0, 162.0)
+        assert ei.value.status == GJP_ERR_BOUNDS
+        assert x[0] == kept_x and _weight_bits(ww[0]) == _weight_bits(kept_w)
+    pairs = _overflow_tie_pairs()
+    assert len(pairs) == 158
+    for d, q in pairs:
+        ww_val = math.ldexp(d, 970)
+        for sign in (1.0, -1.0):
+            x = np.array([0.25])
+            ww = np.array([sign * ww_val])
+            kept_w = float(ww[0])
+            with pytest.raises(GaussJacobiError) as ei:
+                gauss_jacobi_scale(x, ww, 0.0, 0.0, 0.0, float(2 * q))
+            assert ei.value.status == GJP_ERR_BOUNDS
+            assert x[0] == 0.25 and _weight_bits(ww[0]) == _weight_bits(kept_w)
+    w = float.fromhex("0x1.9999999999972p+1023")
+    _x, ws = gauss_jacobi_scale([0.25], [w], 0.0, 0.0, 0.0, 2.5)
+    _assert_weight_bits(ws[0], float.fromhex("0x1.fffffffffffcep+1023"))
+
+
+def test_exact_underflow_ties_and_signed_zero():
+    _x, ws = gauss_jacobi_scale([0.0], [1.0], 106.5, 0.0, 0.0, 2.0**-9)
+    _assert_weight_bits(ws[0], 0.0)
+    _x, ws = gauss_jacobi_scale([0.0], [-1.0], 106.5, 0.0, 0.0, 2.0**-9)
+    _assert_weight_bits(ws[0], -0.0)
+    _x, ws = gauss_jacobi_scale([0.0], [7.0], 536.5, 0.0, 0.0, 0.5)
+    _assert_weight_bits(ws[0], math.ldexp(4.0, -1074))
+    _x, ws = gauss_jacobi_scale([0.0], [-7.0], 536.5, 0.0, 0.0, 0.5)
+    _assert_weight_bits(ws[0], math.ldexp(-4.0, -1074))
+    w = math.ldexp(3.0, -1074)
+    _x, ws = gauss_jacobi_scale([0.0], [w], 0.0, 0.0, 0.0, 3.0)
+    _assert_weight_bits(ws[0], math.ldexp(4.0, -1074))
+    _x, ws = gauss_jacobi_scale([0.0], [-w], 0.0, 0.0, 0.0, 3.0)
+    _assert_weight_bits(ws[0], math.ldexp(-4.0, -1074))
+    tiny = float(np.nextafter(0.0, 1.0))
+    _x, ws = gauss_jacobi_scale([0.0], [1.0], -0.5, 0.0, 0.0, tiny)
+    _assert_weight_bits(ws[0], float.fromhex("0x1.6a09e667f3bcdp-538"))
+    _x, ws = gauss_jacobi_scale([0.0], [-1.0], -0.5, 0.0, 0.0, tiny)
+    _assert_weight_bits(ws[0], float.fromhex("-0x1.6a09e667f3bcdp-538"))
+    # Far underflow stays a signed zero, not an overflow.
+    _x, ws = gauss_jacobi_scale([0.0], [4.0], 1099.0, 0.0, 0.0, 1.0)
+    _assert_weight_bits(ws[0], 0.0)
+    _x, ws = gauss_jacobi_scale([0.0], [-4.0], 1099.0, 0.0, 0.0, 1.0)
+    _assert_weight_bits(ws[0], -0.0)
+
+
+def test_legendre_weight_ties():
+    pins = [
+        (0.0, 3.0, "0x1.2c6d5c2eff05fp-4", "0x1.c2a40a467e88ep-4"),
+        (-2.0, 5.0, "0x1.a0060a8531fecp-6", "0x1.6c0549348bbeep-4"),
+        (-100.0, 100.0, "0x1.9465bd31121f0p-7", "0x1.3bef7bce56284p+0"),
+    ]
+    for a, b, src, exp in pins:
+        _x, ws = gauss_jacobi_scale([0.0], [float.fromhex(src)], 0.0, 0.0, a, b)
+        _assert_weight_bits(ws[0], float.fromhex(exp))
+
+
+def test_random_products_match_exact_bits():
+    """Random binary64 products, including exact ties of w*1.5 and odd*2**-1075."""
+    rng = random.Random(1127)
+    weights = []
+    for _ in range(300):
+        w = math.ldexp(rng.randrange(1 << 52), rng.randint(-1050, 900) - 52)
+        if w == 0.0 or not math.isfinite(w):
+            continue
+        if rng.random() < 0.5:
+            w = -w
+        weights.append(w)
+    _x, got = gauss_jacobi_scale([0.0] * len(weights), weights, 0.0, 0.0, 0.0, 3.0)
+    for src, out in zip(weights, got):
+        _assert_weight_bits(out, _cr_weight(1.5, 1, src))
+    odds = [float(i) for i in range(1, 400, 2)]
+    _x, got = gauss_jacobi_scale([0.0] * len(odds), odds, 536.5, 0.0, 0.0, 0.5)
+    for src, out in zip(odds, got):
+        _assert_weight_bits(out, _cr_weight(0.25, 537.5, src))
+    neg = [-v for v in odds]
+    _x, got = gauss_jacobi_scale([0.0] * len(neg), neg, 536.5, 0.0, 0.0, 0.5)
+    for src, out in zip(neg, got):
+        _assert_weight_bits(out, _cr_weight(0.25, 537.5, src))
+    # Non-integer, non-power-of-two half. One plan, many weights.
+    rng = random.Random(9)
+    misc = []
+    for _ in range(40):
+        w = math.ldexp(rng.randrange(1 << 52) | 1, rng.randint(-20, 20) - 52)
+        if rng.random() < 0.5:
+            w = -w
+        misc.append(w)
+    _x, got = gauss_jacobi_scale([0.0] * len(misc), misc, 1.5, 0.0, 0.0, 2.2)
+    for src, out in zip(misc, got):
+        _assert_weight_bits(out, _cr_weight(1.1, 2.5, src))

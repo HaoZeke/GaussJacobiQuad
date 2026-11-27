@@ -373,5 +373,112 @@ block
     call gauss_jacobi_scale(1, 1750.0_dp, 0.0_dp, 0.0_dp, 3.0_dp, xs, ws)
     if (ws(1) /= huge(1.0_dp)) error stop "alpha 1750 rounds to huge"
 end block
+! Ties and signed zeros. Compare the bits, including the sign of zero.
+block
+    integer(int64) :: gotb, expb
+    integer :: ie
+    real(dp) :: wv
+    xs(1) = 0.25_dp
+    wv = transfer(ior(ishft(int(z'7F8948B0', int64), 32), int(z'FCD6E9E0', int64)), 0.0_dp)
+    ws(1) = wv
+    xkeep = xs(1)
+    wkeep = ws(1)
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 162.0_c_double, xs, ws)
+    if (stc /= 7_c_int .or. xs(1) /= xkeep .or. ws(1) /= wkeep) &
+        error stop "half 81 overflow tie"
+    ws(1) = -wv
+    xs(1) = 0.25_dp
+    xkeep = xs(1)
+    wkeep = ws(1)
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 162.0_c_double, xs, ws)
+    if (stc /= 7_c_int .or. xs(1) /= xkeep .or. ws(1) /= wkeep) &
+        error stop "half 81 negative overflow tie"
+    wv = transfer(ior(ishft(int(z'7FE99999', int64), 32), int(z'99999972', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.25_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 2.5_c_double, xs, ws)
+    gotb = transfer(ws(1), 0_int64)
+    expb = ior(ishft(int(z'7FEFFFFF', int64), 32), int(z'FFFFFFCE', int64))
+    if (stc /= 0_c_int .or. gotb /= expb) error stop "half 1.25 interior tie"
+    ws(1) = 1.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 106.5_c_double, 0.0_c_double, &
+                      0.0_c_double, 2.0_c_double**(-9), xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= 0_int64) &
+        error stop "exact 2**-1075 is +0"
+    ws(1) = -1.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 106.5_c_double, 0.0_c_double, &
+                      0.0_c_double, 2.0_c_double**(-9), xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= ishft(1_int64, 63)) &
+        error stop "exact 2**-1075 is -0"
+    ws(1) = 7.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 536.5_c_double, 0.0_c_double, &
+                      0.0_c_double, 0.5_c_double, xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= 4_int64) &
+        error stop "7*2**-1075"
+    ws(1) = -7.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 536.5_c_double, 0.0_c_double, &
+                      0.0_c_double, 0.5_c_double, xs, ws)
+    expb = ior(ishft(1_int64, 63), 4_int64)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "negative 7*2**-1075"
+    ie = -1074
+    ws(1) = 3.0_dp * scale(1.0_dp, ie)
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 3.0_c_double, xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= 4_int64) &
+        error stop "1.5 subnormal tie"
+    ws(1) = -3.0_dp * scale(1.0_dp, ie)
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 3.0_c_double, xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "negative 1.5 subnormal tie"
+    ws(1) = 1.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, -0.5_c_double, 0.0_c_double, &
+                      0.0_c_double, nearest(0.0_c_double, 1.0_c_double), xs, ws)
+    expb = ior(ishft(int(z'1E56A09E', int64), 32), int(z'667F3BCD', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "flushed half square root"
+    ws(1) = -1.0_dp
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, -0.5_c_double, 0.0_c_double, &
+                      0.0_c_double, nearest(0.0_c_double, 1.0_c_double), xs, ws)
+    expb = ior(ishft(int(z'9E56A09E', int64), 32), int(z'667F3BCD', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "flushed half negative square root"
+    wv = transfer(ior(ishft(int(z'3FB2C6D5', int64), 32), int(z'C2EFF05F', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 3.0_c_double, xs, ws)
+    expb = ior(ishft(int(z'3FBC2A40', int64), 32), int(z'A467E88E', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "Legendre [0,3] weight"
+    wv = transfer(ior(ishft(int(z'3F9A0060', int64), 32), int(z'A8531FEC', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      -2.0_c_double, 5.0_c_double, xs, ws)
+    expb = ior(ishft(int(z'3FB6C054', int64), 32), int(z'9348BBEE', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "Legendre [-2,5] weight"
+    wv = transfer(ior(ishft(int(z'3F89465B', int64), 32), int(z'D31121F0', int64)), 0.0_dp)
+    ws(1) = wv
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 0.0_c_double, 0.0_c_double, &
+                      -100.0_c_double, 100.0_c_double, xs, ws)
+    expb = ior(ishft(int(z'3FF3BEF7', int64), 32), int(z'BCE56284', int64))
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= expb) &
+        error stop "Legendre [-100,100] weight"
+end block
 print '(A)', "scale endpoints and weight range OK"
 end program test_scale_interval
