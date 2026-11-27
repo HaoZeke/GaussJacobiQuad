@@ -110,8 +110,39 @@ _gjp_f_sources = files(
 
 # ---------------------- Native library / apps / C ABI (skip install when packaging wheel)
 if not _py_pkg
+  # C header is generated. The Fortran module is src/gjp_version.f90 so fpm
+  # (no configure_file) and meson compile the same constants.
+  # Packing matches tblite: 10000*major + 100*minor + patch, each in 0..99.
+  _py = find_program('python3', required: true)
+  _gjp_parsed = run_command(
+    _py,
+    files('scripts/parse_gjp_version.py'),
+    '--check-fortran',
+    files('src/gjp_version.f90'),
+    meson.project_version(),
+    check: true,
+  )
+  _gjp_nums = _gjp_parsed.stdout().strip().split()
+  _gjp_major = _gjp_nums[0]
+  _gjp_minor = _gjp_nums[1]
+  _gjp_patch = _gjp_nums[2]
+  _gjp_ver_data = configuration_data()
+  _gjp_ver_data.set('GJP_VERSION_MAJOR', _gjp_major)
+  _gjp_ver_data.set('GJP_VERSION_MINOR', _gjp_minor)
+  _gjp_ver_data.set('GJP_VERSION_PATCH', _gjp_patch)
+  _gjp_ver_data.set('GJP_VERSION_STRING', meson.project_version())
+  gjp_version_h = configure_file(
+    input: 'interfaces/CInterface/gjp_version.h.in',
+    output: 'gjp_version.h',
+    configuration: _gjp_ver_data,
+    install: true,
+    install_dir: get_option('includedir'),
+  )
+  # Compiler-specific, same layout tblite uses for installed .mod files.
+  _mod_sub = meson.project_name() + '/' + _fc.get_id() + '-' + _fc.version()
+
   gjplib = library('GaussJacobiQuad',
-                sources: _gjp_f_sources,
+                sources: [_gjp_f_sources, files('src/gjp_version.f90')],
                 fortran_args: _args,
                 dependencies: _deps,
                 install: true,
@@ -119,7 +150,31 @@ if not _py_pkg
 
   gaussjacobiquad_dep = declare_dependency(
     link_with: gjplib,
+    # .mod files are written to the library private build dir. Export that
+    # directory so a subproject consumer can `use GaussJacobiQuad`.
+    include_directories: gjplib.private_dir_include(),
     dependencies: _deps,
+  )
+
+  test_dep_mod = executable('test_dep_mod',
+    sources: files('test/test_dep_mod.f90'),
+    dependencies: gaussjacobiquad_dep,
+    fortran_args: _args,
+    link_language: 'fortran',
+  )
+  test('dep_mod', test_dep_mod)
+
+  # Tracked install so `ninja uninstall` removes gjp_version.mod. The copy
+  # also lands in the build root, which the uninstalled pkg-config file
+  # already searches via -I${prefix}.
+  _gjp_version_mod = custom_target(
+    'gjp_version_mod',
+    input: gjplib,
+    output: 'gjp_version.mod',
+    command: [_py, files('scripts/install_gjp_mod.py'), '--stage', '@INPUT@', '@OUTPUT@'],
+    install: true,
+    install_dir: get_option('includedir') / _mod_sub,
+    build_by_default: true,
   )
 
   # ---------------------- Applications
@@ -178,14 +233,20 @@ if not _py_pkg
                           'src/GaussJacobiQuadCCompat.f90',
                           'interfaces/CInterface/GaussJacobiQuadCInterp.c',
                         ],
-                        include_directories: include_directories('interfaces/CInterface'),
+                        include_directories: [
+                          include_directories('interfaces/CInterface'),
+                          gjplib.private_dir_include(),
+                        ],
                         fortran_args: _args,
                         link_with: [gjplib],
                         dependencies: _deps,
                         install: true,
   )
 
-  # pkg-config for Rust/Python consumers
+  # Header dir and the installed module dir. subdirs '.' is ${includedir}
+  # (gjp_version.h). _mod_sub is the gjp_version.mod directory.
+  # libraries: puts -lGaussJacobiQuad on Libs. gjp_get_version is defined in
+  # that library; a shared -lgjp_cinterp does not resolve it.
   pkg = import('pkgconfig')
   pkg.generate(
     gjp_cinterp,
@@ -193,7 +254,10 @@ if not _py_pkg
     description: 'GaussJacobiQuad C ABI (gauss_jacobi_rule_c)',
     version: meson.project_version(),
     filebase: 'gjp_cinterp',
-    subdirs: '.',
+    libraries: gjplib,
+    subdirs: ['.', _mod_sub],
+    variables: {'moduledir': '${includedir}/' + _mod_sub},
+    uninstalled_variables: {'moduledir': '${prefix}'},
   )
 
   c_cli_gjpq = executable('c_cli_gjpq',
@@ -218,6 +282,60 @@ if not _py_pkg
                           install: false,
   )
   test('c_rule', test_c_rule)
+
+  test_c_version = executable('test_c_version',
+    sources: ['interfaces/CInterface/test_c_version.c', gjp_version_h],
+    c_args: [
+      '-DEXPECT_MAJOR=' + _gjp_major,
+      '-DEXPECT_MINOR=' + _gjp_minor,
+      '-DEXPECT_PATCH=' + _gjp_patch,
+      '-DEXPECT_STRING="' + meson.project_version() + '"',
+    ],
+  )
+  test('c_version', test_c_version)
+
+  test_gjp_version = executable('test_gjp_version',
+    sources: 'interfaces/CInterface/test_gjp_version.f90',
+    fortran_args: _args,
+    link_with: [gjplib],
+    dependencies: _deps,
+    link_language: 'fortran',
+  )
+  test('fortran_version', test_gjp_version, args: [
+    _gjp_major, _gjp_minor, _gjp_patch, meson.project_version(),
+  ])
+
+  test('version_parse', _py, args: [files('test/test_gjp_version_parse.py')])
+  test('version_agree', _py, args: [files('test/test_gjp_version_agree.py')])
+  _sh = find_program('sh')
+  test(
+    'pkgconfig_c_consumer',
+    _sh,
+    args: [files('ci/test_pkgconfig_consumer.sh'), meson.current_build_dir()],
+  )
+  # `meson test` builds test executables only. The uninstalled .pc
+  # reads gjp_version.mod from the build root, so stage it first.
+  test(
+    'pkgconfig_uninstalled_mod',
+    _sh,
+    args: [files('ci/test_pkgconfig_uninstalled_mod.sh'), meson.current_build_dir()],
+    depends: _gjp_version_mod,
+  )
+  # Clean fpm install must ship gjp_version.mod and link a consumer.
+  test(
+    'fpm_install_version',
+    _sh,
+    args: [files('ci/test_fpm_install_version.sh')],
+    timeout: 900,
+  )
+  # Wheel config (pyproject.toml -Dpython_package=true) must compile gjp_version.
+  test(
+    'python_package_compile',
+    _sh,
+    args: [files('ci/test_python_package_compile.sh')],
+    timeout: 900,
+    is_parallel: false,
+  )
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)
@@ -240,11 +358,13 @@ if _py_pkg
     py_deps += _m
   endif
 
+  # Same module the native library adds beside _gjp_f_sources. The facade
+  # uses gjp_version, so a wheel that omits it fails with gjp_version.mod missing.
   _ext_sources = files(
     'python/src/gauss_jacobi_quad/_core.c',
     'interfaces/CInterface/GaussJacobiQuadCInterp.c',
     'src/GaussJacobiQuadCCompat.f90',
-  ) + _gjp_f_sources
+  ) + _gjp_f_sources + files('src/gjp_version.f90')
 
   # Free-threaded CPython is a different ABI: full C API + Py_mod_gil, not abi3.
   _py_is_ft = run_command(

@@ -15,7 +15,7 @@ Version strings are patched by [`scripts/set_version.sh`](../scripts/set_version
 |------|------|----------------|
 | **cog** | Conventional-commit lint, semver choice, tag `vX.Y.Z`, release commit | `NEWS.md` body (disabled via `disable_changelog = true`) |
 | **towncrier** | `NEWS.md` sections from `newsfragments/*` | Git tags / semver |
-| **set_version.sh** | `fpm.toml`, `meson.build`, Doxygen `PROJECT_NUMBER`, `CITATION.cff` | Commit message / tag |
+| **set_version.sh** | `fpm.toml` (major.minor.patch), `meson.build`, `src/gjp_version.f90`, Doxygen `PROJECT_NUMBER`, `CITATION.cff` | Commit message / tag |
 | **add_headers.py** | MIT license banners on Fortran, C, Rust, and Python sources | Version in build manifests |
 | **GitHub Actions** (`release.yml`) | GitHub Release on `v*` tag push (Zenodo DOI minting) | Choosing the version |
 
@@ -88,8 +88,10 @@ What happens (from `cog.toml` `pre_bump_hooks`, then cog itself):
 
 1. **Version pick** — semver increment from conventional commits since the latest
    `v*` tag (or from your explicit flag).
-2. **`scripts/set_version.sh`** — writes `X.Y.Z` into `fpm.toml`, `meson.build`,
-   `apidocs/Doxygen-GaussJacobiQuad.cfg`, and `vX.Y.Z` into `CITATION.cff`.
+2. **`scripts/set_version.sh`** — writes the release triple `X.Y.Z` into
+   `fpm.toml` (fpm rejects pre-release text) and the project version into
+   `meson.build`, `src/gjp_version.f90`, `apidocs/Doxygen-GaussJacobiQuad.cfg`,
+   and `v` plus the project version, rc suffix kept, into `CITATION.cff`.
 3. **License headers** — `scripts/add_headers.py` refreshes Fortran, C, Rust, and
    Python license banners.
 4. **towncrier** — consumes `newsfragments/*`, prepends a dated section to
@@ -117,10 +119,15 @@ Confirm consumers can still build and install from the tagged tree.
 `fpm.toml` sets `[install] library = true` so `fpm install` ships the static
 library and `.mod` files, not only executables.
 
+`src/gjp_rec.f90` uses coarrays (`this_image` / `num_images`), so `fpm build`
+needs `--flag -fcoarray=single`. The same flag belongs on `fpm test` and
+`fpm install`, which compile those sources. Meson passes it from the
+`fcoarray` option (default `single`); fpm does not.
+
 ```bash
-fpm build
-fpm test
-fpm install --prefix /tmp/gjq-prefix
+fpm build --flag -fcoarray=single
+fpm test --flag -fcoarray=single
+fpm install --prefix /tmp/gjq-prefix --flag -fcoarray=single
 # expects libGaussJacobiQuad.a (or equivalent) and modules under the prefix
 ```
 
@@ -128,7 +135,10 @@ fpm install --prefix /tmp/gjq-prefix
 
 `meson.build` installs the Fortran library `GaussJacobiQuad`
 (`libGaussJacobiQuad`), the executables, the C interop library
-`gjp_cinterp`, and the public header `GaussJacobiQuadCInterp.h`.
+`gjp_cinterp`, and the public headers `GaussJacobiQuadCInterp.h`
+and `gjp_version.h` into `include/`. Only `gjp_version.mod` is
+installed under
+`include/gaussjacobiquad/<compiler-id>-<compiler-version>/`.
 `gaussjacobiquad_dep` is a `declare_dependency` of that Fortran library
 (`subproject().get_variable('gaussjacobiquad_dep')`).
 The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
@@ -137,7 +147,11 @@ The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
 meson setup builddir --prefix=/tmp/gjq-prefix
 meson compile -C builddir
 meson install -C builddir
-pkg-config --modversion gjp_cinterp   # if PKG_CONFIG_PATH includes prefix/lib/pkgconfig
+# gjp_cinterp.pc is <prefix>/<libdir>/pkgconfig/gjp_cinterp.pc.
+# libdir is lib/<multiarch> on Debian, lib64 on some distros, and lib on
+# macOS and conda. Put that directory on PKG_CONFIG_PATH. Find it with
+# `meson configure builddir` or `pkg-config --variable=pcfiledir gjp_cinterp`.
+pkg-config --modversion gjp_cinterp
 ```
 
 ### Single-file export (vendoring)

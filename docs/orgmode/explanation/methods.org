@@ -9,7 +9,7 @@ ACM 655 trick (only track first eigenvector components / weight vector). It is
 *not* state of the art for large =n=, and its Givens chase is inherently serial.
 
 What ACM 655 optimizes vs =gw=:
-- same math (eigenvalues of Jacobi =T=, weights = mu0 * v_1^2)
+- same math (eigenvalues of Jacobi \(T\), weights \(\mu_0 v_1^{2}\))
 - much less work/storage than full =DSTEQR= with =Z=I=
 
 ** Landscape**
@@ -73,14 +73,16 @@ names when more than one image is present.
 
 ** Math note (Sturm)**
 
-For tridiagonal =T= with diagonal =a_i=, off-diagonal =b_i=, the Sturm count
-(number of eigenvalues =< λ) is obtained from the LDL-style recurrence
+For tridiagonal \(T\) with diagonal \(a_i\), off-diagonal \(b_i\), the Sturm count
+(number of eigenvalues \(\le \lambda\)) is obtained from the LDL-style recurrence
 
-=d_1 = a_1 - λ=,  =d_i = (a_i - λ) - b_{i-1}^2 / d_{i-1}=,
+\[
+d_1 = a_1 - \lambda,\quad d_i = (a_i - \lambda) - \frac{b_{i-1}^{2}}{d_{i-1}},
+\]
 
-counting negative pivots. The =k=-th eigenvalue is found by bisection on that
-count. Weights use a few steps of inverse iteration on =(T - λI)= and
-=w = mu0 * u_1^2=.
+counting negative pivots. The \(k\)-th eigenvalue is found by bisection on that
+count. Weights use a few steps of inverse iteration on \((T - \lambda I)\) and
+\(w = \mu_0 u_1^{2}\).
 
 See also =scripts/imtqlx_parallel_math.py= for why a *single* QL sweep cannot
 be reordered, and how Cuppen creates independent leaves.

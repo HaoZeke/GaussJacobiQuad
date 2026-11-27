@@ -5,7 +5,7 @@
 * GaussJacobiQuad
 
 Permissively licensed *modern Fortran* Gauss–Jacobi quadrature: nodes and
-weights on =[-1, 1]= for weight =(1-x)^α (1+x)^β= (α,β > −1). Multiple algorithms,
+weights on \([-1, 1]\) for weight \((1-x)^{\alpha}(1+x)^{\beta}\) (\(\alpha,\beta > -1\)). Multiple algorithms,
 optional auto selection, Coarray Fortran paths, and C/Python surfaces.
 
 *Navigation* follows the [[https://diataxis.fr/][Diátaxis]] map (same pattern as
@@ -29,6 +29,7 @@ optional auto selection, Coarray Fortran paths, and C/Python surfaces.
 - C: =gauss_jacobi_rule_c= (single-image); Python: PyPI =gauss-jacobi-quad=
   (Stable ABI =cp39-abi3= + free-threaded =cp313t= wheels)
 - SymPy accuracy harness for regime checks
+- Measured-range sweep (=scripts/accuracy_ranges.py=) over =npts= and =(alpha, beta)=
 - Bibliography managed via ookcite collection =GaussJacobiQuad= → =docs/refs.bib=
 
 * Minimal example (Fortran)

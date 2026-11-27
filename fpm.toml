@@ -24,7 +24,7 @@ auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
-link = ["openblas"]
+link = ["lapacke", "openblas"]
 
 # Install static library + .mod files (not only executables) for fpm consumers.
 [install]
