@@ -93,7 +93,7 @@ impl Status {
             }
             Status::ErrBogaertAb => "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
             Status::ErrBogaertN => "bogaert requires n >= 21",
-            Status::ErrBounds => "invalid interval or scaled weights overflow",
+            Status::ErrBounds => "invalid interval or non-finite scaled node or weight",
             Status::Unknown => "unknown status",
         }
     }
@@ -288,10 +288,11 @@ pub fn gauss_jacobi_method_str(
 
 /// Map nodes and weights from `[-1, 1]` onto `[a, b]`.
 ///
-/// Nodes and weights are the ties-to-even binary64 rounding of the real
-/// expressions `(b - a) / 2 * x + (a + b) / 2` and
-/// `w * ((b - a) / 2)` to the power `alpha + beta + 1`. A half-width that
-/// flushes to zero is treated as `2**-1075`. `x = -1` is exactly `a` and
+/// Nodes are one ties-to-even binary64 rounding of the real expression
+/// `(b - a) / 2 * x + (a + b) / 2`. Weights are one ties-to-even binary64
+/// rounding of `w * H**(alpha + beta + 1)`, where `H` is the binary64
+/// half-width `fl((b - a) / 2)`. A half-width that flushes to zero is
+/// treated as `2**-1075`. `x = -1` is exactly `a` and
 /// `x = 1` is exactly `b`. A non-finite scaled node or weight is an error.
 /// A weight factor that overflows on its own is not an error when the
 /// product with the weight is finite.
@@ -352,7 +353,7 @@ mod status_messages {
         );
         assert_eq!(
             Status::ErrBounds.message(),
-            "invalid interval or scaled weights overflow"
+            "invalid interval or non-finite scaled node or weight"
         );
     }
 }
@@ -420,11 +421,22 @@ mod tests {
             other => panic!("scale overflow reported as {other}: {text}"),
         }
         assert!(text.starts_with("gauss_jacobi_scale_c"), "{text}");
-        assert!(text.contains("overflow"), "{text}");
+        assert!(text.contains("non-finite scaled node or weight"), "{text}");
         assert!(!text.contains("method="), "{text}");
         let pred = f64::from_bits(1.0f64.to_bits() - 1);
         let (_x, w) = gauss_jacobi_scale(&[0.25], &[pred], 1023.0, 0.0, -2.0, 2.0).unwrap();
         assert_eq!(w[0], f64::MAX);
+    }
+
+    #[test]
+    fn scale_nan_node_is_bounds() {
+        let err = gauss_jacobi_scale(&[f64::NAN], &[1.0], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        let text = err.to_string();
+        match err {
+            Error::Scale { status, .. } => assert_eq!(status, Status::ErrBounds),
+            other => panic!("NaN node reported as {other}: {text}"),
+        }
+        assert!(text.contains("non-finite scaled node or weight"), "{text}");
     }
 
     #[test]

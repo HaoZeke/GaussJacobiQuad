@@ -25,10 +25,11 @@ x, w = gauss_jacobi(n, alpha, beta, method="bogaert")
 x, w = gauss_jacobi_scale(x, w, alpha, beta, a, b)  # [-1, 1] -> [a, b]
 #+end_src
 
-=gauss_jacobi_scale= maps nodes and weights by the ties-to-even binary64
-rounding of the real expressions =(b-a)/2 * x + (a+b)/2= and
-=w * ((b-a)/2)**(alpha+beta+1)=. A half-width that flushes to zero is
-treated as =2**-1075=. =x = -1= is exactly =a= and =x = 1= is exactly =b=.
+=gauss_jacobi_scale= maps nodes by one ties-to-even binary64 rounding of
+=(b-a)/2 * x + (a+b)/2=. Weights are one ties-to-even binary64 rounding of
+=w * H**(alpha+beta+1)=, where =H= is the binary64 half-width
+=fl((b-a)/2)=. A half-width that flushes to zero is treated as =2**-1075=.
+=x = -1= is exactly =a= and =x = 1= is exactly =b=.
 That power integrates =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=.
 Raises =GaussJacobiError= on an invalid interval or when the scaled node or
 weight is non-finite (=GJP_ERR_BOUNDS=). A weight factor that overflows on

@@ -122,10 +122,11 @@ end subroutine gauss_jacobi_rule
 
 !> Map Gauss-Jacobi nodes and weights from [-1, 1] onto [a, b].
 !>
-!> Nodes and weights are the ties-to-even binary64 rounding of the real
-!> expressions t = (b-a)/2 * x + (a+b)/2 and
-!> w * ((b-a)/2)**(alpha+beta+1). A half-width that flushes to zero
-!> is treated as 2**-1075. x = -1 is exactly a and x = 1 is exactly b.
+!> Nodes are one ties-to-even binary64 rounding of the real expression
+!> t = (b-a)/2 * x + (a+b)/2. Weights are one ties-to-even binary64
+!> rounding of w * H**(alpha+beta+1), where H is the binary64 half-width
+!> fl((b-a)/2). A half-width that flushes to zero is treated as
+!> 2**-1075. x = -1 is exactly a and x = 1 is exactly b.
 !> For the Jacobi weight (1-x)**alpha * (1+x)**beta, that power maps the
 !> rule onto (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
 !> Requires finite a < b and finite alpha, beta > -1.
@@ -142,7 +143,7 @@ subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     if (st == 1) error stop "Number of points must be positive"
     if (st == 2) error stop "alpha must be greater than -1"
     if (st == 3) error stop "beta must be greater than -1"
-    if (st == GJP_ERR_BOUNDS) error stop "invalid interval or scaled weights overflow"
+    if (st == GJP_ERR_BOUNDS) error stop "invalid interval or non-finite scaled node or weight"
 end subroutine gauss_jacobi_scale
 
 !> C ABI. Status: 0 ok, 1 npts, 2 alpha, 3 beta, 7 bounds (GJP_ERR_BOUNDS).

@@ -116,8 +116,15 @@ def test_scale_endpoints_and_weight_overflow():
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi_scale(nodes, weights, 0.0, 0.0, -1.0e308, 1.0e308)
     assert ei.value.status == GJP_ERR_BOUNDS
-    assert "invalid interval or scaled weights overflow" in str(ei.value)
+    assert "non-finite scaled node or weight" in str(ei.value)
     assert nodes[0] == 0.0 and weights[0] == 2.0
+    nodes = np.array([np.nan])
+    weights = np.array([1.0])
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(nodes, weights, 0.0, 0.0, 0.0, 1.0)
+    assert ei.value.status == GJP_ERR_BOUNDS
+    assert "non-finite scaled node or weight" in str(ei.value)
+    assert np.isnan(nodes[0]) and weights[0] == 1.0
 
 
 def test_scale_cancelled_endpoints_and_weight_range():

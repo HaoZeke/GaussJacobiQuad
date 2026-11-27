@@ -510,6 +510,18 @@ block
                       0.0_c_double, 18.0_c_double, xs, ws)
     if (stc /= 7_c_int .or. xs(1) /= xkeep .or. ws(1) /= wkeep) &
         error stop "half 9 overflow tie"
+    ! alpha=1, beta=0 on [0, 3]. H = fl((b-a)/2) = 1.5 and p = 2.
+    ! w = 0x0.0000000000003p-1022 = 3 * 2**-1074.
+    ! Fraction ties-to-even: w*(3/2)**2 = 27/4 * 2**-1074 = 6.75 ulps.
+    ! Quotient 6 is even and the remainder is above half an ulp
+    ! (round bit 1, sticky 1), so the result is 7 ulps,
+    ! 0x0.0000000000007p-1022. Dropping sticky keeps 6.
+    ws(1) = transfer(3_int64, 0.0_dp)
+    xs(1) = 0.0_dp
+    stc = gjp_scale_f(1_c_int, 1.0_c_double, 0.0_c_double, &
+                      0.0_c_double, 3.0_c_double, xs, ws)
+    if (stc /= 0_c_int .or. transfer(ws(1), 0_int64) /= 7_int64) &
+        error stop "subnormal sticky half 1.5 square"
 end block
 print '(A)', "scale endpoints and weight range OK"
 end program test_scale_interval
