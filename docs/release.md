@@ -15,7 +15,7 @@ Version strings are patched by [`scripts/set_version.sh`](../scripts/set_version
 |------|------|----------------|
 | **cog** | Conventional-commit lint, semver choice, tag `vX.Y.Z`, release commit | `NEWS.md` body (disabled via `disable_changelog = true`) |
 | **towncrier** | `NEWS.md` sections from `newsfragments/*` | Git tags / semver |
-| **set_version.sh** | `fpm.toml`, `meson.build`, Doxygen `PROJECT_NUMBER`, `CITATION.cff` | Commit message / tag |
+| **set_version.sh** | `fpm.toml` (major.minor.patch), `meson.build`, `src/gjp_version.f90`, Doxygen `PROJECT_NUMBER`, `CITATION.cff` | Commit message / tag |
 | **add_headers.py** | License / version headers in `src/`, `interfaces/`, `scripts/` | Version in build manifests |
 | **GitHub Actions** (`release.yml`) | GitHub Release on `v*` tag push (Zenodo DOI minting) | Choosing the version |
 
@@ -88,8 +88,10 @@ What happens (from `cog.toml` `pre_bump_hooks`, then cog itself):
 
 1. **Version pick** — semver increment from conventional commits since the latest
    `v*` tag (or from your explicit flag).
-2. **`scripts/set_version.sh`** — writes `X.Y.Z` into `fpm.toml`, `meson.build`,
-   `apidocs/Doxygen-GaussJacobiQuad.cfg`, and `vX.Y.Z` into `CITATION.cff`.
+2. **`scripts/set_version.sh`** — writes the release triple `X.Y.Z` into
+   `fpm.toml` (fpm rejects pre-release text) and the project version into
+   `meson.build`, `src/gjp_version.f90`, `apidocs/Doxygen-GaussJacobiQuad.cfg`,
+   and `vX.Y.Z` into `CITATION.cff`.
 3. **License headers** — `scripts/add_headers.py` refreshes Fortran/C/Python
    headers (commit / date / citation line).
 4. **towncrier** — consumes `newsfragments/*`, prepends a dated section to
@@ -128,7 +130,9 @@ fpm install --prefix /tmp/gjq-prefix
 
 `meson.build` installs the Fortran library `GaussJacobiQuad`
 (`libGaussJacobiQuad`), the executables, the C interop library
-`gjp_cinterp`, and the public header `GaussJacobiQuadCInterp.h`.
+`gjp_cinterp`, the public header `GaussJacobiQuadCInterp.h`,
+the generated `gjp_version.h`, and `gjp_version.mod` under
+`include/gaussjacobiquad/<fortran-id>-<fortran-version>/`.
 `gaussjacobiquad_dep` is a `declare_dependency` of that Fortran library
 (`subproject().get_variable('gaussjacobiquad_dep')`).
 The pkg-config file is `gjp_cinterp.pc` (`name` and `filebase` `gjp_cinterp`).
