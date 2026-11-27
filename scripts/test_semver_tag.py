@@ -123,9 +123,7 @@ def run_workflow_wiring() -> int:
     if prerelease not in text:
         print("FAIL prerelease flag regex changed")
         failed += 1
-    old_boundary = (
-        r"[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?"
-    )
+    old_boundary = r"[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?"
     if old_boundary in text:
         print("FAIL workflow still uses the old NEWS boundary")
         failed += 1
