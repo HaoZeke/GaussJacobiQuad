@@ -119,7 +119,7 @@ def _git_env():
 
 
 def check_shell_updater():
-    """addHeaders.sh keeps a glued closer and skips a missing one."""
+    """A glued closer is not a banner line, so the file stays unchanged."""
     script = ROOT / "scripts" / "addHeaders.sh"
     failed = 0
     env = _git_env()
@@ -128,13 +128,14 @@ def check_shell_updater():
         src = repo / "src"
         src.mkdir()
         subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
-        glued = src / "glued.f90"
-        glued.write_text(
+        glued_text = (
             "! BEGIN_HEADER\n"
             "! old\n"
             "! END_HEADERmodule glued_should_survive\n"
             "SECOND_LINE\n"
         )
+        glued = src / "glued.f90"
+        glued.write_text(glued_text)
         missing = src / "partial.f90"
         original_missing = "! BEGIN_HEADER\nmodule survive\n"
         missing.write_text(original_missing)
@@ -145,18 +146,11 @@ def check_shell_updater():
             text=True,
             env=env,
         )
-        glued_lines = glued.read_text().splitlines()
-        if "module glued_should_survive" not in glued_lines:
-            print("FAIL addHeaders.sh glued: module line removed", file=sys.stderr)
+        if glued.read_text() != glued_text:
+            print("FAIL addHeaders.sh glued: file changed", file=sys.stderr)
             failed += 1
-        elif "SECOND_LINE" not in glued_lines:
-            print("FAIL addHeaders.sh glued: following line removed", file=sys.stderr)
-            failed += 1
-        elif glued.read_text().count("END_HEADER") != 1:
-            print(
-                "FAIL addHeaders.sh glued: END_HEADER was duplicated",
-                file=sys.stderr,
-            )
+        elif "no END_HEADER" not in result.stderr:
+            print("FAIL addHeaders.sh glued: no warning", file=sys.stderr)
             failed += 1
         else:
             again = subprocess.run(
@@ -166,7 +160,7 @@ def check_shell_updater():
                 text=True,
                 env=env,
             )
-            if glued.read_text().splitlines() != glued_lines or again.returncode != 0:
+            if glued.read_text() != glued_text or again.returncode != 0:
                 print(
                     "FAIL addHeaders.sh glued: second run changed it",
                     file=sys.stderr,
@@ -366,6 +360,178 @@ def check_banner_in_leading_comments(updater, tmp):
     return failed
 
 
+def check_shell_adversarial():
+    """Marker text in strings or comments must not drop a source line."""
+    script = ROOT / "scripts" / "addHeaders.sh"
+    failed = 0
+    env = _git_env()
+    unchanged = {
+        "unclosed_string.f90": (
+            "! BEGIN_HEADER\n"
+            "! old banner\n"
+            "module keep_me\n"
+            "  implicit none\n"
+            "  integer :: x = 1\n"
+            "end module\n"
+            'print *, "END_HEADER"\n'
+            'print *, "TAIL"\n'
+        ),
+        "string_inside.f90": (
+            "! BEGIN_HEADER\n"
+            "! still the banner\n"
+            "call keep_this_subroutine()\n"
+            "x = 'has END_HEADER inside'\n"
+            "SENTINEL_BODY_9f3\n"
+        ),
+        "end_in_comment.f90": (
+            "! BEGIN_HEADER\n"
+            "! the word END_HEADER sits here\n"
+            "module comment_keep\n"
+            "  integer :: x = 4\n"
+        ),
+    }
+    kept = {
+        "begin_in_string.f90": (
+            "x = 'BEGIN_HEADER'\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            "call keep_this_subroutine()\n",
+            ("x = 'BEGIN_HEADER'", "call keep_this_subroutine()"),
+        ),
+        "comment_begin.f90": (
+            "! note has BEGIN_HEADER in it\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            "module after_comment\n",
+            ("! note has BEGIN_HEADER in it", "module after_comment"),
+        ),
+        "code_before.f90": (
+            "module before_banner\n"
+            "  integer :: n = 2\n"
+            "end module\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            'print *, "TAIL"\n',
+            (
+                "module before_banner",
+                "  integer :: n = 2",
+                "end module",
+                'print *, "TAIL"',
+            ),
+        ),
+        "body_markers.f90": (
+            "! BEGIN_HEADER\n"
+            "! old banner\n"
+            "! END_HEADER\n"
+            "module keep_body\n"
+            "  x = 'has END_HEADER inside'\n"
+            "  y = 'BEGIN_HEADER'\n"
+            "  ! comment with END_HEADER inside\n"
+            "  z = 1\n"
+            "end module\n",
+            (
+                "module keep_body",
+                "  x = 'has END_HEADER inside'",
+                "  y = 'BEGIN_HEADER'",
+                "  ! comment with END_HEADER inside",
+                "  z = 1",
+                "end module",
+            ),
+        ),
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        src = repo / "src"
+        src.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
+        for name, text in unchanged.items():
+            (src / name).write_text(text)
+        for name, (text, _lines) in kept.items():
+            (src / name).write_text(text)
+        result = subprocess.run(
+            ["bash", str(script)],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            print(
+                "FAIL addHeaders.sh adversarial EXIT:%s" % result.returncode,
+                file=sys.stderr,
+            )
+            failed += 1
+        for name, text in unchanged.items():
+            if (src / name).read_text() != text:
+                print(
+                    "FAIL addHeaders.sh %s: source changed" % name,
+                    file=sys.stderr,
+                )
+                failed += 1
+        for name, (_text, lines) in kept.items():
+            got = (src / name).read_text().splitlines()
+            for line in lines:
+                if line not in got:
+                    print(
+                        "FAIL addHeaders.sh %s: lost %r" % (name, line),
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    break
+    return failed
+
+
+def check_mode_line_after_blank(updater, tmp):
+    """A blank line before the f2py mode line stays above the banner."""
+    failed = 0
+    dest_dir = tmp / "mode_blank"
+    dest_dir.mkdir()
+    sample = dest_dir / "blank.pyf"
+    sample.write_text("\n!    -*- f90 -*-\npython module m\nSENTINEL_BODY_9f3\n")
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    lines = sample.read_text().splitlines()
+    if len(lines) < 3 or lines[0] != "" or lines[1] != "!    -*- f90 -*-":
+        print("FAIL mode blank: mode line is not first", file=sys.stderr)
+        failed += 1
+    elif lines[2] != "! BEGIN_HEADER":
+        print(
+            "FAIL mode blank: banner did not follow the mode line",
+            file=sys.stderr,
+        )
+        failed += 1
+    elif lines.count("! BEGIN_HEADER") != 1 or "SENTINEL_BODY_9f3" not in lines:
+        print("FAIL mode blank: banner count or body", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+        if sample.read_text().splitlines() != lines:
+            print("FAIL mode blank: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    bare = dest_dir / "nonew.pyf"
+    bare.write_text("\n!    -*- f90 -*-")
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    text = bare.read_text()
+    bare_lines = text.splitlines()
+    if "!    -*- f90 -*-!" in text:
+        print("FAIL mode blank: mode line glued to the banner", file=sys.stderr)
+        failed += 1
+    elif (
+        len(bare_lines) < 3
+        or bare_lines[0] != ""
+        or bare_lines[1] != "!    -*- f90 -*-"
+    ):
+        print("FAIL mode blank: unterminated mode line moved", file=sys.stderr)
+        failed += 1
+    elif bare_lines[2] != "! BEGIN_HEADER":
+        print("FAIL mode blank: unterminated banner", file=sys.stderr)
+        failed += 1
+    return failed
+
+
 def check_unclosed_banner(updater, tmp):
     """An unclosed leading banner is not closed by END_HEADER in a string."""
     failed = 0
@@ -433,7 +599,9 @@ def main():
         failed += check_pyf_banner(updater, tmp)
         failed += check_banner_in_leading_comments(updater, tmp)
         failed += check_unclosed_banner(updater, tmp)
+        failed += check_mode_line_after_blank(updater, tmp)
     failed += check_shell_updater()
+    failed += check_shell_adversarial()
     if failed:
         print("failed %s" % failed)
         return 1

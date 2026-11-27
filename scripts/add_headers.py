@@ -43,7 +43,11 @@ def _is_mode_line(line):
 
 
 def _place_banner(header_text, content):
-    """Put a new banner after a leading shebang or f2py mode line."""
+    """Put a new banner after a leading shebang or f2py mode line.
+
+    Blank lines before the mode line stay above the banner, including when
+    the mode line itself has no trailing newline.
+    """
     if content == "":
         return header_text
     lines = content.splitlines(keepends=True)
@@ -53,11 +57,14 @@ def _place_banner(header_text, content):
             ending = "\r\n" if "\r\n" in header_text else "\n"
             lines[0] = lines[0] + ending
         idx = 1
-    if idx < len(lines) and _is_mode_line(lines[idx]):
-        if "\n" not in lines[idx]:
+    mode_at = idx
+    while mode_at < len(lines) and lines[mode_at].strip() == "":
+        mode_at += 1
+    if mode_at < len(lines) and _is_mode_line(lines[mode_at]):
+        if "\n" not in lines[mode_at]:
             ending = "\r\n" if "\r\n" in header_text else "\n"
-            lines[idx] = lines[idx] + ending
-        idx += 1
+            lines[mode_at] = lines[mode_at] + ending
+        idx = mode_at + 1
     if idx == 0:
         return header_text + content
     return "".join(lines[:idx]) + header_text + "".join(lines[idx:])
