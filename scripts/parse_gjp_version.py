@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """Split a project version into major, minor, and patch.
 
 The compact integer matches tblite: 10000 * major + 100 * minor + patch.

@@ -1,0 +1,613 @@
+#!/usr/bin/env python3
+
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
+"""The header updater must leave the source line after END_HEADER intact."""
+
+import contextlib
+import importlib.util
+import io
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+AUTHOR = "Authors: Rohit Goswami <rgoswami[at]ieee.org>"
+SAMPLES = (
+    (ROOT / "src" / "gjp_imtqlx.f90", "!", "f90"),
+    (ROOT / "interfaces" / "CInterface" / "c_cli_gjpq.c", "//", "c"),
+    (ROOT / "pytests" / "test_gjp_rec.py", "#", "py"),
+)
+
+
+def load_add_headers():
+    path = ROOT / "scripts" / "add_headers.py"
+    spec = importlib.util.spec_from_file_location("add_headers_under_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def suffix_after(text, cchar):
+    marker = f"{cchar} END_HEADER\n"
+    idx = text.find(marker)
+    if idx == -1:
+        return None
+    return text[idx + len(marker) :]
+
+
+def first_line(text):
+    if not text:
+        return None
+    return text.splitlines()[0]
+
+
+def check_syntax(dest, suffix, src):
+    if suffix == "c":
+        header = src.parent / "GaussJacobiQuadCInterp.h"
+        shutil.copyfile(header, dest.parent / header.name)
+        cmd = ["gcc", "-fsyntax-only", str(dest)]
+    elif suffix == "py":
+        cmd = [sys.executable, "-m", "py_compile", str(dest)]
+    else:
+        return 0
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        print("FAIL %s EXIT:%s" % (" ".join(cmd), result.returncode), file=sys.stderr)
+    return result.returncode
+
+
+def check_crlf_and_shebang(updater, tmp):
+    """A CRLF file stays CRLF, and a shebang stays above the banner."""
+    failed = 0
+    crlf_dir = tmp / "crlf"
+    crlf_dir.mkdir()
+    sample = crlf_dir / "sample.py"
+    sample.write_bytes(b"# BEGIN_HEADER\r\n# old\r\n# END_HEADER\r\nimport stay\r\n")
+    updater.add_headers([str(crlf_dir)], ["py"], cchar="#")
+    data = sample.read_bytes()
+    bare = data.replace(b"\r\n", b"")
+    if b"\n" in bare or not data.endswith(b"import stay\r\n"):
+        print("FAIL crlf: line endings or body changed", file=sys.stderr)
+        failed += 1
+    elif b"# END_HEADER\r\nimport stay\r\n" not in data:
+        print("FAIL crlf: source was glued or dropped", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(crlf_dir)], ["py"], cchar="#")
+        if sample.read_bytes() != data:
+            print("FAIL crlf: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    sh_dir = tmp / "shebang"
+    sh_dir.mkdir()
+    tool = sh_dir / "tool.py"
+    tool.write_bytes(b"#!/usr/bin/env python3\r\nprint('hi')\r\n")
+    updater.add_headers([str(sh_dir)], ["py"], cchar="#")
+    sh_data = tool.read_bytes()
+    prefix = b"#!/usr/bin/env python3\r\n# BEGIN_HEADER\r\n"
+    if not sh_data.startswith(prefix):
+        print("FAIL shebang: banner was placed above #!", file=sys.stderr)
+        failed += 1
+    elif b"print('hi')\r\n" not in sh_data or b"\n" in sh_data.replace(b"\r\n", b""):
+        print("FAIL shebang: body or CRLF lost", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(sh_dir)], ["py"], cchar="#")
+        if tool.read_bytes() != sh_data:
+            print("FAIL shebang: second run changed the file", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def _git_env():
+    env = os.environ.copy()
+    for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+        env.pop(key, None)
+    return env
+
+
+def check_shell_updater():
+    """A glued closer is not a banner line, so the file stays unchanged."""
+    script = ROOT / "scripts" / "addHeaders.sh"
+    failed = 0
+    env = _git_env()
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        src = repo / "src"
+        src.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
+        glued_text = (
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADERmodule glued_should_survive\n"
+            "SECOND_LINE\n"
+        )
+        glued = src / "glued.f90"
+        glued.write_text(glued_text)
+        missing = src / "partial.f90"
+        original_missing = "! BEGIN_HEADER\nmodule survive\n"
+        missing.write_text(original_missing)
+        result = subprocess.run(
+            ["bash", str(script)],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if glued.read_text() != glued_text:
+            print("FAIL addHeaders.sh glued: file changed", file=sys.stderr)
+            failed += 1
+        elif "no END_HEADER" not in result.stderr:
+            print("FAIL addHeaders.sh glued: no warning", file=sys.stderr)
+            failed += 1
+        else:
+            again = subprocess.run(
+                ["bash", str(script)],
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if glued.read_text() != glued_text or again.returncode != 0:
+                print(
+                    "FAIL addHeaders.sh glued: second run changed it",
+                    file=sys.stderr,
+                )
+                failed += 1
+        if missing.read_text() != original_missing:
+            print(
+                "FAIL addHeaders.sh missing END_HEADER: file changed",
+                file=sys.stderr,
+            )
+            failed += 1
+        elif "no END_HEADER" not in result.stderr:
+            print(
+                "FAIL addHeaders.sh missing END_HEADER: no warning",
+                file=sys.stderr,
+            )
+            failed += 1
+        if result.returncode != 0:
+            print("FAIL addHeaders.sh EXIT:%s" % result.returncode, file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_later_markers(updater, tmp):
+    """END_HEADER after the banner is source, not a second header."""
+    failed = 0
+    self_dir = tmp / "selfsrc"
+    self_dir.mkdir()
+    src = ROOT / "scripts" / "test_add_headers.py"
+    dest = self_dir / src.name
+    dest.write_bytes(src.read_bytes())
+    updater.add_headers([str(self_dir)], ["py"], cchar="#")
+    updated = dest.read_bytes()
+    fixture = (
+        b'b"# BEGIN_HEADER\\r\\n# old\\r\\n' b'# END_HEADER\\r\\nimport stay\\r\\n"'
+    )
+    if fixture not in updated:
+        print("FAIL self: fixture literal was rewritten", file=sys.stderr)
+        failed += 1
+    compiled = subprocess.run(
+        [sys.executable, "-m", "py_compile", str(dest)],
+        capture_output=True,
+        text=True,
+    )
+    if compiled.returncode != 0:
+        print(
+            "FAIL self: py_compile EXIT:%s" % compiled.returncode,
+            file=sys.stderr,
+        )
+        failed += 1
+    else:
+        updater.add_headers([str(self_dir)], ["py"], cchar="#")
+        if dest.read_bytes() != updated:
+            print("FAIL self: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    emb_dir = tmp / "embedded"
+    emb_dir.mkdir()
+    sample = emb_dir / "embedded.py"
+    sample.write_text(
+        "# BEGIN_HEADER\n"
+        "# old\n"
+        "# END_HEADER\n"
+        "note = 'keep END_HEADER in this string'\n"
+        "also = '# BEGIN_HEADER\\n# END_HEADER\\n'\n"
+    )
+    updater.add_headers([str(emb_dir)], ["py"], cchar="#")
+    text = sample.read_text()
+    if "keep END_HEADER in this string" not in text or "BEGIN_HEADER\\n" not in text:
+        print("FAIL embedded: string was rewritten", file=sys.stderr)
+        failed += 1
+    elif (
+        subprocess.run(
+            [sys.executable, "-m", "py_compile", str(sample)],
+            capture_output=True,
+        ).returncode
+        != 0
+    ):
+        print("FAIL embedded: py_compile", file=sys.stderr)
+        failed += 1
+
+    mixed_dir = tmp / "mixed"
+    mixed_dir.mkdir()
+    mixed = mixed_dir / "mixed.py"
+    mixed.write_bytes(b"# BEGIN_HEADER\n# old\n# END_HEADER\n" b"x = 'a\r\nb'\n")
+    updater.add_headers([str(mixed_dir)], ["py"], cchar="#")
+    mixed_bytes = mixed.read_bytes()
+    if b"\r\n# END_HEADER" in mixed_bytes:
+        print("FAIL mixed: banner picked up a later CRLF", file=sys.stderr)
+        failed += 1
+    elif b"x = 'a\r\nb'\n" not in mixed_bytes:
+        print("FAIL mixed: body CRLF was rewritten", file=sys.stderr)
+        failed += 1
+
+    cache = tmp / "pkg" / "__pycache__"
+    cache.mkdir(parents=True)
+    blob = b"\xcb\x00not-utf8"
+    cached = cache / "mod.cpython-312.pyc"
+    cached.write_bytes(blob)
+    stray = tmp / "pkg" / "not_c.pyc"
+    stray.write_bytes(blob)
+    try:
+        updater.add_headers([str(tmp / "pkg")], ["c"], cchar="//")
+    except UnicodeDecodeError:
+        print("FAIL bytecode: decoded a .pyc", file=sys.stderr)
+        failed += 1
+    else:
+        if cached.read_bytes() != blob or stray.read_bytes() != blob:
+            print("FAIL bytecode: .pyc bytes changed", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_pyf_banner(updater, tmp):
+    """A .pyf keeps one banner and leaves the f2py mode line on line 1."""
+    failed = 0
+    src_path = ROOT / "interfaces" / "PyInterface" / "gjquadpy.pyf"
+    src = src_path.read_text()
+    mode = src.splitlines()[0]
+    body = suffix_after(src, "!")
+    if body is None:
+        print("FAIL pyf: sample has no END_HEADER line", file=sys.stderr)
+        return 1
+    dest_dir = tmp / "pyf"
+    dest_dir.mkdir()
+    dest = dest_dir / src_path.name
+    dest.write_text(src.replace(AUTHOR, "Authors: SENTINEL", 1))
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    updated = dest.read_text()
+    if updated.splitlines()[0] != mode:
+        print("FAIL pyf: mode line moved", file=sys.stderr)
+        failed += 1
+    elif updated.count("! BEGIN_HEADER") != 1 or "SENTINEL" in updated:
+        print("FAIL pyf: banner was duplicated or kept", file=sys.stderr)
+        failed += 1
+    elif suffix_after(updated, "!") != body:
+        print("FAIL pyf: body changed", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+        if dest.read_text() != updated:
+            print("FAIL pyf: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    lines = src.splitlines(keepends=True)
+    begin = next(i for i, line in enumerate(lines) if line.strip() == "! BEGIN_HEADER")
+    end = next(
+        i
+        for i, line in enumerate(lines)
+        if i > begin and line.strip() == "! END_HEADER"
+    )
+    bare_dir = tmp / "pyf_bare"
+    bare_dir.mkdir()
+    bare = bare_dir / src_path.name
+    bare.write_text("".join(lines[:begin] + lines[end + 1 :]))
+    updater.add_headers([str(bare_dir)], ["pyf"], cchar="!")
+    inserted = bare.read_text()
+    if inserted.splitlines()[0] != mode or inserted.count("! BEGIN_HEADER") != 1:
+        print("FAIL pyf bare: mode line or banner count", file=sys.stderr)
+        failed += 1
+    elif suffix_after(inserted, "!") != body:
+        print("FAIL pyf bare: body changed", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(bare_dir)], ["pyf"], cchar="!")
+        if bare.read_text() != inserted:
+            print("FAIL pyf bare: second run changed the file", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_banner_in_leading_comments(updater, tmp):
+    """A banner later in the leading comments is replaced, not duplicated."""
+    failed = 0
+    dest_dir = tmp / "leadnote"
+    dest_dir.mkdir()
+    sample = dest_dir / "noted.py"
+    sample.write_text(
+        "# a leading note\n" "# BEGIN_HEADER\n" "# old\n" "# END_HEADER\n" "x = 1\n"
+    )
+    updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+    text = sample.read_text()
+    if text.count("# BEGIN_HEADER") != 1 or text.count("# END_HEADER") != 1:
+        print("FAIL leading: banner count", file=sys.stderr)
+        failed += 1
+    elif not text.startswith("# a leading note\n# BEGIN_HEADER\n"):
+        print("FAIL leading: note or banner moved", file=sys.stderr)
+        failed += 1
+    elif "# old\n" in text or not text.endswith("# END_HEADER\nx = 1\n"):
+        print("FAIL leading: body or old banner", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+        if sample.read_text() != text:
+            print("FAIL leading: second run changed the file", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_shell_adversarial():
+    """Marker text in strings or comments must not drop a source line."""
+    script = ROOT / "scripts" / "addHeaders.sh"
+    failed = 0
+    env = _git_env()
+    unchanged = {
+        "unclosed_string.f90": (
+            "! BEGIN_HEADER\n"
+            "! old banner\n"
+            "module keep_me\n"
+            "  implicit none\n"
+            "  integer :: x = 1\n"
+            "end module\n"
+            'print *, "END_HEADER"\n'
+            'print *, "TAIL"\n'
+        ),
+        "string_inside.f90": (
+            "! BEGIN_HEADER\n"
+            "! still the banner\n"
+            "call keep_this_subroutine()\n"
+            "x = 'has END_HEADER inside'\n"
+            "SENTINEL_BODY_9f3\n"
+        ),
+        "end_in_comment.f90": (
+            "! BEGIN_HEADER\n"
+            "! the word END_HEADER sits here\n"
+            "module comment_keep\n"
+            "  integer :: x = 4\n"
+        ),
+    }
+    kept = {
+        "begin_in_string.f90": (
+            "x = 'BEGIN_HEADER'\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            "call keep_this_subroutine()\n",
+            ("x = 'BEGIN_HEADER'", "call keep_this_subroutine()"),
+        ),
+        "comment_begin.f90": (
+            "! note has BEGIN_HEADER in it\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            "module after_comment\n",
+            ("! note has BEGIN_HEADER in it", "module after_comment"),
+        ),
+        "code_before.f90": (
+            "module before_banner\n"
+            "  integer :: n = 2\n"
+            "end module\n"
+            "! BEGIN_HEADER\n"
+            "! old\n"
+            "! END_HEADER\n"
+            'print *, "TAIL"\n',
+            (
+                "module before_banner",
+                "  integer :: n = 2",
+                "end module",
+                'print *, "TAIL"',
+            ),
+        ),
+        "body_markers.f90": (
+            "! BEGIN_HEADER\n"
+            "! old banner\n"
+            "! END_HEADER\n"
+            "module keep_body\n"
+            "  x = 'has END_HEADER inside'\n"
+            "  y = 'BEGIN_HEADER'\n"
+            "  ! comment with END_HEADER inside\n"
+            "  z = 1\n"
+            "end module\n",
+            (
+                "module keep_body",
+                "  x = 'has END_HEADER inside'",
+                "  y = 'BEGIN_HEADER'",
+                "  ! comment with END_HEADER inside",
+                "  z = 1",
+                "end module",
+            ),
+        ),
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        src = repo / "src"
+        src.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
+        for name, text in unchanged.items():
+            (src / name).write_text(text)
+        for name, (text, _lines) in kept.items():
+            (src / name).write_text(text)
+        result = subprocess.run(
+            ["bash", str(script)],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if result.returncode != 0:
+            print(
+                "FAIL addHeaders.sh adversarial EXIT:%s" % result.returncode,
+                file=sys.stderr,
+            )
+            failed += 1
+        for name, text in unchanged.items():
+            if (src / name).read_text() != text:
+                print(
+                    "FAIL addHeaders.sh %s: source changed" % name,
+                    file=sys.stderr,
+                )
+                failed += 1
+        for name, (_text, lines) in kept.items():
+            got = (src / name).read_text().splitlines()
+            for line in lines:
+                if line not in got:
+                    print(
+                        "FAIL addHeaders.sh %s: lost %r" % (name, line),
+                        file=sys.stderr,
+                    )
+                    failed += 1
+                    break
+    return failed
+
+
+def check_mode_line_after_blank(updater, tmp):
+    """A blank line before the f2py mode line stays above the banner."""
+    failed = 0
+    dest_dir = tmp / "mode_blank"
+    dest_dir.mkdir()
+    sample = dest_dir / "blank.pyf"
+    sample.write_text("\n!    -*- f90 -*-\npython module m\nSENTINEL_BODY_9f3\n")
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    lines = sample.read_text().splitlines()
+    if len(lines) < 3 or lines[0] != "" or lines[1] != "!    -*- f90 -*-":
+        print("FAIL mode blank: mode line is not first", file=sys.stderr)
+        failed += 1
+    elif lines[2] != "! BEGIN_HEADER":
+        print(
+            "FAIL mode blank: banner did not follow the mode line",
+            file=sys.stderr,
+        )
+        failed += 1
+    elif lines.count("! BEGIN_HEADER") != 1 or "SENTINEL_BODY_9f3" not in lines:
+        print("FAIL mode blank: banner count or body", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+        if sample.read_text().splitlines() != lines:
+            print("FAIL mode blank: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    bare = dest_dir / "nonew.pyf"
+    bare.write_text("\n!    -*- f90 -*-")
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    text = bare.read_text()
+    bare_lines = text.splitlines()
+    if "!    -*- f90 -*-!" in text:
+        print("FAIL mode blank: mode line glued to the banner", file=sys.stderr)
+        failed += 1
+    elif (
+        len(bare_lines) < 3
+        or bare_lines[0] != ""
+        or bare_lines[1] != "!    -*- f90 -*-"
+    ):
+        print("FAIL mode blank: unterminated mode line moved", file=sys.stderr)
+        failed += 1
+    elif bare_lines[2] != "! BEGIN_HEADER":
+        print("FAIL mode blank: unterminated banner", file=sys.stderr)
+        failed += 1
+    return failed
+
+
+def check_unclosed_banner(updater, tmp):
+    """An unclosed leading banner is not closed by END_HEADER in a string."""
+    failed = 0
+    dest_dir = tmp / "unclosed"
+    dest_dir.mkdir()
+    sample = dest_dir / "bad.py"
+    original = (
+        "# BEGIN_HEADER\n" "# old\n" "x = 1\n" "note = '# END_HEADER'\n" "y = 2\n"
+    )
+    sample.write_text(original)
+    reported = io.StringIO()
+    with contextlib.redirect_stderr(reported):
+        updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+    if sample.read_text() != original:
+        print("FAIL unclosed: file changed", file=sys.stderr)
+        failed += 1
+    elif "left unchanged" not in reported.getvalue():
+        print("FAIL unclosed: no report", file=sys.stderr)
+        failed += 1
+    return failed
+
+
+def main():
+    updater = load_add_headers()
+    failed = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        for src, cchar, suffix in SAMPLES:
+            original = src.read_text()
+            expected = suffix_after(original, cchar)
+            if expected is None:
+                print(
+                    "FAIL %s: sample has no END_HEADER line" % src.name,
+                    file=sys.stderr,
+                )
+                failed += 1
+                continue
+            dest_dir = tmp / suffix
+            dest_dir.mkdir()
+            dest = dest_dir / src.name
+            dest.write_text(original.replace(AUTHOR, "Authors: SENTINEL", 1))
+            updater.add_headers([str(dest_dir)], [suffix], cchar=cchar)
+            updated = dest.read_text()
+            got = suffix_after(updated, cchar)
+            if "SENTINEL" in updated or got != expected:
+                print(
+                    "FAIL %s: next line %r != %r"
+                    % (src.name, first_line(got), first_line(expected)),
+                    file=sys.stderr,
+                )
+                failed += 1
+                continue
+            updater.add_headers([str(dest_dir)], [suffix], cchar=cchar)
+            if dest.read_text() != updated:
+                print(
+                    "FAIL %s: second run changed the file" % src.name,
+                    file=sys.stderr,
+                )
+                failed += 1
+                continue
+            if check_syntax(dest, suffix, src) != 0:
+                failed += 1
+        failed += check_crlf_and_shebang(updater, tmp)
+        failed += check_later_markers(updater, tmp)
+        failed += check_pyf_banner(updater, tmp)
+        failed += check_banner_in_leading_comments(updater, tmp)
+        failed += check_unclosed_banner(updater, tmp)
+        failed += check_mode_line_after_blank(updater, tmp)
+    failed += check_shell_updater()
+    failed += check_shell_adversarial()
+    if failed:
+        print("failed %s" % failed)
+        return 1
+    print("ok")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
