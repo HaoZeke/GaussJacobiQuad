@@ -1,0 +1,23 @@
+name: license headers
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  license-headers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Missing license headers fail
+      uses: pre-commit/action@v3.0.1
+      with:
+        extra_args: insert-license --all-files

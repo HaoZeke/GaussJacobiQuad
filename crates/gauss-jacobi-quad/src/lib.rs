@@ -1,3 +1,12 @@
+// BEGIN_HEADER
+// -----------------------------------------------------------------------------
+// Gauss-Jacobi Quadrature Implementation
+// Authors: Rohit Goswami <rgoswami[at]ieee.org>
+// Source: GaussJacobiQuad Library
+// License: MIT
+// GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+// -----------------------------------------------------------------------------
+// END_HEADER
 //! Safe Rust bindings to **GaussJacobiQuad** via the C ABI
 //! (`gauss_jacobi_rule_c` in `libgjp_cinterp`).
 //!

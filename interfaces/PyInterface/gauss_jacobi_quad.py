@@ -1,3 +1,12 @@
+# BEGIN_HEADER
+# -----------------------------------------------------------------------------
+# Gauss-Jacobi Quadrature Implementation
+# Authors: Rohit Goswami <rgoswami[at]ieee.org>
+# Source: GaussJacobiQuad Library
+# License: MIT
+# GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+# -----------------------------------------------------------------------------
+# END_HEADER
 """High-level Python bindings for GaussJacobiQuad (ctypes → C ABI).
 
 Loads libgjp_cinterp (meson build product). Set GJP_CINTERP to the shared library

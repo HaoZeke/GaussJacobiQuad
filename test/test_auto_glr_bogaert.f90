@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> Tests for bogaert, glr, auto dispatch, and bogaert non-Legendre policy.
 program test_auto_glr_bogaert
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto

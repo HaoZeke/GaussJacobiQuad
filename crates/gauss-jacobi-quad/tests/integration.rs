@@ -1,3 +1,12 @@
+// BEGIN_HEADER
+// -----------------------------------------------------------------------------
+// Gauss-Jacobi Quadrature Implementation
+// Authors: Rohit Goswami <rgoswami[at]ieee.org>
+// Source: GaussJacobiQuad Library
+// License: MIT
+// GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+// -----------------------------------------------------------------------------
+// END_HEADER
 //! Integration tests require a built libgjp_cinterp (set GJP_CINTERP).
 use gauss_jacobi_quad::{gauss_jacobi, gauss_jacobi_method_str, Method};
 

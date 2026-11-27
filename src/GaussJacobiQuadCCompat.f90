@@ -1,3 +1,12 @@
+! BEGIN_HEADER
+! -----------------------------------------------------------------------------
+! Gauss-Jacobi Quadrature Implementation
+! Authors: Rohit Goswami <rgoswami[at]ieee.org>
+! Source: GaussJacobiQuad Library
+! License: MIT
+! GitHub Repository: https://github.com/HaoZeke/GaussJacobiQuad
+! -----------------------------------------------------------------------------
+! END_HEADER
 !> C-compatible bindings around the single-image method set.
 !>
 !> Primary entry: =gauss_jacobi_rule_c= (status codes; empty/"auto" → policy).

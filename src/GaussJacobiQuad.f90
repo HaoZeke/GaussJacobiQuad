@@ -20,7 +20,11 @@ use gjp_auto, only: select_method_auto
 use gjp_types, only: dp, GJP_ERR_BOUNDS
 use iso_c_binding, only: c_double, c_int
 use, intrinsic :: iso_fortran_env, only: int64
+! Apps link this facade. fpm drops a src module that no executable
+! dependency uses, so install would omit gjp_version.mod and its object.
+use gjp_version, only: gjp_version_string
 implicit none
+private :: gjp_version_string
 public :: gauss_jacobi, gauss_jacobi_rule, gauss_jacobi_batch_caf
 public :: select_method_auto, gauss_jacobi_scale
 private :: scale_interval, gjp_scale_f, affine_image
@@ -46,6 +50,7 @@ integer, parameter, private :: zmax = 4096
 integer, parameter, private :: fb = 1280
 integer, parameter, private :: fl = 96
 integer(int64), parameter, private :: zmask = 65535_int64
+character(len=*), parameter, private :: gjp_version_keep = gjp_version_string
 contains
 
 !> Legacy/string dispatch. Prefer =gauss_jacobi_rule= for optional method/auto.

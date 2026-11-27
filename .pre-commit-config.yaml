@@ -27,3 +27,35 @@ repos:
   hooks:
   - id: ruff
     args: ["--fix", "--show-source"]
+- repo: local
+  hooks:
+  - id: insert-license
+    name: license header (Fortran)
+    entry: python3 scripts/insert_fortran_license.py
+    language: system
+    files: \.(f90|pyf)$
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.5.6
+  hooks:
+  - id: insert-license
+    name: license header (C and Rust)
+    files: \.(c|h|rs)$
+    args:
+      - --license-filepath
+      - scripts/license_header.txt
+      - --license-filepath
+      - scripts/license_header_legacy.txt
+      - --comment-style
+      - "//"
+      - --no-extra-eol
+  - id: insert-license
+    name: license header (Python)
+    files: \.py$
+    args:
+      - --license-filepath
+      - scripts/license_header.txt
+      - --license-filepath
+      - scripts/license_header_legacy.txt
+      - --comment-style
+      - "#"
+      - --no-extra-eol

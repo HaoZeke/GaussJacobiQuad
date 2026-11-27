@@ -35,6 +35,7 @@ jobs:
         shell: bash -l {0}
         run: |
           set -euo pipefail
+          python scripts/test_add_headers.py
           # Coarray Fortran for rec_caf (this_image / coarrays)
           fpm build --flag "-fcoarray=single"
           fpm test  --flag "-fcoarray=single"
@@ -42,6 +43,7 @@ jobs:
           # C library for ctypes pytests
           meson setup bbdir -Dfcoarray=single -Dwarning_level=1
           meson compile -C bbdir
+          meson test -C bbdir
           export GJP_CINTERP="$PWD/bbdir/libgjp_cinterp.so"
           export LD_LIBRARY_PATH="$PWD/bbdir:${LD_LIBRARY_PATH:-}"
           export DYLD_LIBRARY_PATH="$PWD/bbdir:${DYLD_LIBRARY_PATH:-}"
