@@ -24,6 +24,10 @@ call expect_split("1.2.3&x", 1, 0, 0, 0)
 call expect_split("1.100.0", 1, 0, 0, 0)
 call expect_split("1.2.100", 1, 0, 0, 0)
 call expect_split("100.0.0", 1, 0, 0, 0)
+call expect_split("2147483648", 1, 0, 0, 0)
+call expect_split("1.2.2147483648", 1, 0, 0, 0)
+call expect_split("4294967296", 1, 0, 0, 0)
+call expect_split("999999999999", 1, 0, 0, 0)
 
 call get_command_argument(0, exe, status=ios)
 if (ios /= 0) error stop "argv0"
@@ -143,7 +147,7 @@ subroutine split3(text, major, minor, patch, ios)
     do
         call take_int(core, value, used, ios)
         if (ios /= 0) return
-        if (value > 99) then
+        if (value < 0 .or. value > 99) then
             ios = 1
             return
         end if
@@ -174,7 +178,7 @@ end subroutine split3
 subroutine take_int(text, value, used, ios)
     character(len=*), intent(in) :: text
     integer, intent(out) :: value, used, ios
-    integer :: k
+    integer :: k, digit
     if (len_trim(text) < 1 .or. text(1:1) < "0" .or. text(1:1) > "9") then
         ios = 1
         value = 0
@@ -184,7 +188,14 @@ subroutine take_int(text, value, used, ios)
     value = 0
     k = 1
     do while (k <= len_trim(text) .and. text(k:k) >= "0" .and. text(k:k) <= "9")
-        value = value * 10 + ichar(text(k:k)) - ichar("0")
+        digit = ichar(text(k:k)) - ichar("0")
+        if (value > (huge(value) - digit) / 10) then
+            ios = 1
+            value = 0
+            used = k
+            return
+        end if
+        value = value * 10 + digit
         k = k + 1
     end do
     used = k
