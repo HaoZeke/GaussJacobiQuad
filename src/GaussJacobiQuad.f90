@@ -98,7 +98,8 @@ end subroutine gauss_jacobi_rule
 !> For the Jacobi weight (1-x)**alpha * (1+x)**beta, weights are multiplied
 !> by ((b-a)/2)**(alpha+beta+1) so the mapped rule integrates
 !> (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
-!> Requires a < b and alpha, beta > -1.
+!> Requires finite a < b and finite alpha, beta > -1.
+!> (a+b) and (b-a) are not formed when that would overflow.
 subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
@@ -139,31 +140,55 @@ function gjp_scale_f(npts, alpha, beta, a, b, x, wts) result(status) &
 end function gjp_scale_f
 
 integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
     real(dp), intent(inout) :: x(npts), wts(npts)
-    real(dp) :: half, fac
+    real(dp) :: half, fac, mid
 
     status = 0
     if (npts <= 0) then
         status = 1
         return
     end if
-    if (alpha <= -1.0_dp) then
+    if (.not. ieee_is_finite(alpha) .or. alpha <= -1.0_dp) then
         status = 2
         return
     end if
-    if (beta <= -1.0_dp) then
+    if (.not. ieee_is_finite(beta) .or. beta <= -1.0_dp) then
         status = 3
         return
     end if
-    if (.not. (a < b)) then
+    if (.not. ieee_is_finite(a) .or. .not. ieee_is_finite(b) .or. .not. (a < b)) then
         status = 7
         return
     end if
+    ! Ordinary intervals keep 0.5*(b-a) and 0.5*(a+b). Split the
+    ! products when (b-a) or (a+b) overflows for finite a < b.
     half = 0.5_dp * (b - a)
+    mid = 0.5_dp * (a + b)
+    if (ieee_is_finite(half) .and. ieee_is_finite(mid)) then
+        fac = half**(alpha + beta + 1.0_dp)
+        if (.not. ieee_is_finite(fac)) then
+            status = 7
+            return
+        end if
+        x = half * x + 0.5_dp * (a + b)
+        wts = fac * wts
+        return
+    end if
+    half = 0.5_dp * b - 0.5_dp * a
+    mid = 0.5_dp * a + 0.5_dp * b
+    if (.not. ieee_is_finite(half)) then
+        status = 7
+        return
+    end if
     fac = half**(alpha + beta + 1.0_dp)
-    x = half * x + 0.5_dp * (a + b)
+    if (.not. ieee_is_finite(fac)) then
+        status = 7
+        return
+    end if
+    x = mid + half * x
     wts = fac * wts
 end function scale_interval
 

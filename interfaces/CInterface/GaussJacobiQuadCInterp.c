@@ -4,6 +4,7 @@
  */
 #include "GaussJacobiQuadCInterp.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,11 +27,14 @@ int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b
                          double *wts) {
     if (npts <= 0)
         return GJP_ERR_NPTS;
-    if (alpha <= -1.0)
+    /* npts > 0 with a null buffer would segfault inside Fortran. */
+    if (x == NULL || wts == NULL)
+        return GJP_ERR_NPTS;
+    if (!isfinite(alpha) || alpha <= -1.0)
         return GJP_ERR_ALPHA;
-    if (beta <= -1.0)
+    if (!isfinite(beta) || beta <= -1.0)
         return GJP_ERR_BETA;
-    if (!(a < b))
+    if (!isfinite(a) || !isfinite(b) || !(a < b))
         return GJP_ERR_BOUNDS;
     return gjp_scale_f(npts, alpha, beta, a, b, x, wts);
 }
