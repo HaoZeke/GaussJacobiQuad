@@ -16,7 +16,7 @@ Version strings are patched by [`scripts/set_version.sh`](../scripts/set_version
 | **cog** | Conventional-commit lint, semver choice, tag `vX.Y.Z`, release commit | `NEWS.md` body (disabled via `disable_changelog = true`) |
 | **towncrier** | `NEWS.md` sections from `newsfragments/*` | Git tags / semver |
 | **set_version.sh** | `fpm.toml`, `meson.build`, Doxygen `PROJECT_NUMBER`, `CITATION.cff` | Commit message / tag |
-| **add_headers.py** | License / version headers in `src/`, `interfaces/`, `scripts/` | Version in build manifests |
+| **add_headers.py** | MIT license banners on Fortran, C, Rust, and Python sources | Version in build manifests |
 | **GitHub Actions** (`release.yml`) | GitHub Release on `v*` tag push (Zenodo DOI minting) | Choosing the version |
 
 ## Conventional commits
@@ -90,7 +90,7 @@ What happens (from `cog.toml` `pre_bump_hooks`, then cog itself):
    `v*` tag (or from your explicit flag).
 2. **`scripts/set_version.sh`** — writes `X.Y.Z` into `fpm.toml`, `meson.build`,
    `apidocs/Doxygen-GaussJacobiQuad.cfg`, and `vX.Y.Z` into `CITATION.cff`.
-3. **License headers** — `scripts/add_headers.py` refreshes Fortran, C, and
+3. **License headers** — `scripts/add_headers.py` refreshes Fortran, C, Rust, and
    Python license banners.
 4. **towncrier** — consumes `newsfragments/*`, prepends a dated section to
    `NEWS.md`, and removes consumed fragments.
