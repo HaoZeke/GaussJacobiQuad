@@ -10,10 +10,18 @@
 #define GJP_VERSION_MINOR @GJP_VERSION_MINOR@
 #define GJP_VERSION_PATCH @GJP_VERSION_PATCH@
 
-/** Project version string. */
+/** Project version string, including any pre-release suffix. */
 #define GJP_VERSION_STRING "@GJP_VERSION_STRING@"
 
-/** Combined integer: 10000 * major + 100 * minor + patch. */
+/* tblite packing: 10000 * major + 100 * minor + patch.
+ * Each component is in 0..99. Past that the integer collides
+ * (1.100.0 == 2.0.0, 1.2.100 == 1.3.0). Configure rejects those.
+ */
+#if (GJP_VERSION_MAJOR) < 0 || (GJP_VERSION_MAJOR) > 99 \
+    || (GJP_VERSION_MINOR) < 0 || (GJP_VERSION_MINOR) > 99 \
+    || (GJP_VERSION_PATCH) < 0 || (GJP_VERSION_PATCH) > 99
+#error "GJP version component is outside 0..99"
+#endif
 #define GJP_VERSION (10000 * GJP_VERSION_MAJOR + 100 * GJP_VERSION_MINOR + GJP_VERSION_PATCH)
 
 #endif /* GJP_VERSION_H */
