@@ -90,8 +90,8 @@ What happens (from `cog.toml` `pre_bump_hooks`, then cog itself):
    `v*` tag (or from your explicit flag).
 2. **`scripts/set_version.sh`** — writes `X.Y.Z` into `fpm.toml`, `meson.build`,
    `apidocs/Doxygen-GaussJacobiQuad.cfg`, and `vX.Y.Z` into `CITATION.cff`.
-3. **License headers** — `scripts/add_headers.py` refreshes Fortran/C/Python
-   headers (commit / date / citation line).
+3. **License headers** — `scripts/add_headers.py` refreshes Fortran, C, and
+   Python license banners.
 4. **towncrier** — consumes `newsfragments/*`, prepends a dated section to
    `NEWS.md`, and removes consumed fragments.
 5. **Release commit + annotated tag** — `vX.Y.Z` (prefix from `tag_prefix`).
