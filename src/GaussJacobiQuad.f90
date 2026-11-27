@@ -22,7 +22,9 @@ use iso_c_binding, only: c_double, c_int
 implicit none
 public :: gauss_jacobi, gauss_jacobi_rule, gauss_jacobi_batch_caf
 public :: select_method_auto, gauss_jacobi_scale
-private :: scale_interval, gjp_scale_f
+private :: scale_interval, gjp_scale_f, affine_image, weight_image
+! Same value as GaussJacobiQuadCCompat::GJP_ERR_BOUNDS and the C enum.
+integer, parameter, private :: GJP_ERR_BOUNDS = 7
 contains
 
 !> Legacy/string dispatch. Prefer =gauss_jacobi_rule= for optional method/auto.
@@ -111,7 +113,7 @@ subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     if (st == 1) error stop "Number of points must be positive"
     if (st == 2) error stop "alpha must be greater than -1"
     if (st == 3) error stop "beta must be greater than -1"
-    if (st == 7) error stop "invalid interval or scaled weights overflow"
+    if (st == GJP_ERR_BOUNDS) error stop "invalid interval or scaled weights overflow"
 end subroutine gauss_jacobi_scale
 
 !> C ABI. Status: 0 ok, 1 npts, 2 alpha, 3 beta, 7 bounds (GJP_ERR_BOUNDS).
@@ -141,14 +143,14 @@ function gjp_scale_f(npts, alpha, beta, a, b, x, wts) result(status) &
 end function gjp_scale_f
 
 integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
-    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite, ieee_fma
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
     real(dp), intent(inout) :: x(npts), wts(npts)
-    real(dp) :: half, fac, mid, t, tw
+    real(dp) :: half, mid, fac, log_half, p, t, tw
     real(dp), allocatable :: xt(:), wt(:)
     integer :: i
-    logical :: lease_ok, repair
+    logical :: lease_ok, faithful, use_direct, repair
 
     status = 0
     if (npts <= 0) then
@@ -164,50 +166,88 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
         return
     end if
     if (.not. ieee_is_finite(a) .or. .not. ieee_is_finite(b) .or. .not. (a < b)) then
-        status = 7
+        status = GJP_ERR_BOUNDS
         return
     end if
-    ! Lease map when 0.5*(b-a) and 0.5*(a+b) are finite. A node whose
-    ! image is non-finite, outside [a, b], or collapsed onto an endpoint
-    ! uses (a/2)*(1-x)+(b/2)*(1+x) and is clamped into [a, b].
+    ! Faithful half=(b-a)/2 and mid=(a+b)/2 use ieee_fma(half, x, mid).
+    ! Otherwise use the split form (a/2)*(1-x)+(b/2)*(1+x). When a+b or
+    ! b-a overflows, keep the non-fused sum: fma of that split overflows
+    ! on [1e308, huge] while the plain sum does not.
     half = 0.5_dp * (b - a)
     mid = 0.5_dp * (a + b)
     lease_ok = ieee_is_finite(half) .and. ieee_is_finite(mid)
-    if (.not. lease_ok) then
+    faithful = .false.
+    if (lease_ok) then
+        faithful = ieee_fma(half, 2.0_dp, a) == b .and. &
+                   ieee_fma(mid, 2.0_dp, -b) == a
+    else
         half = 0.5_dp * b - 0.5_dp * a
         mid = 0.5_dp * a + 0.5_dp * b
         if (.not. ieee_is_finite(half)) then
-            status = 7
+            status = GJP_ERR_BOUNDS
             return
         end if
     end if
-    fac = half**(alpha + beta + 1.0_dp)
-    if (.not. ieee_is_finite(fac)) then
-        status = 7
+    p = alpha + beta + 1.0_dp
+    fac = 0.0_dp
+    log_half = 0.0_dp
+    use_direct = .false.
+    if (half > 0.0_dp) then
+        log_half = log(half)
+        if (ieee_is_finite(p)) then
+            fac = half**p
+            use_direct = ieee_is_finite(fac) .and. fac > 0.0_dp
+        end if
+    else if (half == 0.0_dp) then
+        ! 0.5*(b-a) flushed. The only positive gap of two doubles is
+        ! 2**-1074, so the mathematical half-width is 2**-1075.
+        log_half = -1075.0_dp * log(2.0_dp)
+    else
+        status = GJP_ERR_BOUNDS
+        return
+    end if
+    if (.not. ieee_is_finite(log_half)) then
+        status = GJP_ERR_BOUNDS
         return
     end if
     allocate (xt(npts), wt(npts))
     do i = 1, npts
-        if (lease_ok) then
-            t = half * x(i) + mid
-        else
-            t = mid + half * x(i)
-        end if
-        repair = .not. (ieee_is_finite(t) .and. t >= a .and. t <= b)
-        if (ieee_is_finite(t) .and. t == a .and. x(i) /= -1.0_dp) repair = .true.
-        if (ieee_is_finite(t) .and. t == b .and. x(i) /= 1.0_dp) repair = .true.
-        if (repair) then
-            t = (0.5_dp * a) * (1.0_dp - x(i)) + (0.5_dp * b) * (1.0_dp + x(i))
+        if (x(i) == -1.0_dp) then
+            t = a
+        else if (x(i) == 1.0_dp) then
+            t = b
+        else if (faithful) then
+            t = ieee_fma(half, x(i), mid)
+        else if (lease_ok) then
+            t = affine_image(a, b, x(i))
             if (.not. ieee_is_finite(t)) then
-                status = 7
+                status = GJP_ERR_BOUNDS
                 return
             end if
             if (t < a) t = a
             if (t > b) t = b
+        else
+            t = mid + half * x(i)
+            repair = .not. (ieee_is_finite(t) .and. t >= a .and. t <= b)
+            if (ieee_is_finite(t) .and. t == a .and. x(i) /= -1.0_dp) repair = .true.
+            if (ieee_is_finite(t) .and. t == b .and. x(i) /= 1.0_dp) repair = .true.
+            if (repair) then
+                t = affine_image(a, b, x(i))
+                if (.not. ieee_is_finite(t)) then
+                    status = GJP_ERR_BOUNDS
+                    return
+                end if
+                if (t < a) t = a
+                if (t > b) t = b
+            end if
         end if
-        tw = fac * wts(i)
+        if (.not. ieee_is_finite(t) .or. .not. ieee_is_finite(wts(i))) then
+            status = GJP_ERR_BOUNDS
+            return
+        end if
+        tw = weight_image(wts(i), p, fac, log_half, use_direct)
         if (.not. ieee_is_finite(tw)) then
-            status = 7
+            status = GJP_ERR_BOUNDS
             return
         end if
         xt(i) = t
@@ -216,5 +256,34 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
     x = xt
     wts = wt
 end function scale_interval
+
+!> Split affine image (a/2)*(1-x)+(b/2)*(1+x). Exact at x = -1 and x = 1
+!> for every finite normal endpoint.
+pure function affine_image(a, b, x) result(t)
+    real(dp), intent(in) :: a, b, x
+    real(dp) :: t
+    t = (0.5_dp * a) * (1.0_dp - x) + (0.5_dp * b) * (1.0_dp + x)
+end function affine_image
+
+!> half**p * w. The direct product is kept when it is finite and nonzero.
+!> Overflow of half**p alone, or a flushed half-width, is evaluated as
+!> exp(log(|w|) + p*log(half)) so a finite product is not reported as 0
+!> or as status 7.
+pure function weight_image(w, p, fac, log_half, use_direct) result(tw)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+    real(dp), intent(in) :: w, p, fac, log_half
+    logical, intent(in) :: use_direct
+    real(dp) :: tw
+    if (w == 0.0_dp .or. p == 0.0_dp) then
+        tw = w
+        return
+    end if
+    if (use_direct) then
+        tw = fac * w
+        if (ieee_is_finite(tw) .and. tw /= 0.0_dp) return
+    end if
+    tw = exp(log(abs(w)) + p * log_half)
+    if (w < 0.0_dp) tw = -tw
+end function weight_image
 
 end module GaussJacobiQuad

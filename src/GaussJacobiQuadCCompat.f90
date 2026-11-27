@@ -2,7 +2,7 @@
 !>
 !> Primary entry: =gauss_jacobi_rule_c= (status codes; empty/"auto" → policy).
 !> Status: 0 ok; 1 bad npts; 2 bad alpha; 3 bad beta; 4 unknown method;
-!>         5 bogaert non-Legendre; 6 bogaert n < 21.
+!>         5 bogaert non-Legendre; 6 bogaert n < 21; 7 bounds.
 !> Does not =error stop= on policy failures so C/Python can handle them.
 module GaussJacobiQuadCCompat
 use iso_c_binding, only: c_double, c_int, c_char, c_null_char
@@ -27,6 +27,7 @@ integer(c_int), parameter, public :: GJP_ERR_BETA = 3_c_int
 integer(c_int), parameter, public :: GJP_ERR_METHOD = 4_c_int
 integer(c_int), parameter, public :: GJP_ERR_BOGAERT_AB = 5_c_int
 integer(c_int), parameter, public :: GJP_ERR_BOGAERT_N = 6_c_int
+integer(c_int), parameter, public :: GJP_ERR_BOUNDS = 7_c_int
 
 contains
 

@@ -40,8 +40,9 @@ int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *
  * (b-t)^alpha * (t-a)^beta * f(t) on [a, b].
  * @return GJP_OK, or GJP_ERR_NPTS / GJP_ERR_ALPHA / GJP_ERR_BETA / GJP_ERR_BOUNDS.
  *         Non-finite alpha or beta is ALPHA/BETA. Non-finite a or b, a
- *         non-finite half-width or weight factor, or a non-finite scaled
- *         node or weight, is GJP_ERR_BOUNDS.
+ *         non-finite half-width, or a non-finite scaled node or weight,
+ *         is GJP_ERR_BOUNDS. A weight factor that overflows on its own is
+ *         not an error when the product with the weight is finite.
  *         NULL x or wts with npts > 0 is GJP_ERR_NPTS and does not write.
  */
 int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b,

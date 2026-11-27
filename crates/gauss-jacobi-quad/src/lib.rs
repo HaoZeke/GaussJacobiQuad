@@ -79,8 +79,10 @@ impl Status {
             Status::ErrNpts => "npts must be positive",
             Status::ErrAlpha => "alpha must be greater than -1",
             Status::ErrBeta => "beta must be greater than -1",
-            Status::ErrMethod => "unknown method",
-            Status::ErrBogaertAb => "bogaert requires alpha=beta=0",
+            Status::ErrMethod => {
+                "unknown method (use auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert)"
+            }
+            Status::ErrBogaertAb => "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
             Status::ErrBogaertN => "bogaert requires n >= 21",
             Status::ErrBounds => "invalid interval or scaled weights overflow",
             Status::Unknown => "unknown status",
@@ -141,6 +143,16 @@ extern "C" {
         x: *mut c_double,
         wts: *mut c_double,
         method: *const c_char,
+    ) -> c_int;
+
+    fn gauss_jacobi_scale_c(
+        npts: c_int,
+        alpha: c_double,
+        beta: c_double,
+        a: c_double,
+        b: c_double,
+        x: *mut c_double,
+        wts: *mut c_double,
     ) -> c_int;
 
     fn gjp_status_string(status: c_int) -> *const c_char;
@@ -256,6 +268,71 @@ pub fn gauss_jacobi_method_str(
     Ok((x, w))
 }
 
+/// Map nodes and weights from `[-1, 1]` onto `[a, b]`.
+///
+/// `nodes` and `weights` must have the same length, and that length must fit
+/// in `i32`. The C call is not made when the length is rejected.
+#[cfg(feature = "native")]
+pub fn gauss_jacobi_scale(
+    nodes: &[f64],
+    weights: &[f64],
+    alpha: f64,
+    beta: f64,
+    a: f64,
+    b: f64,
+) -> Result<(Vec<f64>, Vec<f64>), Error> {
+    if nodes.len() != weights.len() || nodes.is_empty() || nodes.len() > i32::MAX as usize {
+        return Err(Error::Library {
+            status: Status::ErrNpts,
+            msg: Status::ErrNpts.message(),
+            method: None,
+        });
+    }
+    let mut x = nodes.to_vec();
+    let mut w = weights.to_vec();
+    let st = unsafe {
+        gauss_jacobi_scale_c(
+            nodes.len() as c_int,
+            alpha,
+            beta,
+            a,
+            b,
+            x.as_mut_ptr(),
+            w.as_mut_ptr(),
+        )
+    };
+    let status = Status::from(st);
+    if status != Status::Ok {
+        return Err(Error::Library {
+            status,
+            msg: status.message(),
+            method: None,
+        });
+    }
+    Ok((x, w))
+}
+
+#[cfg(test)]
+mod status_messages {
+    use super::Status;
+
+    #[test]
+    fn method_and_bogaert_match_c_strings() {
+        assert_eq!(
+            Status::ErrMethod.message(),
+            "unknown method (use auto|rec|gw|algo665|algo665_dc|sturm|glr|bogaert)"
+        );
+        assert_eq!(
+            Status::ErrBogaertAb.message(),
+            "bogaert requires alpha=beta=0 (Gauss-Legendre only)"
+        );
+        assert_eq!(
+            Status::ErrBounds.message(),
+            "invalid interval or scaled weights overflow"
+        );
+    }
+}
+
 #[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
@@ -294,5 +371,28 @@ mod tests {
             Error::Library { status, .. } => assert_eq!(status, Status::ErrBogaertAb),
             _ => panic!("unexpected"),
         }
+    }
+
+    #[test]
+    fn scale_rejects_bad_lengths() {
+        let err = gauss_jacobi_scale(&[0.0, 1.0], &[1.0], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        match err {
+            Error::Library { status, .. } => assert_eq!(status, Status::ErrNpts),
+            _ => panic!("unexpected"),
+        }
+        let err = gauss_jacobi_scale(&[], &[], 0.0, 0.0, 0.0, 1.0).unwrap_err();
+        match err {
+            Error::Library { status, .. } => assert_eq!(status, Status::ErrNpts),
+            _ => panic!("unexpected"),
+        }
+    }
+
+    #[test]
+    fn scale_wide_endpoint_is_exact() {
+        let (x, w) = gauss_jacobi_scale(&[-1.0], &[0.0], 0.0, 0.0, -1.0, 1.0e16).unwrap();
+        assert_eq!(x[0], -1.0);
+        assert_eq!(w[0], 0.0);
+        let (x, _) = gauss_jacobi_scale(&[1.0], &[0.0], 0.0, 0.0, -1.0e16, 1.0).unwrap();
+        assert_eq!(x[0], 1.0);
     }
 }
