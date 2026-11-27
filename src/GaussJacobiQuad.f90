@@ -143,7 +143,7 @@ subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     if (st == 1) error stop "Number of points must be positive"
     if (st == 2) error stop "alpha must be greater than -1"
     if (st == 3) error stop "beta must be greater than -1"
-    if (st == GJP_ERR_BOUNDS) error stop "invalid interval or scaled weights overflow"
+    if (st == GJP_ERR_BOUNDS) error stop "invalid interval or non-finite scaled node or weight"
 end subroutine gauss_jacobi_scale
 
 !> C ABI. Status: 0 ok, 1 npts, 2 alpha, 3 beta, 7 bounds (GJP_ERR_BOUNDS).

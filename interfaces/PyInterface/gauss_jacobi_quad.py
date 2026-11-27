@@ -51,7 +51,7 @@ _STATUS_MSG = {
     ),
     GJP_ERR_BOGAERT_AB: "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
     GJP_ERR_BOGAERT_N: "bogaert requires n >= 21",
-    GJP_ERR_BOUNDS: "invalid interval or scaled weights overflow",
+    GJP_ERR_BOUNDS: "invalid interval or non-finite scaled node or weight",
 }
 
 

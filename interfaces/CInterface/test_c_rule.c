@@ -223,8 +223,17 @@ int main(void) {
         double x[1], w[1], xn, xkeep, wkeep;
         int st;
         if (strcmp(gjp_status_string(GJP_ERR_BOUNDS),
-                   "invalid interval or scaled weights overflow") != 0) {
+                   "invalid interval or non-finite scaled node or weight") != 0) {
             fprintf(stderr, "FAIL bounds string: %s\n", gjp_status_string(GJP_ERR_BOUNDS));
+            rc = 1;
+        }
+        x[0] = nan("");
+        w[0] = 1.0;
+        st = gauss_jacobi_scale_c(1, 0.0, 0.0, 0.0, 1.0, x, w);
+        if (st != GJP_ERR_BOUNDS || !isnan(x[0]) || w[0] != 1.0 ||
+            strcmp(gjp_status_string(st),
+                   "invalid interval or non-finite scaled node or weight") != 0) {
+            fprintf(stderr, "FAIL NaN node st=%d msg=%s\n", st, gjp_status_string(st));
             rc = 1;
         }
         x[0] = -1.0;
