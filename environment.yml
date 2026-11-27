@@ -24,6 +24,8 @@ dependencies:
   - ipython
   - sympy
   - numpy
+  - scipy
+  - mpmath
   - jupytext
   - papermill
   - ipykernel
