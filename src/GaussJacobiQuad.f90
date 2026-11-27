@@ -18,9 +18,11 @@ use gjp_glr, only: gauss_jacobi_glr, gauss_jacobi_glr_caf
 use gjp_caf, only: gauss_jacobi_batch_caf
 use gjp_auto, only: select_method_auto
 use gjp_types, only: dp
+use iso_c_binding, only: c_double, c_int
 implicit none
 public :: gauss_jacobi, gauss_jacobi_rule, gauss_jacobi_batch_caf
-public :: select_method_auto
+public :: select_method_auto, gauss_jacobi_scale
+private :: scale_interval, gjp_scale_f
 contains
 
 !> Legacy/string dispatch. Prefer =gauss_jacobi_rule= for optional method/auto.
@@ -89,5 +91,80 @@ subroutine gauss_jacobi_rule(npts, alpha, beta, x, wts, method)
         error stop
     end select
 end subroutine gauss_jacobi_rule
+
+!> Map Gauss-Jacobi nodes and weights from [-1, 1] onto [a, b].
+!>
+!> Nodes go to t = (b-a)/2 * x + (a+b)/2.
+!> For the Jacobi weight (1-x)**alpha * (1+x)**beta, weights are multiplied
+!> by ((b-a)/2)**(alpha+beta+1) so the mapped rule integrates
+!> (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
+!> Requires a < b and alpha, beta > -1.
+subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta, a, b
+    real(dp), intent(inout) :: x(npts), wts(npts)
+    integer :: st
+
+    st = scale_interval(npts, alpha, beta, a, b, x, wts)
+    if (st == 1) error stop "Number of points must be positive"
+    if (st == 2) error stop "alpha must be greater than -1"
+    if (st == 3) error stop "beta must be greater than -1"
+    if (st == 7) error stop "require a < b"
+end subroutine gauss_jacobi_scale
+
+!> C ABI. Status: 0 ok, 1 npts, 2 alpha, 3 beta, 7 bounds (GJP_ERR_BOUNDS).
+function gjp_scale_f(npts, alpha, beta, a, b, x, wts) result(status) &
+    bind(C, name="gjp_scale_f")
+    integer(c_int), intent(in), value :: npts
+    real(c_double), intent(in), value :: alpha, beta, a, b
+    real(c_double), intent(inout) :: x(npts), wts(npts)
+    integer(c_int) :: status
+    real(dp), allocatable :: xd(:), wd(:)
+    integer :: st
+
+    if (npts <= 0_c_int) then
+        status = 1_c_int
+        return
+    end if
+    allocate (xd(npts), wd(npts))
+    xd = real(x, dp)
+    wd = real(wts, dp)
+    st = scale_interval(int(npts), real(alpha, dp), real(beta, dp), &
+                        real(a, dp), real(b, dp), xd, wd)
+    status = int(st, c_int)
+    if (status == 0_c_int) then
+        x = real(xd, c_double)
+        wts = real(wd, c_double)
+    end if
+end function gjp_scale_f
+
+integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
+    integer, intent(in) :: npts
+    real(dp), intent(in) :: alpha, beta, a, b
+    real(dp), intent(inout) :: x(npts), wts(npts)
+    real(dp) :: half, fac
+
+    status = 0
+    if (npts <= 0) then
+        status = 1
+        return
+    end if
+    if (alpha <= -1.0_dp) then
+        status = 2
+        return
+    end if
+    if (beta <= -1.0_dp) then
+        status = 3
+        return
+    end if
+    if (.not. (a < b)) then
+        status = 7
+        return
+    end if
+    half = 0.5_dp * (b - a)
+    fac = half**(alpha + beta + 1.0_dp)
+    x = half * x + 0.5_dp * (a + b)
+    wts = fac * wts
+end function scale_interval
 
 end module GaussJacobiQuad

@@ -12,10 +12,27 @@
 extern int gjp_rule_f(int npts, double alpha, double beta, double *x, double *wts,
                       const char *method_c);
 
+/* Fortran bind(C, name="gjp_scale_f") */
+extern int gjp_scale_f(int npts, double alpha, double beta, double a, double b, double *x,
+                       double *wts);
+
 int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *wts,
                         const char *method) {
     const char *m = (method == NULL) ? "" : method;
     return gjp_rule_f(npts, alpha, beta, x, wts, m);
+}
+
+int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b, double *x,
+                         double *wts) {
+    if (npts <= 0)
+        return GJP_ERR_NPTS;
+    if (alpha <= -1.0)
+        return GJP_ERR_ALPHA;
+    if (beta <= -1.0)
+        return GJP_ERR_BETA;
+    if (!(a < b))
+        return GJP_ERR_BOUNDS;
+    return gjp_scale_f(npts, alpha, beta, a, b, x, wts);
 }
 
 const char *gjp_status_string(int status) {
@@ -34,6 +51,8 @@ const char *gjp_status_string(int status) {
         return "bogaert requires alpha=beta=0 (Gauss-Legendre only)";
     case GJP_ERR_BOGAERT_N:
         return "bogaert requires n >= 21";
+    case GJP_ERR_BOUNDS:
+        return "require a < b";
     default:
         return "unknown status";
     }

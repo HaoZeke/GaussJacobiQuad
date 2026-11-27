@@ -30,6 +30,7 @@ GJP_ERR_BETA = 3
 GJP_ERR_METHOD = 4
 GJP_ERR_BOGAERT_AB = 5
 GJP_ERR_BOGAERT_N = 6
+GJP_ERR_BOUNDS = 7
 
 _STATUS_MSG = {
     GJP_OK: "ok",
@@ -39,6 +40,7 @@ _STATUS_MSG = {
     GJP_ERR_METHOD: "unknown method",
     GJP_ERR_BOGAERT_AB: "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
     GJP_ERR_BOGAERT_N: "bogaert requires n >= 21",
+    GJP_ERR_BOUNDS: "require a < b",
 }
 
 
@@ -113,6 +115,16 @@ def _lib_api() -> ctypes.CDLL:
             ctypes.c_char_p,
         ]
         _lib.gauss_jacobi_rule_c.restype = ctypes.c_int
+        _lib.gauss_jacobi_scale_c.argtypes = [
+            ctypes.c_int,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.c_double,
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+        ]
+        _lib.gauss_jacobi_scale_c.restype = ctypes.c_int
     return _lib
 
 
@@ -158,6 +170,32 @@ def gauss_jacobi(
     )
     if st != GJP_OK:
         raise GaussJacobiError(st, method)
+    return x, w
+
+
+def gauss_jacobi_scale(nodes, weights, alpha: float, beta: float, a: float, b: float):
+    """Map nodes and weights from [-1, 1] to [a, b].
+
+    Nodes go to ``(b - a) / 2 * x + (a + b) / 2``. Weights are multiplied by
+    ``((b - a) / 2) ** (alpha + beta + 1)`` so the rule integrates
+    ``(b - t) ** alpha * (t - a) ** beta * f(t)`` on ``[a, b]``.
+    """
+    x = np.array(nodes, dtype=np.float64, copy=True)
+    w = np.array(weights, dtype=np.float64, copy=True)
+    if x.ndim != 1 or x.shape != w.shape:
+        raise ValueError("nodes and weights must be 1-d and the same length")
+    lib = _lib_api()
+    st = lib.gauss_jacobi_scale_c(
+        int(x.size),
+        float(alpha),
+        float(beta),
+        float(a),
+        float(b),
+        x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        w.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+    )
+    if st != GJP_OK:
+        raise GaussJacobiError(st)
     return x, w
 
 

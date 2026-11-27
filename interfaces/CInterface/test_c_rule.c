@@ -72,6 +72,36 @@ int main(void) {
             rc = 1;
         }
     }
+    /* scaled rule: ∫_0^3 (3-t) t^2 * t^3 dt = 729/14 */
+    {
+        enum { n = 8 };
+        double x[8], w[8];
+        double quad = 0.0, exact = 729.0 / 14.0;
+        int i, st = gauss_jacobi_rule_c(n, 1.0, 2.0, x, w, "rec");
+        if (st != GJP_OK) {
+            fprintf(stderr, "scale setup failed: %s\n", gjp_status_string(st));
+            rc = 1;
+        } else {
+            st = gauss_jacobi_scale_c(n, 1.0, 2.0, 0.0, 3.0, x, w);
+            if (st != GJP_OK) {
+                fprintf(stderr, "scale failed: %s\n", gjp_status_string(st));
+                rc = 1;
+            } else {
+                for (i = 0; i < n; ++i)
+                    quad += w[i] * x[i] * x[i] * x[i];
+                printf("C scale [0,3] poly err=%.3e\n", fabs(quad - exact));
+                if (fabs(quad - exact) > 1e-12) {
+                    fprintf(stderr, "FAIL scale integral\n");
+                    rc = 1;
+                }
+            }
+        }
+        st = gauss_jacobi_scale_c(4, 1.0, 2.0, 3.0, 0.0, x, w);
+        if (st != GJP_ERR_BOUNDS) {
+            fprintf(stderr, "expected GJP_ERR_BOUNDS got %d\n", st);
+            rc = 1;
+        }
+    }
     if (rc == 0)
         printf("test_c_rule PASSED\n");
     else

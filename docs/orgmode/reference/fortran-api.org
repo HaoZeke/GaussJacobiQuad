@@ -10,6 +10,13 @@ Public symbols:
 - =gauss_jacobi_batch_caf= — multi-rule batch (CAF)
 - =select_method_auto(npts, alpha, beta)= — deferred-length method string
   (CAF names when =num_images()>1=)
+- =gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)= — in-place map of a
+  =[-1, 1]= rule onto =[a, b]=
+
+Nodes become =t = (b-a)/2 * x + (a+b)/2=. Weights are multiplied by
+=((b-a)/2)**(alpha+beta+1)= so the rule integrates
+=(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=
+(the image of =(1-x)**alpha * (1+x)**beta=). Requires =a < b=.
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto

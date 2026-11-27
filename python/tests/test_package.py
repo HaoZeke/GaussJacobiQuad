@@ -7,10 +7,12 @@ import numpy as np
 import pytest
 from gauss_jacobi_quad import (
     GJP_ERR_BOGAERT_AB,
+    GJP_ERR_BOUNDS,
     GJP_OK,
     GaussJacobiError,
     __version__,
     gauss_jacobi,
+    gauss_jacobi_scale,
     status_string,
 )
 
@@ -105,3 +107,18 @@ def test_bogaert_ok_and_policy():
 def test_bad_npts():
     with pytest.raises(GaussJacobiError):
         gauss_jacobi(0, 0.0, 0.0)
+
+
+def test_scale_polynomial_on_interval():
+    """∫_0^3 (3-t) t^2 t^3 dt = 729/14, alpha=1, beta=2."""
+    alpha, beta, a, b = 1.0, 2.0, 0.0, 3.0
+    x, w = gauss_jacobi(8, alpha, beta, method="rec")
+    xs, ws = gauss_jacobi_scale(x, w, alpha, beta, a, b)
+    quad = float(np.dot(ws, xs**3))
+    assert abs(quad - 729.0 / 14.0) < 1e-12
+    assert abs(float(np.sum(ws)) - 27.0 / 4.0) < 1e-12
+    assert np.all((xs > a) & (xs < b))
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, alpha, beta, b, a)
+    assert "status=7" in str(ei.value)
+    assert GJP_ERR_BOUNDS == 7

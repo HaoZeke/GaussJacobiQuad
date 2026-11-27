@@ -16,6 +16,19 @@ const char *gjp_status_string(int status);
 - =method=: =NULL=, =""=, or ="auto"= → policy; else a method string (see [[file:method-names.org][method names]]).
 - Returns =GJP_OK= (0) or =GJP_ERR_*= (does not abort on bogaert policy errors).
 
+* Interval scaling
+
+#+begin_src c
+int gauss_jacobi_scale_c(int npts, double alpha, double beta,
+                         double a, double b, double *x, double *wts);
+#+end_src
+
+In-place map from =[-1, 1]= to =[a, b]=. Nodes become
+=t = (b-a)/2 * x + (a+b)/2=. Weights are multiplied by
+=((b-a)/2)**(alpha+beta+1)= so the rule integrates
+=(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=.
+Returns =GJP_ERR_BOUNDS= when =a >= b=.
+
 * C++ helper
 
 #+begin_src cpp
@@ -27,7 +40,7 @@ inline int gauss_jacobi_rule(int npts, double alpha, double beta,
 * Status enum
 
 =GJP_OK=, =GJP_ERR_NPTS=, =GJP_ERR_ALPHA=, =GJP_ERR_BETA=, =GJP_ERR_METHOD=,
-=GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=.
+=GJP_ERR_BOGAERT_AB=, =GJP_ERR_BOGAERT_N=, =GJP_ERR_BOUNDS=.
 
 * Legacy
 

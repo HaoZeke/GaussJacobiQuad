@@ -218,6 +218,16 @@ if not _py_pkg
                           install: false,
   )
   test('c_rule', test_c_rule)
+
+  test_scale = executable('test_scale_interval',
+                         sources: ['test/test_scale_interval.f90'],
+                         fortran_args: _args,
+                         link_with: [gjplib],
+                         dependencies: _deps,
+                         link_language: 'fortran',
+                         install: false,
+  )
+  test('scale_interval', test_scale)
 endif
 
 # ---------------------- CPython extension (meson-python / PyPI)

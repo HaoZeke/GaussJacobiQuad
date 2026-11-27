@@ -24,6 +24,8 @@ import gauss_jacobi_quad as _gjq  # noqa: E402
 GJP_ERR_BOGAERT_AB = _gjq.GJP_ERR_BOGAERT_AB
 GaussJacobiError = _gjq.GaussJacobiError
 gauss_jacobi = _gjq.gauss_jacobi
+gauss_jacobi_scale = _gjq.gauss_jacobi_scale
+GJP_ERR_BOUNDS = _gjq.GJP_ERR_BOUNDS
 
 
 def test_auto_legendre_matches_bogaert():
@@ -54,3 +56,15 @@ def test_bogaert_non_legendre_raises():
     with pytest.raises(GaussJacobiError) as ei:
         gauss_jacobi(32, 0.5, 0.0, method="bogaert")
     assert ei.value.status == GJP_ERR_BOGAERT_AB
+
+
+def test_scale_polynomial_on_interval():
+    """∫_0^3 (3-t)^1 t^2 t^3 dt = 729/14."""
+    alpha, beta, a, b = 1.0, 2.0, 0.0, 3.0
+    x, w = gauss_jacobi(8, alpha, beta, method="rec")
+    xs, ws = gauss_jacobi_scale(x, w, alpha, beta, a, b)
+    quad = float(np.dot(ws, xs**3))
+    assert abs(quad - 729.0 / 14.0) < 1e-12
+    with pytest.raises(GaussJacobiError) as ei:
+        gauss_jacobi_scale(x, w, alpha, beta, b, a)
+    assert ei.value.status == GJP_ERR_BOUNDS
