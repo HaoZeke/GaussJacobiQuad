@@ -3,17 +3,22 @@
 
 Drives ``gauss_jacobi`` (ctypes → libgjp_cinterp → Fortran) over a grid of
 ``npts`` and ``alpha, beta`` in ``(-1, 20]``. The reference is
-``scipy.special.roots_jacobi`` when that rule is internally consistent, and a
-high-precision mpmath Golub-Welsch rule otherwise. Writes a CSV and, with
-``--plot``, the worst relative errors against ``npts``.
+``scipy.special.roots_jacobi`` when that rule matches an mpmath Golub-Welsch
+rule to ``REF_REL_TOL`` on every node and weight, and the mpmath rule
+otherwise. Node error uses ``REL_FLOOR``. Weight error uses
+``WEIGHT_TAU * max|w|`` so a negligible weight does not set the headline.
+Writes a CSV and, with ``--plot``, the worst relative errors against ``npts``.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import math
+import os
 import sys
+import tempfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -38,12 +43,16 @@ METHODS: Tuple[str, ...] = (
     "auto",
 )
 
-# |dx|/max(|x_ref|, REL_FLOOR) and the same for weights.
+# Nodes: |dx|/max(|x_ref|, REL_FLOOR).
+# Weights: |dw_i|/max(|w_i|, WEIGHT_TAU * max|w|).
 REL_FLOOR = 1e-30
+WEIGHT_TAU = 1e-12
 # SciPy is treated as unreliable above either of these.
 NEWTON_TOL = 1e-8
 SUM_TOL = 1e-8
 MP_DPS = 40
+# Plain relative error (|d|/max(|ref|, REL_FLOOR)). Above this, use mpmath.
+REF_REL_TOL = 1e-13
 
 _API = None
 
@@ -70,8 +79,22 @@ def mu0_jacobi(alpha: float, beta: float) -> float:
     )
 
 
-def max_rel_err(est: np.ndarray, ref: np.ndarray) -> float:
-    scale = np.maximum(np.abs(ref), REL_FLOOR)
+def max_rel_err(est: np.ndarray, ref: np.ndarray, *, weight: bool = False) -> float:
+    """Largest relative error of ``est`` against ``ref``.
+
+    Nodes use ``max(|ref|, REL_FLOOR)``. Weights use
+    ``max(|w_i|, WEIGHT_TAU * max|w|)`` so a negligible weight cannot
+    set the headline. ``weight=False`` is the node score and the plain
+    relative gap used to accept a SciPy reference.
+    """
+    est = np.asarray(est, dtype=np.float64)
+    ref = np.asarray(ref, dtype=np.float64)
+    if weight:
+        peak = float(np.max(np.abs(ref))) if ref.size else 0.0
+        floor = max(REL_FLOOR, WEIGHT_TAU * peak)
+    else:
+        floor = REL_FLOOR
+    scale = np.maximum(np.abs(ref), floor)
     return float(np.max(np.abs(est - ref) / scale))
 
 
@@ -92,8 +115,10 @@ def scipy_reliable(
         return False
     try:
         poly = eval_jacobi(n, alpha, beta, x)
-        deriv = 0.5 * (n + alpha + beta + 1.0) * eval_jacobi(
-            n - 1, alpha + 1.0, beta + 1.0, x
+        deriv = (
+            0.5
+            * (n + alpha + beta + 1.0)
+            * eval_jacobi(n - 1, alpha + 1.0, beta + 1.0, x)
         )
     except Exception:
         return False
@@ -105,6 +130,7 @@ def scipy_reliable(
     return newton <= NEWTON_TOL
 
 
+@lru_cache(maxsize=None)
 def mpmath_reference(
     n: int, alpha: float, beta: float, dps: int = MP_DPS
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -143,8 +169,11 @@ def mpmath_reference(
         matrix[i + 1, i] = value
     evals, evecs = mp.eigsy(matrix)
     order = sorted(range(n), key=lambda i: evals[i])
-    mu0 = mp.power(2, aa + bb + 1) * mp.gamma(aa + 1) * mp.gamma(bb + 1) / mp.gamma(
-        aa + bb + 2
+    mu0 = (
+        mp.power(2, aa + bb + 1)
+        * mp.gamma(aa + 1)
+        * mp.gamma(bb + 1)
+        / mp.gamma(aa + bb + 2)
     )
     xs = [evals[i] for i in order]
     ws = [mu0 * evecs[0, i] ** 2 for i in order]
@@ -154,10 +183,15 @@ def mpmath_reference(
     )
 
 
-def reference(
-    n: int, alpha: float, beta: float
-) -> Tuple[np.ndarray, np.ndarray, str]:
-    """SciPy nodes/weights, or mpmath when SciPy fails ``scipy_reliable``."""
+def reference(n: int, alpha: float, beta: float) -> Tuple[np.ndarray, np.ndarray, str]:
+    """SciPy nodes and weights, or mpmath when SciPy disagrees.
+
+    SciPy is kept only when ``scipy_reliable`` passes and every node and
+    weight matches ``mpmath_reference`` to ``REF_REL_TOL`` (plain relative
+    error, not the weight-tau score). The returned name is recorded in
+    the CSV ``ref`` column.
+    """
+    x_s = w_s = None
     try:
         x, w = roots_jacobi(n, float(alpha), float(beta))
         x = np.asarray(x, dtype=np.float64)
@@ -165,32 +199,51 @@ def reference(
         order = np.argsort(x)
         x, w = x[order], w[order]
         if scipy_reliable(n, alpha, beta, x, w):
-            return x, w, "scipy"
+            x_s, w_s = x, w
     except Exception:
-        pass
-    x, w = mpmath_reference(n, alpha, beta)
-    return x, w, "mpmath"
+        x_s = w_s = None
+    x_m, w_m = mpmath_reference(n, alpha, beta)
+    if x_s is not None and (
+        max_rel_err(x_s, x_m) <= REF_REL_TOL and max_rel_err(w_s, w_m) <= REF_REL_TOL
+    ):
+        return x_s, w_s, "scipy"
+    return x_m, w_m, "mpmath"
 
 
 def _library():
     global _API
     if _API is None:
-        from gauss_jacobi_quad import GaussJacobiError, gauss_jacobi
+        from gauss_jacobi_quad import (
+            GJP_ERR_BOGAERT_AB,
+            GJP_ERR_BOGAERT_N,
+            GaussJacobiError,
+            gauss_jacobi,
+        )
 
-        _API = (gauss_jacobi, GaussJacobiError)
+        _API = (
+            gauss_jacobi,
+            GaussJacobiError,
+            (GJP_ERR_BOGAERT_AB, GJP_ERR_BOGAERT_N),
+        )
     return _API
 
 
 def library_rule(
     n: int, alpha: float, beta: float, method: str
 ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], str]:
-    """One shipped rule. ``status`` is ``ok``, ``policy``, or ``fail``."""
-    gauss_jacobi, err_type = _library()
+    """One shipped rule. ``status`` is ``ok``, ``policy``, or ``fail``.
+
+    ``policy`` is only the bogaert domain (Legendre, ``n`` at least 21).
+    Any other ``GaussJacobiError`` is ``fail``.
+    """
+    gauss_jacobi, err_type, policy_status = _library()
     meth = None if method == "auto" else method
     try:
         x, w = gauss_jacobi(n, alpha, beta, method=meth)
-    except err_type:
-        return None, None, "policy"
+    except err_type as exc:
+        if exc.status in policy_status:
+            return None, None, "policy"
+        return None, None, "fail"
     except Exception:
         return None, None, "fail"
     x = np.asarray(x, dtype=np.float64)
@@ -243,7 +296,7 @@ def run_sweep(
                             key[1],
                             key[2],
                             max_rel_err(x, xref),
-                            max_rel_err(w, wref),
+                            max_rel_err(w, wref, weight=True),
                             ref_name,
                             "ok",
                         )
@@ -257,35 +310,56 @@ def _fmt_err(value: float) -> str:
     return f"{value:.8e}"
 
 
-def write_csv(rows: Sequence[Row], path: Path) -> None:
+def _atomic_write(path: Path, write_to) -> None:
+    """Write ``path`` via a sibling temporary file, then rename it into place."""
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="") as handle:
-        writer = csv.writer(handle, lineterminator="\n")
-        writer.writerow(
-            [
-                "method",
-                "n",
-                "alpha",
-                "beta",
-                "max_rel_node",
-                "max_rel_weight",
-                "ref",
-                "status",
-            ]
-        )
-        for row in rows:
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=path.suffix,
+        dir=path.parent,
+    )
+    os.close(fd)
+    tmp = Path(tmp_name)
+    try:
+        write_to(tmp)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def write_csv(rows: Sequence[Row], path: Path) -> None:
+    def _write(tmp: Path) -> None:
+        with tmp.open("w", newline="") as handle:
+            writer = csv.writer(handle, lineterminator="\n")
             writer.writerow(
                 [
-                    row.method,
-                    row.n,
-                    f"{row.alpha:g}",
-                    f"{row.beta:g}",
-                    _fmt_err(row.max_rel_node),
-                    _fmt_err(row.max_rel_weight),
-                    row.ref,
-                    row.status,
+                    "method",
+                    "n",
+                    "alpha",
+                    "beta",
+                    "max_rel_node",
+                    "max_rel_weight",
+                    "ref",
+                    "status",
                 ]
             )
+            for row in rows:
+                writer.writerow(
+                    [
+                        row.method,
+                        row.n,
+                        f"{row.alpha:g}",
+                        f"{row.beta:g}",
+                        _fmt_err(row.max_rel_node),
+                        _fmt_err(row.max_rel_weight),
+                        row.ref,
+                        row.status,
+                    ]
+                )
+
+    _atomic_write(path, _write)
 
 
 def format_report(
@@ -305,8 +379,10 @@ def format_report(
             f"GRID npts={','.join(str(n) for n in npts)} "
             f"alpha={','.join(f'{a:g}' for a in alphas)} "
             f"beta={','.join(f'{b:g}' for b in betas)} "
-            f"rel_floor={REL_FLOOR:g} newton_tol={NEWTON_TOL:g} "
+            f"rel_floor={REL_FLOOR:g} weight_tau={WEIGHT_TAU:g} "
+            f"newton_tol={NEWTON_TOL:g} "
             f"sum_tol={SUM_TOL:g} mp_dps={MP_DPS} "
+            f"ref_rel_tol={REF_REL_TOL:g} "
             f"ref_scipy={n_scipy} ref_mpmath={n_mp}"
         )
     ]
@@ -371,9 +447,10 @@ def write_plot(rows: Sequence[Row], path: Path) -> None:
         axis.grid(True, which="both", alpha=0.3)
     axes[1].legend(fontsize=8)
     fig.tight_layout()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path)
-    plt.close(fig)
+    try:
+        _atomic_write(path, fig.savefig)
+    finally:
+        plt.close(fig)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
