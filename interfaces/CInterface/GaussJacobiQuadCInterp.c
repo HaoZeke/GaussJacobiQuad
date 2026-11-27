@@ -56,7 +56,7 @@ const char *gjp_status_string(int status) {
     case GJP_ERR_BOGAERT_N:
         return "bogaert requires n >= 21";
     case GJP_ERR_BOUNDS:
-        return "require a < b";
+        return "invalid interval or scaled weights overflow";
     default:
         return "unknown status";
     }

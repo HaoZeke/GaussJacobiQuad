@@ -40,7 +40,7 @@ _STATUS_MSG = {
     GJP_ERR_METHOD: "unknown method",
     GJP_ERR_BOGAERT_AB: "bogaert requires alpha=beta=0 (Gauss-Legendre only)",
     GJP_ERR_BOGAERT_N: "bogaert requires n >= 21",
-    GJP_ERR_BOUNDS: "require a < b",
+    GJP_ERR_BOUNDS: "invalid interval or scaled weights overflow",
 }
 
 

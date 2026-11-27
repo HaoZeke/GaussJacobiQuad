@@ -82,7 +82,7 @@ impl Status {
             Status::ErrMethod => "unknown method",
             Status::ErrBogaertAb => "bogaert requires alpha=beta=0",
             Status::ErrBogaertN => "bogaert requires n >= 21",
-            Status::ErrBounds => "require a < b",
+            Status::ErrBounds => "invalid interval or scaled weights overflow",
             Status::Unknown => "unknown status",
         }
     }

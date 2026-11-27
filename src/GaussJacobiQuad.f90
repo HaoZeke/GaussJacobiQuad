@@ -100,6 +100,7 @@ end subroutine gauss_jacobi_rule
 !> (b-t)**alpha * (t-a)**beta * f(t) on [a, b].
 !> Requires finite a < b and finite alpha, beta > -1.
 !> (a+b) and (b-a) are not formed when that would overflow.
+!> A non-finite scaled node or weight is an error and does not write.
 subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
@@ -110,7 +111,7 @@ subroutine gauss_jacobi_scale(npts, alpha, beta, a, b, x, wts)
     if (st == 1) error stop "Number of points must be positive"
     if (st == 2) error stop "alpha must be greater than -1"
     if (st == 3) error stop "beta must be greater than -1"
-    if (st == 7) error stop "require a < b"
+    if (st == 7) error stop "invalid interval or scaled weights overflow"
 end subroutine gauss_jacobi_scale
 
 !> C ABI. Status: 0 ok, 1 npts, 2 alpha, 3 beta, 7 bounds (GJP_ERR_BOUNDS).
@@ -144,7 +145,10 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
     integer, intent(in) :: npts
     real(dp), intent(in) :: alpha, beta, a, b
     real(dp), intent(inout) :: x(npts), wts(npts)
-    real(dp) :: half, fac, mid
+    real(dp) :: half, fac, mid, t, tw
+    real(dp), allocatable :: xt(:), wt(:)
+    integer :: i
+    logical :: lease_ok, repair
 
     status = 0
     if (npts <= 0) then
@@ -163,33 +167,54 @@ integer function scale_interval(npts, alpha, beta, a, b, x, wts) result(status)
         status = 7
         return
     end if
-    ! Ordinary intervals keep 0.5*(b-a) and 0.5*(a+b). Split the
-    ! products when (b-a) or (a+b) overflows for finite a < b.
+    ! Lease map when 0.5*(b-a) and 0.5*(a+b) are finite. A node whose
+    ! image is non-finite, outside [a, b], or collapsed onto an endpoint
+    ! uses (a/2)*(1-x)+(b/2)*(1+x) and is clamped into [a, b].
     half = 0.5_dp * (b - a)
     mid = 0.5_dp * (a + b)
-    if (ieee_is_finite(half) .and. ieee_is_finite(mid)) then
-        fac = half**(alpha + beta + 1.0_dp)
-        if (.not. ieee_is_finite(fac)) then
+    lease_ok = ieee_is_finite(half) .and. ieee_is_finite(mid)
+    if (.not. lease_ok) then
+        half = 0.5_dp * b - 0.5_dp * a
+        mid = 0.5_dp * a + 0.5_dp * b
+        if (.not. ieee_is_finite(half)) then
             status = 7
             return
         end if
-        x = half * x + 0.5_dp * (a + b)
-        wts = fac * wts
-        return
-    end if
-    half = 0.5_dp * b - 0.5_dp * a
-    mid = 0.5_dp * a + 0.5_dp * b
-    if (.not. ieee_is_finite(half)) then
-        status = 7
-        return
     end if
     fac = half**(alpha + beta + 1.0_dp)
     if (.not. ieee_is_finite(fac)) then
         status = 7
         return
     end if
-    x = mid + half * x
-    wts = fac * wts
+    allocate (xt(npts), wt(npts))
+    do i = 1, npts
+        if (lease_ok) then
+            t = half * x(i) + mid
+        else
+            t = mid + half * x(i)
+        end if
+        repair = .not. (ieee_is_finite(t) .and. t >= a .and. t <= b)
+        if (ieee_is_finite(t) .and. t == a .and. x(i) /= -1.0_dp) repair = .true.
+        if (ieee_is_finite(t) .and. t == b .and. x(i) /= 1.0_dp) repair = .true.
+        if (repair) then
+            t = (0.5_dp * a) * (1.0_dp - x(i)) + (0.5_dp * b) * (1.0_dp + x(i))
+            if (.not. ieee_is_finite(t)) then
+                status = 7
+                return
+            end if
+            if (t < a) t = a
+            if (t > b) t = b
+        end if
+        tw = fac * wts(i)
+        if (.not. ieee_is_finite(tw)) then
+            status = 7
+            return
+        end if
+        xt(i) = t
+        wt(i) = tw
+    end do
+    x = xt
+    wts = wt
 end function scale_interval
 
 end module GaussJacobiQuad

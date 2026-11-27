@@ -39,8 +39,9 @@ int gauss_jacobi_rule_c(int npts, double alpha, double beta, double *x, double *
  * Weights are multiplied by pow((b-a)/2, alpha+beta+1) so the rule integrates
  * (b-t)^alpha * (t-a)^beta * f(t) on [a, b].
  * @return GJP_OK, or GJP_ERR_NPTS / GJP_ERR_ALPHA / GJP_ERR_BETA / GJP_ERR_BOUNDS.
- *         Non-finite alpha or beta is ALPHA/BETA. Non-finite a or b, or a
- *         non-finite half-width or weight factor, is GJP_ERR_BOUNDS.
+ *         Non-finite alpha or beta is ALPHA/BETA. Non-finite a or b, a
+ *         non-finite half-width or weight factor, or a non-finite scaled
+ *         node or weight, is GJP_ERR_BOUNDS.
  *         NULL x or wts with npts > 0 is GJP_ERR_NPTS and does not write.
  */
 int gauss_jacobi_scale_c(int npts, double alpha, double beta, double a, double b,

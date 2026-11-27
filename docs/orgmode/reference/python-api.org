@@ -28,7 +28,7 @@ x, w = gauss_jacobi_scale(x, w, alpha, beta, a, b)  # [-1, 1] -> [a, b]
 =gauss_jacobi_scale= maps nodes with =(b-a)/2 * x + (a+b)/2= and multiplies
 weights by =((b-a)/2)**(alpha+beta+1)= so the rule integrates
 =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=. Raises =GaussJacobiError=
-when =a >= b= (=GJP_ERR_BOUNDS=).
+on an invalid interval or when scaled weights overflow (=GJP_ERR_BOUNDS=).
 
 - Returns: two =numpy.ndarray= of shape =(n,)= (nodes, weights).
 - Raises: =GaussJacobiError= (message includes =status=N= matching C =GJP_ERR_*=).

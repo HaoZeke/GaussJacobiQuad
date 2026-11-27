@@ -16,7 +16,8 @@ Public symbols:
 Nodes become =t = (b-a)/2 * x + (a+b)/2=. Weights are multiplied by
 =((b-a)/2)**(alpha+beta+1)= so the rule integrates
 =(b-t)**alpha * (t-a)**beta * f(t)= on =[a, b]=
-(the image of =(1-x)**alpha * (1+x)**beta=). Requires =a < b=.
+(the image of =(1-x)**alpha * (1+x)**beta=). Requires finite =a < b=.
+A non-finite scaled node or weight is an error.
 
 #+begin_src fortran
 use GaussJacobiQuad, only: gauss_jacobi_rule, select_method_auto
