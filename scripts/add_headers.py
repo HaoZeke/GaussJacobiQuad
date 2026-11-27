@@ -12,6 +12,7 @@
 import argparse
 import os
 import re
+import sys
 
 from jinja2 import Template
 
@@ -34,15 +35,82 @@ header_template = Template(
 )
 
 
+_MODE_LINE = re.compile(r"^![ \t]*-\*-[ \t]*f90[ \t]*-\*-[ \t]*$")
+
+
+def _is_mode_line(line):
+    return _MODE_LINE.match(line.rstrip("\r\n")) is not None
+
+
 def _place_banner(header_text, content):
-    """Put a new banner after a leading shebang, otherwise at the top."""
-    if not content.startswith("#!"):
+    """Put a new banner after a leading shebang or f2py mode line."""
+    if content == "":
+        return header_text
+    lines = content.splitlines(keepends=True)
+    idx = 0
+    if lines[0].startswith("#!"):
+        if "\n" not in lines[0]:
+            ending = "\r\n" if "\r\n" in header_text else "\n"
+            lines[0] = lines[0] + ending
+        idx = 1
+    if idx < len(lines) and _is_mode_line(lines[idx]):
+        if "\n" not in lines[idx]:
+            ending = "\r\n" if "\r\n" in header_text else "\n"
+            lines[idx] = lines[idx] + ending
+        idx += 1
+    if idx == 0:
         return header_text + content
-    split_at = content.find("\n")
-    if split_at == -1:
-        ending = "\r\n" if "\r\n" in header_text else "\n"
-        return content + ending + header_text
-    return content[: split_at + 1] + header_text + content[split_at + 1 :]
+    return "".join(lines[:idx]) + header_text + "".join(lines[idx:])
+
+
+def _comment_line(line, cchar):
+    body = line.lstrip(" \t")
+    if cchar == "#" and body.startswith("#!"):
+        return False
+    return body.startswith(cchar)
+
+
+def _marker_line(line, cchar, marker):
+    return line.strip() == "%s %s" % (cchar, marker)
+
+
+def _apply_header(content, file_header, cchar, filepath):
+    """Replace one banner in the leading comment block, or insert one.
+
+    BEGIN_HEADER and END_HEADER must both be comment lines in that block.
+    An unclosed leading banner is left unchanged and reported.
+    """
+    if content == "":
+        return file_header
+    lines = content.splitlines(keepends=True)
+    idx = 0
+    if lines[0].startswith("#!"):
+        idx = 1
+    block_at = idx
+    while idx < len(lines) and (
+        lines[idx].strip() == "" or _comment_line(lines[idx], cchar)
+    ):
+        idx += 1
+    begin = None
+    for i in range(block_at, idx):
+        if _marker_line(lines[i], cchar, "BEGIN_HEADER"):
+            begin = i
+            break
+    if begin is None:
+        return _place_banner(file_header, content)
+    end = None
+    for j in range(begin + 1, idx):
+        if _marker_line(lines[j], cchar, "END_HEADER"):
+            end = j
+            break
+    if end is None:
+        print(
+            "warning: %s has BEGIN_HEADER but no END_HEADER "
+            "in the leading comment block; left unchanged" % filepath,
+            file=sys.stderr,
+        )
+        return content
+    return "".join(lines[:begin]) + file_header + "".join(lines[end + 1 :])
 
 
 def _line_ending(content):
@@ -58,24 +126,6 @@ def _extension(filename):
     if dot < 0:
         return ""
     return filename[dot + 1 :]
-
-
-def _leading_banner_pattern(cchar):
-    """One banner at the start of the file, after an optional shebang.
-
-    Blank lines between the shebang and the banner stay. END_HEADER text
-    later in the file, including inside a string, is not a match.
-    """
-    cc = re.escape(cchar)
-    return re.compile(
-        r"\A(?P<prefix>#![^\n]*\n)?"
-        r"(?P<blanks>(?:[ \t]*\r?\n)*)"
-        + cc
-        + r" BEGIN_HEADER.*?"
-        + cc
-        + r" END_HEADER\r?\n?",
-        flags=re.DOTALL,
-    )
 
 
 def add_headers(
@@ -96,7 +146,6 @@ def add_headers(
     # The template keeps its trailing newline; force one anyway so a write
     # cannot glue the next source line onto END_HEADER.
     header_text = header_text.rstrip("\n") + "\n"
-    pattern = _leading_banner_pattern(cchar)
     for directory in directories:
         # Iterate over all files in the specified directory
         for root, dirs, files in os.walk(directory):
@@ -115,15 +164,7 @@ def add_headers(
 
                 line_ending = _line_ending(content)
                 file_header = header_text.replace("\n", line_ending)
-
-                def _replace(found, banner=file_header):
-                    prefix = found.group("prefix") or ""
-                    blanks = found.group("blanks") or ""
-                    return prefix + blanks + banner
-
-                updated = pattern.sub(_replace, content, count=1)
-                if updated == content and pattern.search(content) is None:
-                    updated = _place_banner(file_header, content)
+                updated = _apply_header(content, file_header, cchar, filepath)
 
                 if updated != content:
                     with open(filepath, "w", newline="", encoding="utf-8") as file:

@@ -11,7 +11,9 @@
 # END_HEADER
 """The header updater must leave the source line after END_HEADER intact."""
 
+import contextlib
 import importlib.util
+import io
 import os
 import shutil
 import subprocess
@@ -278,6 +280,114 @@ def check_later_markers(updater, tmp):
     return failed
 
 
+def check_pyf_banner(updater, tmp):
+    """A .pyf keeps one banner and leaves the f2py mode line on line 1."""
+    failed = 0
+    src_path = ROOT / "interfaces" / "PyInterface" / "gjquadpy.pyf"
+    src = src_path.read_text()
+    mode = src.splitlines()[0]
+    body = suffix_after(src, "!")
+    if body is None:
+        print("FAIL pyf: sample has no END_HEADER line", file=sys.stderr)
+        return 1
+    dest_dir = tmp / "pyf"
+    dest_dir.mkdir()
+    dest = dest_dir / src_path.name
+    dest.write_text(src.replace(AUTHOR, "Authors: SENTINEL", 1))
+    updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+    updated = dest.read_text()
+    if updated.splitlines()[0] != mode:
+        print("FAIL pyf: mode line moved", file=sys.stderr)
+        failed += 1
+    elif updated.count("! BEGIN_HEADER") != 1 or "SENTINEL" in updated:
+        print("FAIL pyf: banner was duplicated or kept", file=sys.stderr)
+        failed += 1
+    elif suffix_after(updated, "!") != body:
+        print("FAIL pyf: body changed", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["pyf"], cchar="!")
+        if dest.read_text() != updated:
+            print("FAIL pyf: second run changed the file", file=sys.stderr)
+            failed += 1
+
+    lines = src.splitlines(keepends=True)
+    begin = next(i for i, line in enumerate(lines) if line.strip() == "! BEGIN_HEADER")
+    end = next(
+        i
+        for i, line in enumerate(lines)
+        if i > begin and line.strip() == "! END_HEADER"
+    )
+    bare_dir = tmp / "pyf_bare"
+    bare_dir.mkdir()
+    bare = bare_dir / src_path.name
+    bare.write_text("".join(lines[:begin] + lines[end + 1 :]))
+    updater.add_headers([str(bare_dir)], ["pyf"], cchar="!")
+    inserted = bare.read_text()
+    if inserted.splitlines()[0] != mode or inserted.count("! BEGIN_HEADER") != 1:
+        print("FAIL pyf bare: mode line or banner count", file=sys.stderr)
+        failed += 1
+    elif suffix_after(inserted, "!") != body:
+        print("FAIL pyf bare: body changed", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(bare_dir)], ["pyf"], cchar="!")
+        if bare.read_text() != inserted:
+            print("FAIL pyf bare: second run changed the file", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_banner_in_leading_comments(updater, tmp):
+    """A banner later in the leading comments is replaced, not duplicated."""
+    failed = 0
+    dest_dir = tmp / "leadnote"
+    dest_dir.mkdir()
+    sample = dest_dir / "noted.py"
+    sample.write_text(
+        "# a leading note\n" "# BEGIN_HEADER\n" "# old\n" "# END_HEADER\n" "x = 1\n"
+    )
+    updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+    text = sample.read_text()
+    if text.count("# BEGIN_HEADER") != 1 or text.count("# END_HEADER") != 1:
+        print("FAIL leading: banner count", file=sys.stderr)
+        failed += 1
+    elif not text.startswith("# a leading note\n# BEGIN_HEADER\n"):
+        print("FAIL leading: note or banner moved", file=sys.stderr)
+        failed += 1
+    elif "# old\n" in text or not text.endswith("# END_HEADER\nx = 1\n"):
+        print("FAIL leading: body or old banner", file=sys.stderr)
+        failed += 1
+    else:
+        updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+        if sample.read_text() != text:
+            print("FAIL leading: second run changed the file", file=sys.stderr)
+            failed += 1
+    return failed
+
+
+def check_unclosed_banner(updater, tmp):
+    """An unclosed leading banner is not closed by END_HEADER in a string."""
+    failed = 0
+    dest_dir = tmp / "unclosed"
+    dest_dir.mkdir()
+    sample = dest_dir / "bad.py"
+    original = (
+        "# BEGIN_HEADER\n" "# old\n" "x = 1\n" "note = '# END_HEADER'\n" "y = 2\n"
+    )
+    sample.write_text(original)
+    reported = io.StringIO()
+    with contextlib.redirect_stderr(reported):
+        updater.add_headers([str(dest_dir)], ["py"], cchar="#")
+    if sample.read_text() != original:
+        print("FAIL unclosed: file changed", file=sys.stderr)
+        failed += 1
+    elif "left unchanged" not in reported.getvalue():
+        print("FAIL unclosed: no report", file=sys.stderr)
+        failed += 1
+    return failed
+
+
 def main():
     updater = load_add_headers()
     failed = 0
@@ -320,6 +430,9 @@ def main():
                 failed += 1
         failed += check_crlf_and_shebang(updater, tmp)
         failed += check_later_markers(updater, tmp)
+        failed += check_pyf_banner(updater, tmp)
+        failed += check_banner_in_leading_comments(updater, tmp)
+        failed += check_unclosed_banner(updater, tmp)
     failed += check_shell_updater()
     if failed:
         print("failed %s" % failed)

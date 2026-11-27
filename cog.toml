@@ -17,7 +17,7 @@ tag_prefix = "v"
 
 pre_bump_hooks = [
   "bash scripts/set_version.sh {{version}}",
-  "python scripts/add_headers.py --dirs src/ interfaces/ app/ test/ --ftypes 'f90,f77' --cchar '!'",
+  "python scripts/add_headers.py --dirs src/ interfaces/ app/ test/ --ftypes 'f90,f77,pyf' --cchar '!'",
   "python scripts/add_headers.py --dirs interfaces/ crates/ python/ --ftypes 'c,h,rs' --cchar '//'",
   "python scripts/add_headers.py --dirs interfaces/ scripts/ benchmarks/ docs/scripts/ pytests/ python/ --ftypes 'py' --cchar '#'",
   "sh -c 'if ! command -v towncrier >/dev/null 2>&1; then echo \"towncrier not installed; skipping NEWS.md\"; exit 0; fi; if ! towncrier build --version {{version}} --yes; then echo \"towncrier build failed\" >&2; exit 1; fi'",

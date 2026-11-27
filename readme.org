@@ -132,7 +132,7 @@ accepts the 2023 citation block in ~scripts/license_header_legacy.txt~, and the
 When the wording needs to change, edit those files and ~add_headers.py~, then
 refresh every tree the license hook checks:
 #+begin_src sh
-python scripts/add_headers.py --dirs src/ interfaces/ app/ test/ --ftypes "f90,f77" --cchar '!'
+python scripts/add_headers.py --dirs src/ interfaces/ app/ test/ --ftypes "f90,f77,pyf" --cchar '!'
 python scripts/add_headers.py --dirs interfaces/ crates/ python/ --ftypes "c,h,rs" --cchar '//'
 python scripts/add_headers.py --dirs interfaces/ scripts/ benchmarks/ docs/scripts/ pytests/ python/ --ftypes "py" --cchar '#'
 #+end_src
