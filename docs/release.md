@@ -130,8 +130,9 @@ fpm install --prefix /tmp/gjq-prefix
 
 `meson.build` installs the Fortran library `GaussJacobiQuad`
 (`libGaussJacobiQuad`), the executables, the C interop library
-`gjp_cinterp`, the public header `GaussJacobiQuadCInterp.h`,
-the generated `gjp_version.h`, and `gjp_version.mod` under
+`gjp_cinterp`, and the public headers `GaussJacobiQuadCInterp.h`
+and `gjp_version.h` into `include/`. Only `gjp_version.mod` is
+installed under
 `include/gaussjacobiquad/<fortran-id>-<fortran-version>/`.
 `gaussjacobiquad_dep` is a `declare_dependency` of that Fortran library
 (`subproject().get_variable('gaussjacobiquad_dep')`).
